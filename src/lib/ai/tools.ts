@@ -44,6 +44,15 @@ function withPermission<I, O>(
   };
 }
 
+// Case-insensitive enum: models sometimes emit "vacation"/"approve" — uppercase
+// before validating so we don't hand the user a spurious tool error.
+function ciEnum<const T extends [string, ...string[]]>(values: T) {
+  return z.preprocess(
+    (v) => (typeof v === "string" ? v.toUpperCase() : v),
+    z.enum(values),
+  );
+}
+
 function daysBetween(start: string, end: string): number {
   const ms = new Date(end).getTime() - new Date(start).getTime();
   return Math.max(1, Math.round(ms / 86_400_000) + 1);
@@ -81,7 +90,7 @@ export function buildHrTools(caller: ToolCaller) {
       inputSchema: z.object({
         filter: z
           .string()
-          .optional()
+          .nullish()
           .describe("Optional case-insensitive substring to filter by."),
       }),
       execute: withPermission(caller, "directory:read:self", async ({ filter }) => {
@@ -114,10 +123,10 @@ export function buildHrTools(caller: ToolCaller) {
       description:
         "Submit a time-off request for the current user. Dates are YYYY-MM-DD. Confirm the dates with the user before submitting.",
       inputSchema: z.object({
-        type: z.enum(["VACATION", "SICK", "PERSONAL"]),
+        type: ciEnum(["VACATION", "SICK", "PERSONAL"]),
         startDate: z.string().describe("Start date, YYYY-MM-DD"),
         endDate: z.string().describe("End date, YYYY-MM-DD"),
-        reason: z.string().optional(),
+        reason: z.string().nullish(),
       }),
       execute: withPermission(
         caller,
@@ -169,7 +178,7 @@ export function buildHrTools(caller: ToolCaller) {
         "Approve or reject a pending time-off request by id. Use listPendingApprovals first to get ids.",
       inputSchema: z.object({
         requestId: z.string(),
-        decision: z.enum(["APPROVE", "REJECT"]),
+        decision: ciEnum(["APPROVE", "REJECT"]),
       }),
       execute: withPermission(caller, "leave:approve", async ({ requestId, decision }) => {
         const req = await prisma.leaveRequest.findUnique({
@@ -217,7 +226,7 @@ export function buildHrTools(caller: ToolCaller) {
       inputSchema: z.object({
         employeeName: z
           .string()
-          .optional()
+          .nullish()
           .describe("Whose payslip — omit for your own."),
       }),
       execute: async ({ employeeName }) => {

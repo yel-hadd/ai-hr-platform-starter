@@ -99,6 +99,27 @@ describe("approvals — permission gating", () => {
   });
 });
 
+describe("tool input schemas — tolerant of model quirks", () => {
+  it("accepts lowercase enum values (case-insensitive)", () => {
+    const tools = buildHrTools(callers.employee);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = (tools.requestTimeOff as any).inputSchema.parse({
+      type: "vacation",
+      startDate: "2026-09-01",
+      endDate: "2026-09-02",
+    });
+    expect(parsed.type).toBe("VACATION");
+  });
+
+  it("accepts null for optional fields (not just undefined)", () => {
+    const tools = buildHrTools(callers.employee);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(() => (tools.getPayslip as any).inputSchema.parse({ employeeName: null })).not.toThrow();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(() => (tools.getEmployeeDirectory as any).inputSchema.parse({ filter: null })).not.toThrow();
+  });
+});
+
 describe("requestTimeOff — write path", () => {
   it("employee can submit a request; days are computed and status is PENDING", async () => {
     const tools = buildHrTools(callers.employee);

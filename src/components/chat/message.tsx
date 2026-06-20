@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
 import { Reasoning } from "./reasoning";
 import { ToolCall } from "./tool-call";
+import { Markdown } from "./markdown";
 
 export function ChatMessage({
   message,
@@ -43,11 +44,13 @@ export function ChatMessage({
               <div
                 key={i}
                 className={cn(
-                  "whitespace-pre-wrap rounded-lg px-3 py-2 text-sm leading-relaxed",
-                  isUser ? "bg-primary text-primary-foreground" : "bg-muted",
+                  "rounded-lg px-3 py-2 text-sm leading-relaxed",
+                  isUser
+                    ? "whitespace-pre-wrap bg-primary text-primary-foreground"
+                    : "bg-muted",
                 )}
               >
-                {part.text}
+                {isUser ? part.text : <Markdown>{part.text}</Markdown>}
               </div>
             );
           }
