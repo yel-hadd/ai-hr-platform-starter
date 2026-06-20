@@ -103,10 +103,12 @@ async function seedHandbook() {
   }
 
   const hasKey =
-    !!process.env.OPENAI_API_KEY || !!process.env.AI_GATEWAY_API_KEY;
+    !!process.env.OPENROUTER_API_KEY ||
+    !!process.env.OPENAI_API_KEY ||
+    !!process.env.AI_GATEWAY_API_KEY;
   if (!hasKey) {
     console.warn(
-      "⚠ No embedding API key (OPENAI_API_KEY / AI_GATEWAY_API_KEY). " +
+      "⚠ No embedding API key (OPENROUTER_API_KEY / OPENAI_API_KEY / AI_GATEWAY_API_KEY). " +
         "Skipping handbook embedding — RAG will return no results until you add a key and re-seed.",
     );
     return;

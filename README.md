@@ -57,10 +57,10 @@ On first boot the app pushes the Prisma schema and seeds demo data automatically
 
 | Variable | Needed for | Notes |
 |---|---|---|
-| `OPENROUTER_API_KEY` | Chat | Free at [openrouter.ai/keys](https://openrouter.ai/keys). Default models are `:free`. |
-| `OPENAI_API_KEY` | RAG embeddings + seeding the handbook | OpenRouter has **no** embeddings API, so embeddings use OpenAI (or the Gateway). Without it, everything works *except* handbook search. |
-| `AI_GATEWAY_API_KEY` | Optional | Enables the Vercel AI Gateway models in the picker. |
+| `OPENROUTER_API_KEY` | Chat **and** RAG embeddings | Free at [openrouter.ai/keys](https://openrouter.ai/keys). Default chat models are `:free`; embeddings (`text-embedding-3-small`) are billed but pennies. This one key powers the whole demo. |
 | `AUTH_SECRET` | Sessions | `npx auth secret` to generate. |
+| `AI_GATEWAY_API_KEY` | Optional | Enables the Vercel AI Gateway models in the picker (and as an embedding provider). |
+| `OPENAI_API_KEY` | Optional | Only if you set `EMBEDDING_PROVIDER="openai"`. |
 
 ### Run locally without Docker
 
@@ -278,7 +278,7 @@ hr-boilerplate/
 │     └─ ai/
 │        ├─ providers.ts       # model registry (OpenRouter default + Gateway)
 │        ├─ tools.ts           # RBAC-gated HR tools  [core]
-│        └─ embeddings.ts      # cloud embeddings (OpenAI / Gateway)
+│        └─ embeddings.ts      # cloud embeddings (OpenRouter default / OpenAI / Gateway)
 └─ tests/                      # vitest: RBAC + tool integration + live LLM
 ```
 

@@ -77,7 +77,7 @@ export function buildHrTools(caller: ToolCaller) {
             query,
             results: [],
             error:
-              "Handbook search is unavailable — set an embedding key (OPENAI_API_KEY) and re-seed.",
+              "Handbook search is unavailable — check the embedding provider key and re-seed.",
           };
         }
       }),
