@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import "dotenv/config"; // self-contained when run directly via tsx
 import { PrismaClient, type Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { embedTexts, toVectorLiteral } from "../src/lib/ai/embeddings";

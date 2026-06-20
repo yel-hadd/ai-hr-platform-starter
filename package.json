@@ -16,9 +16,6 @@
     "test:watch": "vitest",
     "postinstall": "prisma generate"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@ai-sdk/gateway": "^3.0.133",
     "@ai-sdk/openai": "^3.0.73",
