@@ -44,15 +44,21 @@ end-to-end, yet every piece is independently swappable and production-grade.
 
 ## Quick start
 
+**Prerequisites:** Docker + Docker Compose, and a free [OpenRouter API key](https://openrouter.ai/keys).
+
 ```bash
-cp .env.example .env          # then fill in keys (see below)
-docker compose up --build     # db + adminer + app
-# open http://localhost:3000  → pick a demo role
+cp .env.example .env                       # paste your OPENROUTER_API_KEY into .env
+docker compose up --build                  # starts db + adminer + app
+# open http://localhost:3000  → pick a demo role (password: password123)
 ```
 
 That single command starts **Postgres (pgvector)**, **Adminer** (DB UI on `:8080`), and the **app**.
 On first boot the app runs the Prisma migrations and seeds demo data automatically
-(`prisma migrate deploy && prisma db seed`).
+(`prisma migrate deploy && prisma db seed`). The default `.env` already has a working
+`AUTH_SECRET`, so the **only** value you must set is `OPENROUTER_API_KEY`.
+
+> Without `OPENROUTER_API_KEY` the app still boots and you can log in and browse — but the
+> AI chat and handbook RAG won't work until you add the key and re-run `npm run db:seed`.
 
 ### Keys (`.env`)
 
@@ -341,6 +347,7 @@ The build (`npm run build`) typechecks the whole project.
 - **Add a model:** append to `CHAT_MODELS` in `lib/ai/providers.ts`. Free OpenRouter ids end in `:free`.
 - **Add a permission:** add to `PERMISSIONS` in `lib/rbac.ts`, assign it to roles, use it via
   `can()` / `withPermission()`.
-- **Add a tool:** add a `tool({...})` in `lib/ai/tools.ts` (wrap `execute` with `gated`), then a
-  renderer in `components/chat/tool-call.tsx`.
-- **Change the handbook:** edit `prisma/handbook.ts` and re-run `npm run db:seed`.
+- **Add a tool:** add a `tool({...})` in `lib/ai/tools.ts` (wrap `execute` with `withPermission`),
+  then a renderer in `components/chat/tool-call.tsx`.
+- **Change the handbook:** edit `prisma/handbook.ts`, then `npm run db:reset` (the seed skips when
+  chunks already exist, so a plain re-seed won't pick up edits).

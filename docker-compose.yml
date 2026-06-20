@@ -44,8 +44,10 @@ services:
       - .:/app
       - /app/node_modules
       - /app/.next
-    # Apply migrations, seed (idempotent), then run the dev server.
-    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm run dev"
+    # Apply migrations (required), seed (best-effort so a transient embedding
+    # hiccup can't block startup — re-run later with `docker compose exec app
+    # npx prisma db seed`), then run the dev server.
+    command: sh -c "npx prisma migrate deploy && (npx prisma db seed || echo '⚠ seed incomplete — continuing') && npm run dev"
 
 volumes:
   db-data:
