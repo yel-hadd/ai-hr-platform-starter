@@ -53,7 +53,7 @@ export function Sidebar({
     <aside className="flex h-dvh w-64 shrink-0 flex-col border-r bg-card">
       <div className="flex items-center gap-2 px-5 py-4 font-semibold">
         <Bot className="size-5 text-primary" />
-        PeopleAI
+        HARI
       </div>
 
       <nav className="flex-1 space-y-1 px-3">

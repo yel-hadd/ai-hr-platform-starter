@@ -20,7 +20,7 @@ export default async function LoginPage() {
       <section className="hidden lg:flex flex-col justify-between bg-neutral-950 text-neutral-100 p-12">
         <div className="flex items-center gap-2 font-semibold">
           <Bot className="size-6" />
-          PeopleAI
+          HARI
         </div>
         <div className="space-y-4 max-w-md">
           <h1 className="text-3xl font-semibold leading-tight">

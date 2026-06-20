@@ -1,4 +1,4 @@
-# PeopleAI — AI-Powered HR Platform Starter
+# HARI — AI-Powered HR Platform Starter
 
 A reference implementation of an **AI-powered HR platform** (think BambooHR + a built-in
 assistant). It is intentionally a *starter*: it doesn't try to be a complete HR product, it

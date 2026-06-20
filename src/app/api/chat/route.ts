@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     .map((p) => `- ${PERMISSION_LABELS[p]}`)
     .join("\n");
 
-  const system = `You are PeopleAI, the assistant inside an AI-powered HR platform.
+  const system = `You are HARI, the assistant inside an AI-powered HR platform.
 Today is ${new Date().toISOString().slice(0, 10)}.
 
 The signed-in user is ${caller.name}, role: ${ROLE_LABELS[caller.role]}.

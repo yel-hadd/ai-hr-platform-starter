@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PeopleAI — AI HR Platform Starter",
+  title: "HARI — AI HR Platform Starter",
   description:
     "An AI-powered HR platform starter: RBAC-gated AI tools, handbook RAG, and generative chat UI on Next.js + pgvector + Vercel AI SDK.",
 };
