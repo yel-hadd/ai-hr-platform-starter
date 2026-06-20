@@ -178,27 +178,49 @@ unit test. The Settings page renders the full matrix live.
 
 ```mermaid
 erDiagram
-    User ||--o| Employee : "has profile"
-    Employee ||--o{ Employee : "manages (reports)"
-    Employee ||--o{ LeaveBalance : has
-    Employee ||--o{ LeaveRequest : requests
+    User ||--o| Employee : "has login for"
+    Employee ||--o{ Employee : "manages"
+    Employee ||--o{ LeaveBalance : "accrues"
+    Employee ||--o{ LeaveRequest : "submits"
+    Employee |o--o{ LeaveRequest : "approves"
+
     User {
-        string email
+        string id PK
+        string email UK
+        Role role
         string passwordHash
-        Role   role
     }
     Employee {
+        string id PK
+        string userId FK
+        string managerId FK
         string title
         string department
-        int    salary
-        string managerId
+        int salary
+    }
+    LeaveBalance {
+        LeaveType type
+        int totalDays
+        int usedDays
+    }
+    LeaveRequest {
+        LeaveType type
+        date startDate
+        date endDate
+        LeaveStatus status
+        string approverId FK
     }
     HandbookChunk {
-        string  section
-        string  content
-        halfvec embedding "halfvec(1536) + HNSW"
+        string id PK
+        string section
+        string content
+        halfvec embedding "1536-dim, HNSW"
     }
 ```
+
+`HandbookChunk` is intentionally standalone — it's the RAG corpus, with no foreign keys
+into the HR tables. Every `Employee` links to exactly one `User`; an `Employee` both
+**submits** their own leave requests and (as a manager) **approves** others'.
 
 ### RAG pipeline (handbook search)
 
