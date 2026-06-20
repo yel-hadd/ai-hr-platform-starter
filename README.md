@@ -32,13 +32,13 @@ end-to-end, yet every piece is independently swappable and production-grade.
 
 ## What it demonstrates
 
-- 🔐 **RBAC everywhere** — one permission matrix gates the **UI**, **server data access**, and **AI tools**.
-- 🧠 **Thinking UI** — the model's reasoning streams into a collapsible panel.
-- 🛠️ **Tool-call UI** — every tool call is shown live (running → result), including **permission denials**.
-- 🎨 **Generative UI** — tool results render as React components (employee cards, leave widgets, payslips), not walls of text.
-- 📚 **RAG with citations** — vector search over an employee handbook; answers cite their sources.
-- 🔁 **Multi-step** — the assistant chains tools (e.g. *check balance → submit request*).
-- 👥 **Four demo roles** — one click to sign in and watch the whole experience change.
+- **RBAC everywhere** — one permission matrix gates the **UI**, **server data access**, and **AI tools**.
+- **Thinking UI** — the model's reasoning streams into a collapsible panel.
+- **Tool-call UI** — every tool call is shown live (running → result), including **permission denials**.
+- **Generative UI** — tool results render as React components (employee cards, leave widgets, payslips), not walls of text.
+- **RAG with citations** — vector search over an employee handbook; answers cite their sources.
+- **Multi-step** — the assistant chains tools (e.g. *check balance → submit request*).
+- **Four demo roles** — one click to sign in and watch the whole experience change.
 
 ---
 
@@ -90,41 +90,20 @@ Everything is one Next.js app. The browser talks only to Next.js; Next.js talks 
 to the AI providers. There is no separate backend service.
 
 ```mermaid
-flowchart TB
-    subgraph Browser
-        UI["React UI<br/>(Client Components)"]
-        Chat["useChat hook<br/>(streaming chat)"]
+flowchart LR
+    B["Browser<br/>(React UI + useChat)"]
+
+    subgraph Next["Next.js app (server)"]
+        S["Pages (SSR) + /api/chat<br/>Auth.js session + role"]
+        C["RBAC + role-scoped data<br/>+ AI tools"]
     end
 
-    subgraph Next["Next.js App (server)"]
-        RSC["Server Components<br/>(SSR data + RBAC)"]
-        RH["Route Handlers<br/>/api/chat, /api/auth"]
-        AUTH["Auth.js<br/>(session + role)"]
-        RBAC["RBAC matrix<br/>can() / withPermission()"]
-        TOOLS["AI Tools<br/>(permission-checked)"]
-    end
+    DB[("Postgres<br/>+ pgvector")]
+    AI["AI providers<br/>(OpenRouter / Gateway)"]
 
-    subgraph Data
-        PG[("Postgres<br/>+ pgvector (halfvec)")]
-    end
-
-    subgraph AI["AI providers"]
-        OR["OpenRouter<br/>(default, free)"]
-        GW["Vercel AI Gateway<br/>(OpenAI / Google)"]
-        EMB["Embeddings<br/>(OpenAI)"]
-    end
-
-    UI -->|navigations| RSC
-    Chat -->|POST messages| RH
-    RSC --> AUTH --> RBAC
-    RSC -->|Prisma| PG
-    RH --> AUTH
-    RH --> TOOLS --> RBAC
-    TOOLS -->|Prisma| PG
-    RH -->|streamText| OR
-    RH -->|streamText| GW
-    TOOLS -->|RAG: embed + cosine search| EMB
-    EMB --> PG
+    B --> S --> C
+    C -->|Prisma| DB
+    S -->|streamText| AI
 ```
 
 ### Frontend vs. backend vs. SSR — who does what
@@ -258,7 +237,7 @@ hr-boilerplate/
 │  │  ├─ login/                # role picker + manual sign-in (Server Actions)
 │  │  ├─ (dashboard)/          # SSR pages, guarded by the layout
 │  │  │  ├─ page.tsx           # overview (role-aware stats)
-│  │  │  ├─ chat/              # ⭐ the AI assistant page
+│  │  │  ├─ chat/              # the AI assistant page (the showcase)
 │  │  │  ├─ directory/         # role-scoped people table
 │  │  │  ├─ time-off/          # balances, requests, approvals
 │  │  │  └─ settings/          # live permission matrix (admin only)
@@ -270,13 +249,13 @@ hr-boilerplate/
 │  │  ├─ layout/               # sidebar, page header
 │  │  └─ chat/                 # message, reasoning, tool-call, generative/*
 │  └─ lib/
-│     ├─ rbac.ts               # 🔑 permission matrix + can() + PermissionError
+│     ├─ rbac.ts               # permission matrix + can()  [core]
 │     ├─ auth.ts / session.ts  # Auth.js config + server-side session helpers
-│     ├─ hr.ts                 # 🔑 role-scoped data access (shared by UI + AI)
+│     ├─ hr.ts                 # role-scoped data access, shared by UI + AI  [core]
 │     ├─ rag.ts                # vector search
 │     └─ ai/
 │        ├─ providers.ts       # model registry (OpenRouter default + Gateway)
-│        ├─ tools.ts           # 🔑 RBAC-gated HR tools
+│        ├─ tools.ts           # RBAC-gated HR tools  [core]
 │        └─ embeddings.ts      # cloud embeddings (OpenAI / Gateway)
 └─ tests/                      # vitest: RBAC + tool integration + live LLM
 ```

@@ -87,11 +87,3 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 export function can(role: Role, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
 }
-
-/** Thrown by `withPermission` and surfaced to the chat UI as a "denied" card. */
-export class PermissionError extends Error {
-  constructor(public readonly permission: Permission) {
-    super(`Missing permission: ${permission}`);
-    this.name = "PermissionError";
-  }
-}

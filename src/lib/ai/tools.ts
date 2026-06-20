@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// AI tools. Each tool's execute is wrapped by `gated()` which checks the
+// AI tools. Each tool's execute is wrapped by `withPermission()` which checks the
 // caller's permission BEFORE running. On denial it returns a structured
 // { denied: true, ... } payload (instead of throwing) so the chat UI can show
 // a "permission denied" card. The model sees the denial too and can explain it.
@@ -33,7 +33,7 @@ function deny(permission: Permission): Denied {
 }
 
 /** Run `fn` only if the caller holds `permission`, else return a denial. */
-function gated<I, O>(
+function withPermission<I, O>(
   caller: ToolCaller,
   permission: Permission,
   fn: (input: I) => Promise<O>,
@@ -58,7 +58,7 @@ export function buildHrTools(caller: ToolCaller) {
       inputSchema: z.object({
         query: z.string().describe("The policy question or topic to look up."),
       }),
-      execute: gated(caller, "handbook:read", async ({ query }) => {
+      execute: withPermission(caller, "handbook:read", async ({ query }) => {
         try {
           const results = await searchHandbook(query, 4);
           return { query, results };
@@ -84,7 +84,7 @@ export function buildHrTools(caller: ToolCaller) {
           .optional()
           .describe("Optional case-insensitive substring to filter by."),
       }),
-      execute: gated(caller, "directory:read:self", async ({ filter }) => {
+      execute: withPermission(caller, "directory:read:self", async ({ filter }) => {
         let people = await getDirectory(caller);
         if (filter) {
           const f = filter.toLowerCase();
@@ -102,7 +102,7 @@ export function buildHrTools(caller: ToolCaller) {
     getLeaveBalance: tool({
       description: "Get the current user's remaining time-off balances.",
       inputSchema: z.object({}),
-      execute: gated(caller, "leave:read:self", async () => {
+      execute: withPermission(caller, "leave:read:self", async () => {
         if (!caller.employeeId) return { balances: [] };
         const balances = await getLeaveBalances(caller.employeeId);
         return { balances };
@@ -119,7 +119,7 @@ export function buildHrTools(caller: ToolCaller) {
         endDate: z.string().describe("End date, YYYY-MM-DD"),
         reason: z.string().optional(),
       }),
-      execute: gated(
+      execute: withPermission(
         caller,
         "leave:request",
         async ({ type, startDate, endDate, reason }) => {
@@ -157,7 +157,7 @@ export function buildHrTools(caller: ToolCaller) {
       description:
         "List time-off requests awaiting the current user's approval (their reports, or everyone for HR/admins).",
       inputSchema: z.object({}),
-      execute: gated(caller, "leave:approve", async () => {
+      execute: withPermission(caller, "leave:approve", async () => {
         const pending = await getPendingApprovals(caller);
         return { count: pending.length, pending };
       }),
@@ -171,7 +171,7 @@ export function buildHrTools(caller: ToolCaller) {
         requestId: z.string(),
         decision: z.enum(["APPROVE", "REJECT"]),
       }),
-      execute: gated(caller, "leave:approve", async ({ requestId, decision }) => {
+      execute: withPermission(caller, "leave:approve", async ({ requestId, decision }) => {
         const req = await prisma.leaveRequest.findUnique({
           where: { id: requestId },
           include: { employee: { include: { user: { select: { name: true } } } } },
