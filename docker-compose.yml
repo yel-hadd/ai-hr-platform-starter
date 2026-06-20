@@ -44,8 +44,8 @@ services:
       - .:/app
       - /app/node_modules
       - /app/.next
-    # Sync schema, seed (idempotent), then run the dev server.
-    command: sh -c "npx prisma db push --accept-data-loss && npx prisma db seed && npm run dev"
+    # Apply migrations, seed (idempotent), then run the dev server.
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm run dev"
 
 volumes:
   db-data:

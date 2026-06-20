@@ -51,7 +51,8 @@ docker compose up --build     # db + adminer + app
 ```
 
 That single command starts **Postgres (pgvector)**, **Adminer** (DB UI on `:8080`), and the **app**.
-On first boot the app pushes the Prisma schema and seeds demo data automatically.
+On first boot the app runs the Prisma migrations and seeds demo data automatically
+(`prisma migrate deploy && prisma db seed`).
 
 ### Keys (`.env`)
 
@@ -66,9 +67,13 @@ On first boot the app pushes the Prisma schema and seeds demo data automatically
 ```bash
 npm install
 docker compose up -d db        # just Postgres
-npm run db:push && npm run db:seed
+npm run db:deploy && npm run db:seed   # apply migrations, then seed
 npm run dev
 ```
+
+Schema changes go through Prisma migrations: edit `schema.prisma`, run
+`npm run db:migrate` (creates a new migration), commit the generated SQL.
+`npm run db:reset` rebuilds the dev DB from scratch (migrations + seed).
 
 ### Demo logins (password `password123`)
 
@@ -237,9 +242,10 @@ flowchart LR
 ```
 
 Vectors are stored as pgvector **`halfvec(384)`** (16-bit floats — half the size of `vector`) and
-queried with the cosine operator `<=>`, accelerated by an **HNSW** index. The embedding model
-(default `all-MiniLM-L6-v2`) is swappable in `lib/ai/embeddings.ts` — just keep the `halfvec(N)`
-size in `schema.prisma` in sync. See `lib/rag.ts` and the index created in `prisma/seed.ts`.
+queried with the cosine operator `<=>`, accelerated by an **HNSW** index. The extension, column,
+and index are all created in the Prisma migration (`prisma/migrations/0_init`). The embedding model
+is env-selectable (`EMBEDDING_MODEL`); any other 384-dim model is a drop-in, while a different
+dimension needs a migration to ALTER the column. See `lib/rag.ts` and `lib/ai/embeddings.ts`.
 
 ---
 
@@ -252,7 +258,8 @@ hr-boilerplate/
 ├─ docker/db-init/             # CREATE EXTENSION vector on first boot
 ├─ prisma/
 │  ├─ schema.prisma            # User, Employee, Leave*, HandbookChunk(halfvec)
-│  ├─ seed.ts                  # demo people + embedded handbook + HNSW index
+│  ├─ migrations/0_init/       # extension + tables + halfvec column + HNSW index
+│  ├─ seed.ts                  # data only: demo people + embedded handbook
 │  └─ handbook.ts              # the RAG corpus (plain text)
 ├─ src/
 │  ├─ app/

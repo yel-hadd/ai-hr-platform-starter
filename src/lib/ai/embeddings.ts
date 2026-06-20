@@ -1,15 +1,15 @@
 // RAG embeddings via OpenRouter's OpenAI-compatible /embeddings endpoint.
 //
-// MODEL and EMBEDDING_DIMENSIONS are paired and MUST be changed together — the
-// dimension also drives the `halfvec(N)` column (prisma/seed.ts enforces it).
-// To switch models, edit BOTH constants below, then `npm run db:seed` (the seed
-// migrates the column + re-embeds). Options (model -> dimension):
-//   sentence-transformers/all-minilm-l6-v2    -> 384   ~free, lightweight (default)
-//   baai/bge-base-en-v1.5                     -> 768   ~free, stronger English
-//   baai/bge-m3                               -> 1024  ~free, multilingual
-//   nvidia/llama-nemotron-embed-vl-1b-v2:free -> 2048  $0 free tier
-//   openai/text-embedding-3-small             -> 1536  highest quality, ~$0.02/1M
-const MODEL = "sentence-transformers/all-minilm-l6-v2";
+// The model is env-selectable (EMBEDDING_MODEL). The DIMENSION, however, is part
+// of the database schema — the `halfvec(384)` column lives in a Prisma migration.
+// So you can freely swap to any other 384-dim model via env; to use a model with
+// a DIFFERENT dimension, add a migration that ALTERs the column + rebuilds the
+// HNSW index, then update EMBEDDING_DIMENSIONS. The runtime check in embed()
+// fails loudly if the selected model's output width doesn't match the column.
+//
+// Dimensions for reference: all-minilm-l6-v2 / paraphrase-minilm-l6-v2 = 384,
+// bge-base-en-v1.5 = 768, bge-m3 = 1024, text-embedding-3-small = 1536.
+const MODEL = process.env.EMBEDDING_MODEL ?? "sentence-transformers/all-minilm-l6-v2";
 export const EMBEDDING_DIMENSIONS = 384;
 
 type EmbeddingResponse = {
@@ -47,7 +47,8 @@ async function embed(input: string[]): Promise<number[][]> {
     if (!Array.isArray(v) || v.length !== EMBEDDING_DIMENSIONS) {
       throw new Error(
         `Embedding dimension mismatch: model "${MODEL}" returned ${v?.length} dims, ` +
-          `expected ${EMBEDDING_DIMENSIONS}. Update MODEL/EMBEDDING_DIMENSIONS together.`,
+          `but the DB column is halfvec(${EMBEDDING_DIMENSIONS}). Pick a ${EMBEDDING_DIMENSIONS}-dim ` +
+          `model, or add a migration to change the column + update EMBEDDING_DIMENSIONS.`,
       );
     }
   }
