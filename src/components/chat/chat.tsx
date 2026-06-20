@@ -1,0 +1,147 @@
+"use client";
+
+import { useRef, useEffect, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { ArrowUp, Square, Bot } from "lucide-react";
+import { CHAT_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
+import { ROLE_LABELS, type Role } from "@/lib/rbac";
+import { ChatMessage } from "./message";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const SUGGESTIONS = [
+  "What is our parental leave policy?",
+  "How many vacation days do I have left?",
+  "Show me the team directory",
+  "Show me my latest payslip",
+];
+
+export function Chat({ user }: { user: { name: string; role: Role } }) {
+  const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
+  const [input, setInput] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { messages, sendMessage, status, stop, error } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+  });
+
+  const busy = status === "submitted" || status === "streaming";
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages, status]);
+
+  function submit(text: string) {
+    const value = text.trim();
+    if (!value || busy) return;
+    sendMessage({ text: value }, { body: { modelId } });
+    setInput("");
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Model selector */}
+      <div className="flex items-center justify-between gap-2 border-b px-8 py-3">
+        <div className="flex items-center gap-2 text-sm">
+          <Bot className="size-4 text-primary" />
+          <span className="font-medium">AI Assistant</span>
+          <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
+        </div>
+        <Select value={modelId} onValueChange={(v) => v && setModelId(v)}>
+          <SelectTrigger className="w-[220px]" size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CHAT_MODELS.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.label} · {m.provider}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl space-y-6 px-6 py-6">
+          {messages.length === 0 && (
+            <div className="space-y-4 pt-10 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10">
+                <Bot className="size-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">How can I help, {user.name.split(" ")[0]}?</h2>
+                <p className="text-sm text-muted-foreground">
+                  Ask about policies, your time off, the directory, or payslips.
+                </p>
+              </div>
+              <div className="mx-auto grid max-w-md gap-2 sm:grid-cols-2">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => submit(s)}
+                    className="rounded-lg border bg-card p-3 text-left text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {messages.map((m, i) => (
+            <ChatMessage
+              key={m.id}
+              message={m}
+              streaming={busy && i === messages.length - 1}
+            />
+          ))}
+
+          {error && (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              Something went wrong. Check that the provider API key is set in your
+              environment.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Composer */}
+      <div className="border-t p-4">
+        <div className="mx-auto flex max-w-3xl items-end gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit(input);
+              }
+            }}
+            placeholder="Ask anything… (Shift+Enter for newline)"
+            rows={1}
+            className="max-h-40 min-h-[44px] resize-none"
+          />
+          {busy ? (
+            <Button size="icon" variant="secondary" onClick={() => stop()}>
+              <Square className="size-4" />
+            </Button>
+          ) : (
+            <Button size="icon" onClick={() => submit(input)} disabled={!input.trim()}>
+              <ArrowUp className="size-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
