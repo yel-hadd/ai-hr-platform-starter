@@ -102,14 +102,10 @@ async function seedHandbook() {
     return;
   }
 
-  const hasKey =
-    !!process.env.OPENROUTER_API_KEY ||
-    !!process.env.OPENAI_API_KEY ||
-    !!process.env.AI_GATEWAY_API_KEY;
-  if (!hasKey) {
+  if (!process.env.OPENROUTER_API_KEY) {
     console.warn(
-      "⚠ No embedding API key (OPENROUTER_API_KEY / OPENAI_API_KEY / AI_GATEWAY_API_KEY). " +
-        "Skipping handbook embedding — RAG will return no results until you add a key and re-seed.",
+      "⚠ No OPENROUTER_API_KEY — skipping handbook embedding. " +
+        "RAG will return no results until you add the key and re-seed.",
     );
     return;
   }

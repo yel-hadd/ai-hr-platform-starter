@@ -1,5 +1,5 @@
 // Retrieval over the employee handbook using pgvector cosine distance (`<=>`)
-// on the halfvec(1536) column, accelerated by the HNSW index built in seed.ts.
+// on the halfvec(384) column, accelerated by the HNSW index built in seed.ts.
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { embedText, toVectorLiteral } from "@/lib/ai/embeddings";

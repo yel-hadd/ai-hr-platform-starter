@@ -89,11 +89,11 @@ model LeaveRequest {
   createdAt  DateTime    @default(now())
 }
 
-/// Employee-handbook chunks for RAG. `embedding` is a pgvector halfvec(1536).
+/// Employee-handbook chunks for RAG. `embedding` is a pgvector halfvec(384).
 model HandbookChunk {
   id        String                       @id @default(cuid())
   section   String
   content   String
-  embedding Unsupported("halfvec(1536)")?
+  embedding Unsupported("halfvec(384)")?
   createdAt DateTime                      @default(now())
 }

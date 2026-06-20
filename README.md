@@ -57,10 +57,9 @@ On first boot the app pushes the Prisma schema and seeds demo data automatically
 
 | Variable | Needed for | Notes |
 |---|---|---|
-| `OPENROUTER_API_KEY` | Chat **and** RAG embeddings | Free at [openrouter.ai/keys](https://openrouter.ai/keys). Default chat models are `:free`; embeddings (`text-embedding-3-small`) are billed but pennies. This one key powers the whole demo. |
+| `OPENROUTER_API_KEY` | Chat **and** RAG embeddings | Free at [openrouter.ai/keys](https://openrouter.ai/keys). Chat uses `:free` models; embeddings use a free lightweight model (`all-MiniLM-L6-v2`, 384d). **This one key powers the whole demo.** |
 | `AUTH_SECRET` | Sessions | `npx auth secret` to generate. |
-| `AI_GATEWAY_API_KEY` | Optional | Enables the Vercel AI Gateway models in the picker (and as an embedding provider). |
-| `OPENAI_API_KEY` | Optional | Only if you set `EMBEDDING_PROVIDER="openai"`. |
+| `AI_GATEWAY_API_KEY` | Optional | Enables the Vercel AI Gateway models in the chat picker. |
 
 ### Run locally without Docker
 
@@ -214,7 +213,7 @@ erDiagram
         string id PK
         string section
         string content
-        halfvec embedding "1536-dim, HNSW"
+        halfvec embedding "384-dim, HNSW"
     }
 ```
 
@@ -237,9 +236,10 @@ flowchart LR
     end
 ```
 
-Vectors are stored as pgvector **`halfvec(1536)`** (16-bit floats — half the size of `vector`) and
-queried with the cosine operator `<=>`, accelerated by an **HNSW** index. See `lib/rag.ts` and the
-index created in `prisma/seed.ts`.
+Vectors are stored as pgvector **`halfvec(384)`** (16-bit floats — half the size of `vector`) and
+queried with the cosine operator `<=>`, accelerated by an **HNSW** index. The embedding model
+(default `all-MiniLM-L6-v2`) is swappable in `lib/ai/embeddings.ts` — just keep the `halfvec(N)`
+size in `schema.prisma` in sync. See `lib/rag.ts` and the index created in `prisma/seed.ts`.
 
 ---
 
@@ -278,7 +278,7 @@ hr-boilerplate/
 │     └─ ai/
 │        ├─ providers.ts       # model registry (OpenRouter default + Gateway)
 │        ├─ tools.ts           # RBAC-gated HR tools  [core]
-│        └─ embeddings.ts      # cloud embeddings (OpenRouter default / OpenAI / Gateway)
+│        └─ embeddings.ts      # embeddings via OpenRouter (all-MiniLM-L6-v2, swappable)
 └─ tests/                      # vitest: RBAC + tool integration + live LLM
 ```
 
