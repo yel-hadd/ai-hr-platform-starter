@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -26,7 +27,9 @@ const components: Components = {
     </a>
   ),
   code: ({ className, children }) => {
-    const isBlock = className?.includes("language-");
+    // A fenced block may have no language info-string (className undefined);
+    // treat multi-line content as a block too.
+    const isBlock = !!className?.includes("language-") || /\n/.test(String(children));
     if (isBlock) {
       return (
         <code className="block overflow-x-auto rounded-md bg-background/70 p-2 font-mono text-xs">
@@ -56,10 +59,12 @@ const components: Components = {
   hr: () => <hr className="my-2" />,
 };
 
-export function Markdown({ children }: { children: string }) {
+// Memoized on `children`: completed messages don't re-run the full
+// remark/micromark parse when a new token arrives for the streaming message.
+export const Markdown = memo(function Markdown({ children }: { children: string }) {
   return (
     <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
       {children}
     </ReactMarkdown>
   );
-}
+});

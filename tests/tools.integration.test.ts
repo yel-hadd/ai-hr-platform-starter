@@ -64,14 +64,14 @@ describe("getPayslip — self vs anyone", () => {
 
   it("employee is DENIED viewing someone else's payslip", async () => {
     const tools = buildHrTools(callers.employee);
-    const out = await call(tools.getPayslip, { employeeName: "Marcus" });
+    const out = await call(tools.getPayslip, { employeeId: callers.manager.employeeId });
     expect(out.denied).toBe(true);
     expect(out.permission).toBe("payslip:read:any");
   });
 
-  it("HR can view anyone's payslip", async () => {
+  it("HR can view anyone's payslip by id", async () => {
     const tools = buildHrTools(callers.hr);
-    const out = await call(tools.getPayslip, { employeeName: "Erin" });
+    const out = await call(tools.getPayslip, { employeeId: callers.employee.employeeId });
     expect(out.payslip?.employeeName).toContain("Erin");
   });
 });
@@ -114,7 +114,7 @@ describe("tool input schemas — tolerant of model quirks", () => {
   it("accepts null for optional fields (not just undefined)", () => {
     const tools = buildHrTools(callers.employee);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(() => (tools.getPayslip as any).inputSchema.parse({ employeeName: null })).not.toThrow();
+    expect(() => (tools.getPayslip as any).inputSchema.parse({ employeeId: null })).not.toThrow();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(() => (tools.getEmployeeDirectory as any).inputSchema.parse({ filter: null })).not.toThrow();
   });
@@ -133,5 +133,39 @@ describe("requestTimeOff — write path", () => {
 
     // Cleanup so re-runs stay deterministic.
     await prisma.leaveRequest.delete({ where: { id: out.request.id } });
+  });
+
+  it("rejects reversed or malformed dates instead of silently recording 1 day", async () => {
+    const tools = buildHrTools(callers.employee);
+    const reversed = await call(tools.requestTimeOff, {
+      type: "VACATION",
+      startDate: "2026-09-05",
+      endDate: "2026-09-01",
+    });
+    expect(reversed.error).toMatch(/on or after/i);
+    expect(reversed.request).toBeUndefined();
+
+    const malformed = await call(tools.requestTimeOff, {
+      type: "VACATION",
+      startDate: "next monday",
+      endDate: "2026-09-01",
+    });
+    expect(malformed.error).toMatch(/YYYY-MM-DD/);
+  });
+});
+
+describe("approveLeave — only acts on PENDING", () => {
+  it("refuses to re-process an already-decided request (no double deduction)", async () => {
+    const decided = await prisma.leaveRequest.findFirst({
+      where: { status: "APPROVED" },
+    });
+    expect(decided).not.toBeNull();
+    const tools = buildHrTools(callers.hr); // company-wide approver
+    const out = await call(tools.approveLeave, {
+      requestId: decided!.id,
+      decision: "APPROVE",
+    });
+    expect(out.error).toMatch(/already approved/i);
+    expect(out.result).toBeUndefined();
   });
 });

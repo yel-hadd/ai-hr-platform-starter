@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import { PrismaClient, type Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { embedTexts, toVectorLiteral } from "../src/lib/ai/embeddings";
+import { embedTexts, toVectorLiteral, EMBEDDING_DIMENSIONS } from "../src/lib/ai/embeddings";
 import { HANDBOOK } from "./handbook";
 
 const prisma = new PrismaClient();
@@ -90,7 +90,31 @@ async function seedPeople() {
   console.log(`• Seeded ${PEOPLE.length} people (4 demo logins).`);
 }
 
+// `prisma db push` can't diff the dimension inside Unsupported("halfvec(N)"),
+// so the seed owns it: if the live column width doesn't match the current model,
+// drop the index, clear stale vectors, and ALTER it. This makes `db:seed` the
+// single, self-correcting source of truth for the embedding dimension.
+async function ensureEmbeddingColumn() {
+  const rows = await prisma.$queryRawUnsafe<{ t: string }[]>(
+    `SELECT format_type(atttypid, atttypmod) AS t
+     FROM pg_attribute
+     WHERE attrelid = '"HandbookChunk"'::regclass AND attname = 'embedding'`,
+  );
+  const current = rows[0]?.t; // e.g. "halfvec(384)"
+  const want = `halfvec(${EMBEDDING_DIMENSIONS})`;
+  if (current && current !== want) {
+    console.log(`• Embedding column is ${current}, migrating to ${want}…`);
+    await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS handbook_embedding_idx`);
+    await prisma.$executeRawUnsafe(`TRUNCATE "HandbookChunk"`);
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "HandbookChunk" ALTER COLUMN embedding TYPE ${want}`,
+    );
+  }
+}
+
 async function seedHandbook() {
+  await ensureEmbeddingColumn();
+
   // HNSW index for fast cosine search over the halfvec column.
   await prisma.$executeRawUnsafe(
     `CREATE INDEX IF NOT EXISTS handbook_embedding_idx
@@ -115,17 +139,23 @@ async function seedHandbook() {
     HANDBOOK.map((h) => `${h.section}\n${h.content}`),
   );
 
-  for (let i = 0; i < HANDBOOK.length; i++) {
-    const chunk = await prisma.handbookChunk.create({
-      data: { section: HANDBOOK[i].section, content: HANDBOOK[i].content },
-    });
-    const literal = toVectorLiteral(vectors[i]);
-    await prisma.$executeRawUnsafe(
-      `UPDATE "HandbookChunk" SET embedding = $1::halfvec WHERE id = $2`,
-      literal,
-      chunk.id,
-    );
-  }
+  // Atomic: a mid-loop failure rolls back so a retry re-embeds cleanly instead
+  // of leaving a partial corpus that the count() guard above would skip forever.
+  await prisma.$transaction(
+    async (tx) => {
+      for (let i = 0; i < HANDBOOK.length; i++) {
+        const chunk = await tx.handbookChunk.create({
+          data: { section: HANDBOOK[i].section, content: HANDBOOK[i].content },
+        });
+        await tx.$executeRawUnsafe(
+          `UPDATE "HandbookChunk" SET embedding = $1::halfvec WHERE id = $2`,
+          toVectorLiteral(vectors[i]),
+          chunk.id,
+        );
+      }
+    },
+    { timeout: 20_000 },
+  );
   console.log("• Handbook embedded.");
 }
 

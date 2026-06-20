@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { UIMessage } from "ai";
 import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
@@ -7,7 +8,9 @@ import { Reasoning } from "./reasoning";
 import { ToolCall } from "./tool-call";
 import { Markdown } from "./markdown";
 
-export function ChatMessage({
+// Memoized so streaming a token into the last message doesn't re-render (and
+// re-parse the markdown of) every prior message in the conversation.
+export const ChatMessage = memo(function ChatMessage({
   message,
   streaming,
 }: {
@@ -75,4 +78,4 @@ export function ChatMessage({
       </div>
     </div>
   );
-}
+});

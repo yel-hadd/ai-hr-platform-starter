@@ -53,9 +53,24 @@ function ciEnum<const T extends [string, ...string[]]>(values: T) {
   );
 }
 
-function daysBetween(start: string, end: string): number {
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  return Math.max(1, Math.round(ms / 86_400_000) + 1);
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Inclusive day count, or an error string if the range is malformed/reversed —
+// so a model passing a non-date or swapped dates fails loudly instead of
+// silently recording a 1-day request.
+function leaveDays(start: string, end: string): number | { error: string } {
+  if (!ISO_DATE.test(start) || !ISO_DATE.test(end)) {
+    return { error: "Dates must be YYYY-MM-DD." };
+  }
+  const startMs = Date.parse(`${start}T00:00:00Z`);
+  const endMs = Date.parse(`${end}T00:00:00Z`);
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+    return { error: "Invalid calendar date." };
+  }
+  if (endMs < startMs) {
+    return { error: "End date must be on or after the start date." };
+  }
+  return Math.round((endMs - startMs) / 86_400_000) + 1;
 }
 
 export function buildHrTools(caller: ToolCaller) {
@@ -134,7 +149,8 @@ export function buildHrTools(caller: ToolCaller) {
         async ({ type, startDate, endDate, reason }) => {
           if (!caller.employeeId)
             return { error: "No employee profile linked to this account." };
-          const days = daysBetween(startDate, endDate);
+          const days = leaveDays(startDate, endDate);
+          if (typeof days !== "number") return days; // { error }
           const created = await prisma.leaveRequest.create({
             data: {
               employeeId: caller.employeeId,
@@ -193,6 +209,14 @@ export function buildHrTools(caller: ToolCaller) {
           return deny("leave:approve");
         }
 
+        // Only act on PENDING requests — re-approving would double-deduct the
+        // balance, and reverting an APPROVED request would need a refund path.
+        if (req.status !== "PENDING") {
+          return {
+            error: `Request is already ${req.status.toLowerCase()} and can't be changed.`,
+          };
+        }
+
         const status = decision === "APPROVE" ? "APPROVED" : "REJECTED";
         await prisma.leaveRequest.update({
           where: { id: requestId },
@@ -222,32 +246,26 @@ export function buildHrTools(caller: ToolCaller) {
     // ── Payslip (self vs anyone) ────────────────────────────────────────
     getPayslip: tool({
       description:
-        "Get a payslip summary. Without a name, returns the current user's. Viewing someone else's requires elevated permissions.",
+        "Get a payslip summary. Omit employeeId for your own. To view someone else's (requires elevated permissions), first call getEmployeeDirectory to get their employeeId.",
       inputSchema: z.object({
-        employeeName: z
+        employeeId: z
           .string()
           .nullish()
-          .describe("Whose payslip — omit for your own."),
+          .describe("Employee id from getEmployeeDirectory — omit for your own."),
       }),
-      execute: async ({ employeeName }) => {
-        const wantsOther =
-          !!employeeName &&
-          employeeName.trim().toLowerCase() !== caller.name.toLowerCase();
+      execute: async ({ employeeId }) => {
+        // Resolve by stable id, never by name — predictable and unambiguous.
+        const wantsOther = !!employeeId && employeeId !== caller.employeeId;
         const perm: Permission = wantsOther ? "payslip:read:any" : "payslip:read:self";
         if (!can(caller.role, perm)) return deny(perm);
 
-        const target = wantsOther
-          ? await prisma.employee.findFirst({
-              where: { user: { name: { contains: employeeName!, mode: "insensitive" } } },
-              include: { user: { select: { name: true } } },
-            })
-          : caller.employeeId
-            ? await prisma.employee.findUnique({
-                where: { id: caller.employeeId },
-                include: { user: { select: { name: true } } },
-              })
-            : null;
+        const targetId = wantsOther ? employeeId! : caller.employeeId;
+        if (!targetId) return { error: "No employee profile linked to this account." };
 
+        const target = await prisma.employee.findUnique({
+          where: { id: targetId },
+          include: { user: { select: { name: true } } },
+        });
         if (!target) return { error: "Employee not found." };
 
         const monthlyGross = Math.round(target.salary / 12);
