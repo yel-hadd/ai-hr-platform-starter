@@ -70,12 +70,30 @@ On first boot the app runs the Prisma migrations and seeds demo data automatical
 
 ### Run locally without Docker
 
+**Node version:** this project is standardized on **Node 22 LTS** (the same major as the
+`node:22-alpine` Docker image). The target is pinned in [`.nvmrc`](.nvmrc) and enforced via
+`package.json#engines` + [`.npmrc`](.npmrc) (`engine-strict=true`), so `npm install` fails fast
+on an unsupported version.
+
 ```bash
+# 1. Use the project's Node version (with nvm / nvm-windows / fnm)
+nvm install        # reads .nvmrc → installs Node 22
+nvm use            # switches the current shell to Node 22
+
+# 2. Verify you're on the right version
+node --version     # → v22.x.x   (must be 22, not 20/24)
+npm --version      # → 10.x or 11.x
+
+# 3. Install & run
 npm install
 docker compose up -d db        # just Postgres
 npm run db:deploy && npm run db:seed   # apply migrations, then seed
 npm run dev
 ```
+
+> Don't have nvm? Install Node 22 LTS directly from [nodejs.org](https://nodejs.org/) (pick the
+> "LTS" download). On Windows, [nvm-windows](https://github.com/coreybutler/nvm-windows) or
+> [fnm](https://github.com/Schniz/fnm) both read `.nvmrc`.
 
 Schema changes go through Prisma migrations: edit `schema.prisma`, run
 `npm run db:migrate` (creates a new migration), commit the generated SQL.
