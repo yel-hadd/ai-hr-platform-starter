@@ -18,6 +18,8 @@
     "db:studio": "prisma studio",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "test:all": "vitest run && vitest run --config vitest.live.config.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

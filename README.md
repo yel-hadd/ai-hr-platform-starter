@@ -182,6 +182,9 @@ If a tool the role isn't allowed to use is invoked, `withPermission` returns
 card and the model explains it. Defense in depth: the model is *told* the role's permissions in
 the system prompt, **and** the server enforces them regardless.
 
+> **Deep dive:** [Authorized AI chat — full sequence diagram](docs/architecture/authorized-ai-chat-sequence.md)
+> (auth gate, permission branches, RAG sub-flow, multi-step loop).
+
 ### Role-based access control
 
 One matrix, three enforcement points. Defined once in `lib/rbac.ts`:
@@ -271,6 +274,9 @@ and index are all created in the Prisma migration (`prisma/migrations/0_init`). 
 is env-selectable (`EMBEDDING_MODEL`); any other 384-dim model is a drop-in, while a different
 dimension needs a migration to ALTER the column. See `lib/rag.ts` and `lib/ai/embeddings.ts`.
 
+> **Deep dive:** [HR handbook RAG — architecture](docs/architecture/hr-rag-architecture.md)
+> (indexing vs. retrieval pipelines, `halfvec`/HNSW choices, changing the embedding model).
+
 ---
 
 ## Project structure
@@ -345,18 +351,35 @@ This starter models the patterns a real HR app needs:
 
 ## Testing
 
+Tests are split in two so `npm test` is **deterministic** — it never touches the network, so it
+can't flake on model output or rate limits. The live OpenRouter suites are opt-in.
+
 ```bash
-npm test          # vitest run (17 tests)
+npm test          # deterministic suite — no network / no API key (the CI default)
+npm run test:live # live suite — real OpenRouter calls (needs OPENROUTER_API_KEY)
+npm run test:all  # both
 ```
+
+**Deterministic suite (`npm test`)**
 
 - **`tests/rbac.test.ts`** — the permission matrix (nesting, role capabilities). Pure, no DB.
 - **`tests/tools.integration.test.ts`** — runs the real AI tools against a seeded Postgres and
   asserts role scoping (employee sees 1 person, manager 4, HR 6), salary redaction, and **denials**
   (employee blocked from others' payslips / approvals).
-- **`tests/openrouter.live.test.ts`** — a live OpenRouter call proving generation **and**
-  tool-calling work. Auto-skips when `OPENROUTER_API_KEY` is unset.
 
-The build (`npm run build`) typechecks the whole project.
+**Live suite (`npm run test:live` — files end in `*.live.test.ts`)**
+
+- **`tests/openrouter.live.test.ts`** — a live OpenRouter call proving generation **and**
+  tool-calling work.
+- **`tests/rag.live.test.ts`** — embeds a query via OpenRouter and runs the pgvector cosine
+  search over the seeded handbook.
+
+Each live suite self-skips when `OPENROUTER_API_KEY` is unset, so `npm run test:all` stays green
+in a keyless CI. The deterministic suite still needs a running Postgres (`DATABASE_URL`) for the
+integration tests. The build (`npm run build`) typechecks the whole project.
+
+CI (`.github/workflows/test.yml`) runs the deterministic suite on every push/PR against a
+`pgvector` service container — no secrets, no network calls, so it can't flake.
 
 ---
 

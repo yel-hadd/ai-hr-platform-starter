@@ -16,7 +16,8 @@ OpenRouter (chat + embeddings) · Postgres + pgvector (`halfvec` + HNSW) · Pris
 - `npm run dev` — app only (expects Postgres on `:5432`).
 - `npm run db:migrate` / `db:deploy` / `db:reset` — Prisma migrations (schema lives in migrations, **not** `db push`).
 - `npm run db:seed` — demo data (idempotent; won't re-embed if the handbook already exists — use `db:reset` after editing it).
-- `npm test` — vitest (RBAC unit, tool/RBAC integration, live LLM + RAG smoke).
+- `npm test` — vitest **deterministic** suite (RBAC unit + tool/RBAC integration); no network/keys (needs a running Postgres for the integration test).
+- `npm run test:live` / `test:all` — live OpenRouter + RAG smoke (`*.live.test.ts`, needs `OPENROUTER_API_KEY`) / both.
 
 ## Conventions / where things live
 - **Authorization is always server-side.** `lib/rbac.ts` is the single permission matrix; it gates
