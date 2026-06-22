@@ -8,9 +8,9 @@
 
 This is the detailed companion to the simplified *"What happens when you send a
 chat message"* diagram in the [README](../../README.md#what-happens-when-you-send-a-chat-message).
-It shows what the README leaves out: the `401` gate, how the role's permissions
-reach the system prompt, the permission-denied branch, the embeddings call inside
-RAG, and the multi-step tool loop.
+It shows what the README leaves out: the `401` gate, how the role's tools reach
+the system prompt, the per-role tool filtering, the out-of-scope refusal branch,
+the embeddings call inside RAG, and the multi-step tool loop.
 
 ## Participants
 
@@ -53,10 +53,10 @@ sequenceDiagram
         Auth-->>API: session { role, employeeId, name }
     end
 
-    Note over API: Build caller { role, employeeId, name }<br/>and inject the role's permissions<br/>(ROLE_PERMISSIONS + PERMISSION_LABELS)<br/>into the system prompt
-    API->>LLM: streamText(system, messages,<br/>tools = buildHrTools(caller),<br/>stopWhen = stepCountIs(5))
+    Note over API: Build caller { role, employeeId, name }.<br/>buildHrTools(caller) advertises ONLY this role's tools<br/>(TOOL_CATALOGUE); the same list is injected into the<br/>system prompt as the agent's capabilities.
+    API->>LLM: streamText(system, messages,<br/>tools = buildHrTools(caller),<br/>stopWhen = stepCountIs(8))
 
-    loop Agent loop (≤ 5 steps, until a final answer)
+    loop Agent loop (≤ 8 steps, until a final answer)
         opt Model emits reasoning tokens
             LLM-->>API: reasoning tokens
             API-->>UI: stream reasoning part (sendReasoning: true)
@@ -64,12 +64,12 @@ sequenceDiagram
         end
 
         alt Model calls a tool
-            LLM->>Tools: tool call<br/>(getLeaveBalance / searchHandbook / approveLeave / …)
-            Tools->>Tools: can(role, permission)?
+            LLM->>Tools: tool call<br/>(only tools this role was given)
+            Tools->>Tools: can(role, permission)? (defense in depth)
 
-            alt Permission denied
-                Tools-->>LLM: { denied: true, permission, reason }<br/>(no DB access)
-                API-->>UI: stream tool part → "Permission denied" card
+            alt Out-of-scope target (e.g. another's payslip, another team's request)
+                Tools-->>LLM: { error } (no DB access)
+                API-->>UI: stream tool part → neutral note (no "denied" card)
             else Granted — handbook tool (RAG)
                 Tools->>Emb: embed query (all-MiniLM-L6-v2, 384d)
                 Emb-->>Tools: query vector
@@ -133,15 +133,17 @@ loop continues — this is what enables **multi-step** chains (e.g. *check leave
 balance → submit request*). The `stepCountIs(5)` cap bounds the loop so a model
 can't spin indefinitely.
 
-### 5. Per-tool authorization
+### 5. Per-role tools + per-tool authorization
 
-Every tool's `execute` is wrapped by `withPermission(caller, permission, fn)`,
-which calls `can(role, permission)` **before** touching the database
-(`src/lib/ai/tools.ts`):
+The toolset is filtered up front: `buildHrTools(caller)` advertises **only** the
+tools the role may use (driven by `TOOL_CATALOGUE`), so an out-of-scope tool is
+never offered and the model can't attempt it. Each tool's `execute` still
+re-checks `can(role, permission)` **before** touching the database
+(`src/lib/ai/tools.ts`) as defense in depth:
 
-- **Denied** → returns a structured `{ denied: true, permission, reason }` with no
-  DB access; the UI renders a *"permission denied"* card (`generative/denied.tsx`)
-  and the model politely explains the limitation. Tools **fail closed**.
+- **Refused** (a target out of scope — someone else's payslip, another team's
+  request) → returns a plain `{ error }` with no DB access; the UI renders it as a
+  neutral note and the model relays it. Tools **fail closed** — no "denied" card.
 - **Granted — handbook (RAG)** → `searchHandbook` embeds the query via OpenRouter
   (`embedText`, 384-dim) and runs a pgvector cosine search; results stream into the
   **citations** widget. See the dedicated *HR Handbook RAG architecture*
@@ -185,9 +187,10 @@ role, because the **server** enforces the matrix regardless. This mirrors the
 | Case | Behavior |
 |---|---|
 | No session | `401 Unauthorized`; no model call. |
-| Tool not permitted for role | `{ denied: true }` (no DB hit) → denied card; model explains. |
+| Tool not permitted for role | Not advertised — `buildHrTools` never injects it, so the model can't call it. |
+| Target out of scope (other's payslip / another team's request) | `{ error }` (no DB hit) → neutral note; model relays it. |
 | Handbook search unavailable (missing embedding key / unseeded) | `searchHandbook` catches and returns `{ results: [], error }` so the turn degrades gracefully instead of throwing. |
-| Model loops on tools | Bounded by `stopWhen: stepCountIs(5)`. |
+| Model loops on tools | Bounded by `stopWhen: stepCountIs(8)`. |
 | Reasoning-only steps | Streamed to the "Thinking…" panel via `sendReasoning: true`. |
 
 ## Source map
@@ -196,7 +199,7 @@ role, because the **server** enforces the matrix regardless. This mirrors the
 |---|---|
 | Request handling, auth gate, system prompt, `streamText` | `src/app/api/chat/route.ts` |
 | Client stream consumption / UI | `src/components/chat/chat.tsx`, `message.tsx`, `reasoning.tsx`, `tool-call.tsx` |
-| Generative widgets | `src/components/chat/generative/{directory,leave,payslip,citations,denied}.tsx` |
+| Generative widgets | `src/components/chat/generative/{directory,leave,payslip,citations}.tsx` |
 | Tools + per-tool permission wrapper | `src/lib/ai/tools.ts` |
 | Permission matrix + `can()` | `src/lib/rbac.ts` |
 | Role-scoped data access + redaction | `src/lib/hr.ts` |

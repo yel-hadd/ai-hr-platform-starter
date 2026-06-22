@@ -7,19 +7,27 @@
 
 ## The trust boundary
 
-The single most important idea: **the system prompt is not a security control.**
-The model can be wrong, can hallucinate ids, and can be steered by a
-prompt-injection hidden in a handbook chunk or a user message. So nothing the
-model says or passes is trusted. The boundary is **the server-side code that runs
-between the model's tool call and the database** — `withPermission`, `can()`, and
-the role-scoped `lib/hr` layer. Everything in the prompt (role list, "don't
-invent ids", "confirm before writing") is there for *quality and efficiency*, not
-safety. You could delete every prompt guideline and no role could read data it
-shouldn't.
+Guardrails exist at **two levels**, and only one of them is the security
+boundary:
 
-This is why the demo's three scenarios (authorized / refusal / alert) all reduce
-to the same mechanism — the authorized/refusal/alert scenario doc (HARI-41) walks
-through them with concrete chat messages.
+- **Prompt level (guidance).** The agent is told *exactly* which tools it has for
+  its role, so it knows what it can and can't do and answers gracefully when asked
+  for something out of scope. This is for *quality* — it is **not** a security
+  control. The model can be wrong, hallucinate ids, or be steered by a
+  prompt-injection hidden in a handbook chunk.
+- **Code level (the boundary).** The server is what actually enforces access:
+  `buildHrTools` only injects the tools a role may use, `can()` re-checks before
+  every run, and the role-scoped `lib/hr` layer scopes every read. You could
+  delete every prompt guideline and no role could reach data it shouldn't.
+
+The two are kept in sync by construction: the prompt's capability list and the
+injected toolset are both derived from the same `TOOL_CATALOGUE`, so they can
+never disagree.
+
+A consequence worth stating plainly: **a correctly-configured role never hits a
+"permission denied".** Out-of-scope tools aren't offered, so they can't be called;
+the few target-scoped refusals (someone else's payslip, another team's request)
+return a plain `{ error }` the agent relays in prose. No red "denied" card.
 
 ## The two kinds of identifier
 
@@ -32,7 +40,7 @@ through them with concrete chat messages.
 (`{ role, employeeId, name }`) and captured by `buildHrTools(caller)`. A tool
 closure cannot see anything the session didn't put there.
 
-## The five invariants
+## The invariants
 
 1. **Identity from the session, never from the model.** Tools read
    `caller.employeeId`; they do not accept it as input. (`route.ts`, `tools.ts`)
@@ -41,12 +49,18 @@ closure cannot see anything the session didn't put there.
    `can()`) is the only source of "who may do what" — it gates the UI/sidebar,
    the dashboard pages, and the AI tools alike.
 
-3. **One role-scoped data layer.** All *reads* go through `lib/hr.ts`, used by
+3. **Tools are advertised per role — irrelevant tools are never injected.**
+   `buildHrTools(caller)` returns only the tools whose gating permission the role
+   holds, driven by `TOOL_CATALOGUE`. The model never sees an out-of-scope tool,
+   so it can't call, attempt, or be tricked into one. This is the primary
+   guardrail; the per-tool checks below are defense in depth.
+
+4. **One role-scoped data layer.** All *reads* go through `lib/hr.ts`, used by
    both the dashboard pages and the tools, so the chatbot can never return more
    than the UI would for that role. `directoryWhere(caller)` is the single
    "who can this caller see" predicate, shared by `getDirectory` and `getPayslip`.
 
-4. **Every model-supplied id is authorized server-side.** A `requestId` or target
+5. **Every model-supplied id is authorized server-side.** A `requestId` or target
    `employeeId` from the model is validated against the caller's scope before any
    data is returned:
    - `getPayslip` resolves the target with one query that ANDs the id with
@@ -56,19 +70,24 @@ closure cannot see anything the session didn't put there.
      non-report's request even though they hold `leave:approve`.
    Both are locked by tests in `tests/tools.integration.test.ts`.
 
-5. **Fail closed, and silently.** There is no free-form / SQL / fetch tool to
-   escalate through. On denial a tool returns `{ denied: true }` and touches no
-   data. There is no "alert" side channel — deny *is* the alert.
+6. **Fail closed, and quietly.** There is no free-form / SQL / fetch tool to
+   escalate through. A correctly-configured role never hits a denial (invariant
+   #3); the residual target-scoped refusals return a plain `{ error }` the agent
+   relays — never a throw, never a "permission denied" card, no data touched.
+   There is no "alert" side channel — refusing *is* the alert.
 
 ## Checklist — adding a new AI tool
 
-When you add a tool to `buildHrTools`, verify each line:
+When you add a tool, verify each line:
 
+- [ ] **Add a `TOOL_CATALOGUE` row** with the permission that gates advertising it.
+      That alone makes it appear only for roles that hold the permission — the
+      prompt's capability list and the injected toolset both update automatically.
 - [ ] **Identity is not an input.** If the tool acts on "the current user", read
       `caller.employeeId`; do not add an `employeeId` parameter for self-actions.
-- [ ] **It declares a permission** and is gated by `withPermission(caller, perm, …)`
-      — or, if it needs per-target logic (like self-vs-any), it checks `can()`
-      inline *before* any query and returns `deny(perm)` on failure.
+- [ ] **Re-check the permission before running** (defense in depth): wrap with
+      `withPermission(caller, perm, …)`, or for per-target logic (self-vs-any)
+      check `can()` inline *before* any query.
 - [ ] **Reads go through `lib/hr.ts`.** Don't query `prisma` directly for reads in
       the tool; add or reuse a role-scoped helper so the UI and the tool share one
       scoping implementation. (Writes may live in the tool, but still re-check the
@@ -76,10 +95,11 @@ When you add a tool to `buildHrTools`, verify each line:
 - [ ] **Any id argument is authorized against the caller's scope** before
       returning data — never trust that the model "got it from a prior tool".
       Resolve it through `directoryWhere(caller)` or an equivalent scoped query.
-- [ ] **Denials return `{ denied: true }`**, never throw, so the UI renders a card
-      and the model can explain instead of retrying.
-- [ ] **Add a test** for the deny path and (if it takes an id) the
-      out-of-scope-id path.
+- [ ] **Refusals return a plain `{ error: string }`**, never throw and never
+      `{ denied: true }` — so it surfaces as a neutral note the agent relays, not
+      a card.
+- [ ] **Add tests** for per-role exposure (the tool is/ isn't offered) and, if it
+      takes an id, the out-of-scope-id path.
 
 ## What is intentionally *not* here
 
@@ -90,6 +110,6 @@ When you add a tool to `buildHrTools`, verify each line:
   would add machinery without closing a real hole in a starter. If this graduates
   to production with untrusted tenants, that's the first upgrade to make — it
   slots in at the tool boundary and the `lib/hr` resolution step.
-- **Audit logging / real alerting.** Denials are silent today. If added, the
+- **Audit logging / real alerting.** Refusals are silent today. If added, the
   single choke point is `withPermission` (and the inline checks in `getPayslip` /
-  `approveLeave`) — every denial already passes through there.
+  `approveLeave`) — every refusal already passes through there.

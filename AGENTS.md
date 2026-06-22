@@ -24,8 +24,11 @@ OpenRouter (chat + embeddings) · Postgres + pgvector (`halfvec` + HNSW) · Pris
   the UI (`sidebar.tsx`, pages), the data layer, and the AI tools. Never trust a client-supplied role.
 - **`lib/hr.ts` is the one role-scoped data layer** — both dashboard pages and AI tools call it, so
   the chatbot can never read more than the UI would show for that role.
-- **AI tools** (`lib/ai/tools.ts`) wrap `execute` with `withPermission(...)`; on denial they return
-  `{ denied: true }` (rendered as a card) instead of throwing.
+- **AI tools** (`lib/ai/tools.ts`) are advertised **per role**: `buildHrTools(caller)` injects only
+  the tools whose permission the role holds (via `TOOL_CATALOGUE`), so out-of-scope tools never reach
+  the model. Per-tool `withPermission(...)` checks remain as defense in depth; any refusal returns a
+  plain `{ error }` (relayed by the agent), never a throw or a "denied" card. See
+  `docs/architecture/authorization-invariants.md`.
 - **Embeddings** (`lib/ai/embeddings.ts`): model is env-selectable (`EMBEDDING_MODEL`) but the
   dimension is fixed by the migration (`halfvec(384)`). Changing the dimension = a new migration +
   updating `EMBEDDING_DIMENSIONS`; a mismatch fails loudly at runtime.

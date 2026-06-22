@@ -33,8 +33,9 @@ end-to-end, yet every piece is independently swappable and production-grade.
 ## What it demonstrates
 
 - **RBAC everywhere** — one permission matrix gates the **UI**, **server data access**, and **AI tools**.
+- **Per-role tool catalogue** — the assistant is only given the tools its role can use; out-of-scope tools are never injected, so it knows exactly what it can and can't do.
 - **Thinking UI** — the model's reasoning streams into a collapsible panel.
-- **Tool-call UI** — every tool call is shown live (running → result), including **permission denials**.
+- **Tool-call UI** — every tool call is shown live (running → result), with rich result cards.
 - **Generative UI** — tool results render as React components (employee cards, leave widgets, payslips), not walls of text.
 - **RAG with citations** — vector search over an employee handbook; answers cite their sources.
 - **Multi-step** — the assistant chains tools (e.g. *check balance → submit request*).
@@ -159,10 +160,12 @@ sequenceDiagram
     R-->>C: stream text → message bubble
 ```
 
-If a tool the role isn't allowed to use is invoked, `withPermission` returns
-`{ denied: true }` instead of touching the database — the UI renders a **“permission denied”**
-card and the model explains it. Defense in depth: the model is *told* the role's permissions in
-the system prompt, **and** the server enforces them regardless.
+The assistant is only given the tools its role can use — `buildHrTools` advertises
+the subset of the catalogue the role is permitted, so an out-of-scope tool is never even injected and
+the model can't attempt it. Defense in depth: the model is *told* its exact capabilities in the system
+prompt, **and** the server still re-checks every call and scopes every read regardless. The few
+target-scoped refusals (someone else's payslip, another team's request) return a plain `{ error }` the
+assistant relays — there's no "permission denied" card.
 
 > **Deep dive:** [Authorized AI chat — full sequence diagram](docs/architecture/authorized-ai-chat-sequence.md)
 > (auth gate, permission branches, RAG sub-flow, multi-step loop).
@@ -312,8 +315,9 @@ This starter models the patterns a real HR app needs:
    directory query returns only themselves — the filter is in the query, not in the UI.
 4. **Field-level redaction.** Sensitive fields (salary) are stripped server-side unless the role
    holds `salary:read:all`; they never reach the browser.
-5. **Tools fail closed.** `withPermission()` returns a structured denial *before* any DB call; a
-   missing permission can't accidentally execute.
+5. **Tools advertised per role + fail closed.** `buildHrTools` only injects the tools a role may
+   use, so an out-of-scope tool is never offered; per-tool `withPermission()` still re-checks *before*
+   any DB call (defense in depth) and returns a plain `{ error }` — a missing permission can't execute.
 6. **Defense in depth for the model.** The system prompt lists the user's permissions, *and* the
    server enforces them anyway — a jailbroken prompt still can't exceed the role.
 7. **Password hashing.** Credentials are verified with `bcrypt`; only hashes are stored.
@@ -343,8 +347,9 @@ npm run test:all  # both
 
 - **`tests/rbac.test.ts`** — the permission matrix (nesting, role capabilities). Pure, no DB.
 - **`tests/tools.integration.test.ts`** — runs the real AI tools against a seeded Postgres and
-  asserts role scoping (employee sees 1 person, manager 4, HR 6), salary redaction, and **denials**
-  (employee blocked from others' payslips / approvals).
+  asserts role scoping (employee sees 1 person, manager 4, HR 6), salary redaction, **per-role tool
+  exposure** (an employee isn't even offered the approval tools), and clean refusals (others' payslips
+  / another team's request return a plain `{ error }`, never data).
 
 **Live suite (`npm run test:live` — files end in `*.live.test.ts`)**
 

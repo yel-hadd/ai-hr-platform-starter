@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2, Wrench, AlertTriangle } from "lucide-react";
-import { DeniedCard } from "./generative/denied";
 import { Citations } from "./generative/citations";
 import { DirectoryCards } from "./generative/directory";
 import {
@@ -62,7 +61,6 @@ export function ToolCall({ part }: { part: ToolPart }) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ToolOutput({ name, output }: { name: string; output: any }) {
   if (!output) return null;
-  if (output.denied) return <DeniedCard reason={output.reason} />;
   if (output.error)
     return (
       <p className="rounded-lg border border-dashed p-2 text-xs text-muted-foreground">

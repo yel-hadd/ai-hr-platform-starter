@@ -1,17 +1,24 @@
 // ─────────────────────────────────────────────────────────────────────────
-// AI tools. Three rules keep these safe regardless of what the model is told
-// or tricked into (see docs/architecture/authorization-invariants.md):
-//   1. IDENTITY comes from the closed-over `caller` (resolved from the session
-//      in the route), never from a tool argument — the model can't act as
-//      someone else. That's why "self" tools take no id.
-//   2. PERMISSION is checked BEFORE running: most tools use `withPermission()`;
-//      getPayslip delegates to lib/hr which checks inline (it picks self vs any).
-//      On denial a tool returns `{ denied: true, ... }` (not a throw) so the UI
-//      shows a "permission denied" card and the model can explain it.
-//   3. Every model-supplied id (employeeId, requestId) is AUTHORIZED server-side
-//      against the caller's scope, so a guessed/invented id can't reach data:
-//      getPayslip resolves the target within the caller's directory scope;
-//      approveLeave re-checks the request belongs to the caller's reports.
+// AI tools. Guardrails live at TWO levels (see
+// docs/architecture/authorization-invariants.md):
+//
+//   • PROMPT level — the agent is told exactly which tools it has for its role,
+//     so it knows what it can and can't do and won't attempt the impossible.
+//   • CODE level — four rules, enforced regardless of what the model is told or
+//     tricked into:
+//       1. IDENTITY comes from the closed-over `caller` (resolved from the
+//          session in the route), never a tool argument. "Self" tools take no id.
+//       2. EXPOSURE is per role: `buildHrTools` advertises only the tools the
+//          caller's role can use (driven by TOOL_CATALOGUE), so an out-of-scope
+//          tool is never offered — the model can't even attempt it.
+//       3. PERMISSION is still checked before running (defense in depth), and
+//          every model-supplied id (employeeId, requestId) is AUTHORIZED
+//          server-side against the caller's scope, so a guessed id can't reach
+//          data: getPayslip resolves the target within directory scope;
+//          approveLeave re-checks the request belongs to the caller's reports.
+//       4. Authorization shortfalls return a plain `{ error }` the agent relays
+//          in prose — never a throw, never a "permission denied" card. Combined
+//          with per-role exposure, a correctly-configured role never hits one.
 // All reads go through the same role-scoped helpers as the UI (lib/hr).
 // ─────────────────────────────────────────────────────────────────────────
 import { tool } from "ai";
@@ -32,24 +39,23 @@ export type ToolCaller = {
   name: string;
 };
 
-type Denied = { denied: true; permission: Permission; reason: string };
+type ToolError = { error: string };
 
-function deny(permission: Permission): Denied {
-  return {
-    denied: true,
-    permission,
-    reason: `Access denied — your role lacks "${PERMISSION_LABELS[permission]}".`,
-  };
-}
-
-/** Run `fn` only if the caller holds `permission`, else return a denial. */
+/**
+ * Run `fn` only if the caller holds `permission`, else return a plain { error }.
+ * This is defense in depth: `buildHrTools` already declines to advertise a tool
+ * the role can't use, so for a correctly-configured role this branch is never
+ * reached. If it ever fires, it surfaces as a neutral note — never a card.
+ */
 function withPermission<I, O>(
   caller: ToolCaller,
   permission: Permission,
   fn: (input: I) => Promise<O>,
-): (input: I) => Promise<O | Denied> {
+): (input: I) => Promise<O | ToolError> {
   return async (input: I) => {
-    if (!can(caller.role, permission)) return deny(permission);
+    if (!can(caller.role, permission)) {
+      return { error: `That action isn't available to your role (needs "${PERMISSION_LABELS[permission]}").` };
+    }
     return fn(input);
   };
 }
@@ -83,7 +89,11 @@ function leaveDays(start: string, end: string): number | { error: string } {
   return Math.round((endMs - startMs) / 86_400_000) + 1;
 }
 
-export function buildHrTools(caller: ToolCaller) {
+/**
+ * The full tool surface for a caller. NOT exported — callers go through
+ * `buildHrTools`, which advertises only the subset the role may use.
+ */
+function buildAllHrTools(caller: ToolCaller) {
   return {
     // ── RAG over the handbook ───────────────────────────────────────────
     searchHandbook: tool({
@@ -213,10 +223,11 @@ export function buildHrTools(caller: ToolCaller) {
         });
         if (!req) return { error: "Request not found." };
 
-        // Managers may only act on their own reports.
+        // Managers may only act on their own reports. (A manager is offered this
+        // tool, but a requestId outside their team is still refused here.)
         const companyWide = can(caller.role, "directory:read:all");
         if (!companyWide && req.employee.managerId !== caller.employeeId) {
-          return deny("leave:approve");
+          return { error: "That request is for someone outside your team, so you can't action it." };
         }
 
         // Only act on PENDING requests — re-approving would double-deduct the
@@ -256,26 +267,67 @@ export function buildHrTools(caller: ToolCaller) {
     // ── Payslip (self vs anyone) ────────────────────────────────────────
     getPayslip: tool({
       description:
-        "Get a payslip summary. Omit employeeId for your own. To view someone else's (requires elevated permissions), first call getEmployeeDirectory and pass an employeeId it returned — never guess or invent an id.",
+        "Get a payslip summary. Omit employeeId for your own payslip. Viewing someone else's needs elevated rights and only works for an employee you can see — pass an employeeId returned by getEmployeeDirectory, never a guessed one.",
       inputSchema: z.object({
         employeeId: z
           .string()
           .nullish()
           .describe(
-            "An employeeId returned by getEmployeeDirectory — omit for your own. Out-of-scope or invented ids are rejected.",
+            "An employeeId returned by getEmployeeDirectory — omit for your own. Out-of-scope or invented ids return nothing.",
           ),
       }),
       // Delegates to the role-scoped data layer (lib/hr): the target is resolved
       // server-side within the caller's directory scope, so a guessed id can
-      // never surface a real payslip.
+      // never surface a real payslip. Shortfalls return a plain { error }.
       execute: async ({ employeeId }) => {
         const result = await getPayslip(caller, employeeId);
         if (result.ok) return { payslip: result.payslip };
-        if (result.reason === "denied") return deny(result.permission);
+        if (result.reason === "denied") {
+          return { error: "You can only view your own payslip — ask HR for anyone else's." };
+        }
         return { error: "No payslip found for an employee you're allowed to view." };
       },
     }),
   };
 }
 
-export type HrTools = ReturnType<typeof buildHrTools>;
+type AllHrTools = ReturnType<typeof buildAllHrTools>;
+type ToolName = keyof AllHrTools;
+
+/**
+ * The tool catalogue: every tool and the permission that gates ADVERTISING it.
+ * The single source of "which tools does each role get" — used to expose tools
+ * per role (below) and to document the surface (settings page / docs). To add a
+ * tool: define it in buildAllHrTools and add one row here.
+ */
+export const TOOL_CATALOGUE = [
+  { name: "searchHandbook", permission: "handbook:read", summary: "Search the employee handbook (RAG) and cite sections." },
+  { name: "getEmployeeDirectory", permission: "directory:read:self", summary: "List employees the caller is allowed to see." },
+  { name: "getLeaveBalance", permission: "leave:read:self", summary: "The caller's own time-off balances." },
+  { name: "requestTimeOff", permission: "leave:request", summary: "Submit a time-off request for the caller." },
+  { name: "listPendingApprovals", permission: "leave:approve", summary: "List requests awaiting the caller's approval." },
+  { name: "approveLeave", permission: "leave:approve", summary: "Approve or reject a pending request." },
+  { name: "getPayslip", permission: "payslip:read:self", summary: "A payslip — own, or anyone visible with elevated rights." },
+] as const satisfies readonly { name: ToolName; permission: Permission; summary: string }[];
+
+/** Tool names a role is offered — handy for the settings UI and tests. */
+export function toolsForRole(role: Role): ToolName[] {
+  return TOOL_CATALOGUE.filter((t) => can(role, t.permission)).map((t) => t.name);
+}
+
+/**
+ * Tools advertised to the model for this caller: ONLY the ones the role can use.
+ * Irrelevant tools are never injected, so the model can't see, attempt, or be
+ * tricked into calling something out of scope — and no "permission denied" ever
+ * needs to surface. This is the primary guardrail; the per-tool checks inside
+ * each tool are defense in depth.
+ */
+export function buildHrTools(caller: ToolCaller): Partial<AllHrTools> {
+  const all = buildAllHrTools(caller);
+  const allowed = TOOL_CATALOGUE.filter((t) => can(caller.role, t.permission)).map(
+    (t) => [t.name, all[t.name]] as const,
+  );
+  return Object.fromEntries(allowed) as Partial<AllHrTools>;
+}
+
+export type HrTools = Partial<AllHrTools>;

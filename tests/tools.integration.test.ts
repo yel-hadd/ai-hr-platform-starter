@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { buildHrTools, type ToolCaller } from "@/lib/ai/tools";
+import { buildHrTools, toolsForRole, type ToolCaller } from "@/lib/ai/tools";
 
 // Minimal ToolCallOptions stub for invoking tool.execute directly.
 const OPTS = { toolCallId: "test", messages: [] } as never;
@@ -62,11 +62,14 @@ describe("getPayslip — self vs anyone", () => {
     expect(out.payslip.netMonthly).toBeGreaterThan(0);
   });
 
-  it("employee is DENIED viewing someone else's payslip", async () => {
+  it("employee viewing someone else's payslip gets a clean error, no card, no data", async () => {
+    // getPayslip is offered to everyone (for their own), but the cross-person
+    // branch returns a plain { error } the agent relays — never a denied card.
     const tools = buildHrTools(callers.employee);
     const out = await call(tools.getPayslip, { employeeId: callers.manager.employeeId });
-    expect(out.denied).toBe(true);
-    expect(out.permission).toBe("payslip:read:any");
+    expect(out.payslip).toBeUndefined();
+    expect(out.error).toBeDefined();
+    expect(out.denied).toBeUndefined();
   });
 
   it("HR can view anyone's payslip by id", async () => {
@@ -85,12 +88,12 @@ describe("getPayslip — self vs anyone", () => {
   });
 });
 
-describe("approvals — permission gating", () => {
-  it("employee is DENIED listing pending approvals", async () => {
+describe("approvals — per-role exposure", () => {
+  it("employee is NOT offered the approval tools at all", () => {
     const tools = buildHrTools(callers.employee);
-    const out = await call(tools.listPendingApprovals, {});
-    expect(out.denied).toBe(true);
-    expect(out.permission).toBe("leave:approve");
+    // Out-of-scope tools aren't injected, so the model can't even attempt them.
+    expect(tools.listPendingApprovals).toBeUndefined();
+    expect(tools.approveLeave).toBeUndefined();
   });
 
   it("manager sees pending approvals for their reports", async () => {
@@ -101,16 +104,10 @@ describe("approvals — permission gating", () => {
     expect(names).toContain("Erin Employee");
   });
 
-  it("employee is DENIED approving leave", async () => {
-    const tools = buildHrTools(callers.employee);
-    const out = await call(tools.approveLeave, { requestId: "x", decision: "APPROVE" });
-    expect(out.denied).toBe(true);
-  });
-
-  it("manager is DENIED approving a request from someone who isn't their report", async () => {
-    // Hana (HR) does not report to Marcus. Even though Marcus holds leave:approve,
-    // a requestId pointing outside his reports must be rejected server-side — the
-    // permission bit alone isn't enough; the target is authorized too.
+  it("manager approving a request from outside their team gets a clean error, no data change", async () => {
+    // Hana (HR) does not report to Marcus. Even though Marcus IS offered approveLeave,
+    // a requestId pointing outside his reports is refused server-side and returns a
+    // plain { error } — not a denied card — and changes nothing.
     const foreign = await prisma.leaveRequest.create({
       data: {
         employeeId: callers.hr.employeeId!,
@@ -127,8 +124,8 @@ describe("approvals — permission gating", () => {
         requestId: foreign.id,
         decision: "APPROVE",
       });
-      expect(out.denied).toBe(true);
-      expect(out.permission).toBe("leave:approve");
+      expect(out.error).toBeDefined();
+      expect(out.denied).toBeUndefined();
       // And it must NOT have been approved as a side effect.
       const after = await prisma.leaveRequest.findUnique({ where: { id: foreign.id } });
       expect(after?.status).toBe("PENDING");
@@ -206,5 +203,32 @@ describe("approveLeave — only acts on PENDING", () => {
     });
     expect(out.error).toMatch(/already approved/i);
     expect(out.result).toBeUndefined();
+  });
+});
+
+describe("tool catalogue — irrelevant tools aren't injected per role", () => {
+  it("employee gets only self-service tools (no approvals)", () => {
+    const tools = buildHrTools(callers.employee);
+    expect(Object.keys(tools).sort()).toEqual(
+      [
+        "getEmployeeDirectory",
+        "getLeaveBalance",
+        "getPayslip",
+        "requestTimeOff",
+        "searchHandbook",
+      ].sort(),
+    );
+  });
+
+  it("manager additionally gets the approval tools", () => {
+    const names = Object.keys(buildHrTools(callers.manager));
+    expect(names).toContain("listPendingApprovals");
+    expect(names).toContain("approveLeave");
+  });
+
+  it("toolsForRole matches what buildHrTools actually exposes", () => {
+    for (const c of [callers.employee, callers.manager, callers.hr]) {
+      expect(toolsForRole(c.role).sort()).toEqual(Object.keys(buildHrTools(c)).sort());
+    }
   });
 });
