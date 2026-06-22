@@ -64,6 +64,20 @@ Détail complet des 12 écarts : voir `docs/03-conception/conception.md`.
 
 ---
 
+## 6 bis. Diagramme d'architecture applicative
+
+![Diagramme d'architecture applicative](./diagrams/06-architecture-applicative.svg)
+
+*Source éditable : [`diagrams/06-architecture-applicative.mmd`](./diagrams/06-architecture-applicative.mmd)*
+
+Vue complémentaire au §5 (architecture technique) : elle relie les **interfaces** (portails par
+profil), les **domaines applicatifs** (assistant, génération documentaire, dashboard, alertes,
+supervision, onboarding/offboarding) et la **plateforme commune** (RBAC, couche données, audit).
+Chaque domaine applicatif passe systématiquement par le RBAC avant d'accéder à la couche données —
+conforme à `AGENTS.md` ("Authorization is always server-side").
+
+---
+
 > Les diagrammes ont été générés avec [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli)
 > (`@mermaid-js/mermaid-cli`) à partir des fichiers source `.mmd` du dossier
 > [`diagrams/`](./diagrams/). Pour régénérer après une modification :
