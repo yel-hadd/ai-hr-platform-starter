@@ -1,9 +1,18 @@
 // ─────────────────────────────────────────────────────────────────────────
-// AI tools. Each tool's execute is wrapped by `withPermission()` which checks the
-// caller's permission BEFORE running. On denial it returns a structured
-// { denied: true, ... } payload (instead of throwing) so the chat UI can show
-// a "permission denied" card. The model sees the denial too and can explain it.
-// All data access goes through the same role-scoped helpers as the UI (lib/hr).
+// AI tools. Three rules keep these safe regardless of what the model is told
+// or tricked into (see docs/architecture/authorization-invariants.md):
+//   1. IDENTITY comes from the closed-over `caller` (resolved from the session
+//      in the route), never from a tool argument — the model can't act as
+//      someone else. That's why "self" tools take no id.
+//   2. PERMISSION is checked BEFORE running: most tools use `withPermission()`;
+//      getPayslip delegates to lib/hr which checks inline (it picks self vs any).
+//      On denial a tool returns `{ denied: true, ... }` (not a throw) so the UI
+//      shows a "permission denied" card and the model can explain it.
+//   3. Every model-supplied id (employeeId, requestId) is AUTHORIZED server-side
+//      against the caller's scope, so a guessed/invented id can't reach data:
+//      getPayslip resolves the target within the caller's directory scope;
+//      approveLeave re-checks the request belongs to the caller's reports.
+// All reads go through the same role-scoped helpers as the UI (lib/hr).
 // ─────────────────────────────────────────────────────────────────────────
 import { tool } from "ai";
 import { z } from "zod";

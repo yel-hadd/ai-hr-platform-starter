@@ -106,6 +106,36 @@ describe("approvals — permission gating", () => {
     const out = await call(tools.approveLeave, { requestId: "x", decision: "APPROVE" });
     expect(out.denied).toBe(true);
   });
+
+  it("manager is DENIED approving a request from someone who isn't their report", async () => {
+    // Hana (HR) does not report to Marcus. Even though Marcus holds leave:approve,
+    // a requestId pointing outside his reports must be rejected server-side — the
+    // permission bit alone isn't enough; the target is authorized too.
+    const foreign = await prisma.leaveRequest.create({
+      data: {
+        employeeId: callers.hr.employeeId!,
+        type: "VACATION",
+        startDate: new Date("2026-09-01"),
+        endDate: new Date("2026-09-02"),
+        days: 2,
+        status: "PENDING",
+      },
+    });
+    try {
+      const tools = buildHrTools(callers.manager);
+      const out = await call(tools.approveLeave, {
+        requestId: foreign.id,
+        decision: "APPROVE",
+      });
+      expect(out.denied).toBe(true);
+      expect(out.permission).toBe("leave:approve");
+      // And it must NOT have been approved as a side effect.
+      const after = await prisma.leaveRequest.findUnique({ where: { id: foreign.id } });
+      expect(after?.status).toBe("PENDING");
+    } finally {
+      await prisma.leaveRequest.delete({ where: { id: foreign.id } });
+    }
+  });
 });
 
 describe("tool input schemas — tolerant of model quirks", () => {
