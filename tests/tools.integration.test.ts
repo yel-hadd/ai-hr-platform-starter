@@ -74,6 +74,15 @@ describe("getPayslip — self vs anyone", () => {
     const out = await call(tools.getPayslip, { employeeId: callers.employee.employeeId });
     expect(out.payslip?.employeeName).toContain("Erin");
   });
+
+  it("a guessed / non-existent id yields a clean not-found, never a payslip", async () => {
+    // Even with payslip:read:any, an id outside the caller's directory scope
+    // (here: one that doesn't exist) must resolve to nothing — no leak, no throw.
+    const tools = buildHrTools(callers.hr);
+    const out = await call(tools.getPayslip, { employeeId: "clx0000000000000guessed0" });
+    expect(out.payslip).toBeUndefined();
+    expect(out.error).toBeDefined();
+  });
 });
 
 describe("approvals — permission gating", () => {

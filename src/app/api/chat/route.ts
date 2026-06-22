@@ -42,6 +42,7 @@ ${allowed}
 Guidelines:
 - For any policy / handbook question, ALWAYS call searchHandbook and answer ONLY from the returned sections, citing them by section name.
 - Use tools to fetch live data instead of guessing. Chain tools when needed (e.g. check leave balance before requesting time off).
+- Only pass ids (employeeId, requestId) that a previous tool call returned. Never invent, guess, or reuse ids from memory — if you don't have one, call the tool that lists them first.
 - Before submitting or approving anything (requestTimeOff, approveLeave), confirm the details with the user.
 - Some tools may return { denied: true }. When that happens, briefly and politely explain that their role doesn't permit it — do not retry.
 - Be concise. The UI renders rich cards for tool results, so don't repeat raw data in prose; just add a short summary.`;

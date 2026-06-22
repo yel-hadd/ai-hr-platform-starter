@@ -12,6 +12,7 @@ import { can, PERMISSION_LABELS, type Permission, type Role } from "@/lib/rbac";
 import {
   getDirectory,
   getLeaveBalances,
+  getPayslip,
   getPendingApprovals,
 } from "@/lib/hr";
 import { searchHandbook } from "@/lib/rag";
@@ -246,39 +247,23 @@ export function buildHrTools(caller: ToolCaller) {
     // ── Payslip (self vs anyone) ────────────────────────────────────────
     getPayslip: tool({
       description:
-        "Get a payslip summary. Omit employeeId for your own. To view someone else's (requires elevated permissions), first call getEmployeeDirectory to get their employeeId.",
+        "Get a payslip summary. Omit employeeId for your own. To view someone else's (requires elevated permissions), first call getEmployeeDirectory and pass an employeeId it returned — never guess or invent an id.",
       inputSchema: z.object({
         employeeId: z
           .string()
           .nullish()
-          .describe("Employee id from getEmployeeDirectory — omit for your own."),
+          .describe(
+            "An employeeId returned by getEmployeeDirectory — omit for your own. Out-of-scope or invented ids are rejected.",
+          ),
       }),
+      // Delegates to the role-scoped data layer (lib/hr): the target is resolved
+      // server-side within the caller's directory scope, so a guessed id can
+      // never surface a real payslip.
       execute: async ({ employeeId }) => {
-        // Resolve by stable id, never by name — predictable and unambiguous.
-        const wantsOther = !!employeeId && employeeId !== caller.employeeId;
-        const perm: Permission = wantsOther ? "payslip:read:any" : "payslip:read:self";
-        if (!can(caller.role, perm)) return deny(perm);
-
-        const targetId = wantsOther ? employeeId! : caller.employeeId;
-        if (!targetId) return { error: "No employee profile linked to this account." };
-
-        const target = await prisma.employee.findUnique({
-          where: { id: targetId },
-          include: { user: { select: { name: true } } },
-        });
-        if (!target) return { error: "Employee not found." };
-
-        const monthlyGross = Math.round(target.salary / 12);
-        const tax = Math.round(monthlyGross * 0.22);
-        return {
-          payslip: {
-            employeeName: target.user.name,
-            period: "Most recent month",
-            grossMonthly: monthlyGross,
-            tax,
-            netMonthly: monthlyGross - tax,
-          },
-        };
+        const result = await getPayslip(caller, employeeId);
+        if (result.ok) return { payslip: result.payslip };
+        if (result.reason === "denied") return deny(result.permission);
+        return { error: "No payslip found for an employee you're allowed to view." };
       },
     }),
   };
