@@ -164,6 +164,9 @@ If a tool the role isn't allowed to use is invoked, `withPermission` returns
 card and the model explains it. Defense in depth: the model is *told* the role's permissions in
 the system prompt, **and** the server enforces them regardless.
 
+> **Deep dive:** [Authorized AI chat — full sequence diagram](docs/architecture/authorized-ai-chat-sequence.md)
+> (auth gate, permission branches, RAG sub-flow, multi-step loop).
+
 ### Role-based access control
 
 One matrix, three enforcement points. Defined once in `lib/rbac.ts`:
