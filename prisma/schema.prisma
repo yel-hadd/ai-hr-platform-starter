@@ -1,6 +1,7 @@
 // HR Platform starter — data model.
 // Note: pgvector's `halfvec` column is declared via Prisma's `Unsupported` type.
-// The HNSW index over it is created in `prisma/seed.ts` (Prisma can't model it).
+// The HNSW index over it is created in the Prisma migration
+// (`prisma/migrations/0_init`), since Prisma can't model an index on it.
 
 generator client {
   provider = "prisma-client-js"

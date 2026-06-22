@@ -256,6 +256,9 @@ and index are all created in the Prisma migration (`prisma/migrations/0_init`). 
 is env-selectable (`EMBEDDING_MODEL`); any other 384-dim model is a drop-in, while a different
 dimension needs a migration to ALTER the column. See `lib/rag.ts` and `lib/ai/embeddings.ts`.
 
+> **Deep dive:** [HR handbook RAG — architecture](docs/architecture/hr-rag-architecture.md)
+> (indexing vs. retrieval pipelines, `halfvec`/HNSW choices, changing the embedding model).
+
 ---
 
 ## Project structure
