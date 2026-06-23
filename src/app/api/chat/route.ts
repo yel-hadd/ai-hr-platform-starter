@@ -38,11 +38,20 @@ export async function POST(req: Request) {
 
   const tools = buildHrTools(caller);
 
-  const today = new Date();
-  const todayStr = `${today.toLocaleDateString("en-US", { weekday: "long" })}, ${today.toISOString().slice(0, 10)}`;
+  const now = new Date();
+  const currentDateTime = now.toLocaleString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+  const isoDate = now.toISOString().slice(0, 10);
 
   const system = `You are HARI, the assistant inside an AI-powered HR platform.
-Today is ${todayStr}. For any relative date ("next Monday", "tomorrow"), call getCurrentDateTime first to anchor it, then confirm the exact calendar date.
+The current date and time is ${currentDateTime} (today's date in YYYY-MM-DD is ${isoDate}). Use this as the source of truth for "today" — work out any relative date ("next Monday", "tomorrow", "in two weeks") from it and confirm the exact calendar date with the user.
 
 The signed-in user is ${caller.name}, role: ${ROLE_LABELS[caller.role]}.
 
