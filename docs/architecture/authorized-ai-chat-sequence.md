@@ -2,105 +2,83 @@
 
 > Jira: HARI-111 · Parent: HARI-2 (Architecture)
 >
-> One chat turn on the `/chat` page, traced end to end, with the authorization
-> path made explicit: the session gate, the per-tool permission check, the
-> role-scoped data access, and the RAG sub-flow.
+> One chat turn on the `/chat` page, in two views: the turn lifecycle, and a
+> zoom into a single authorized tool call (session gate, per-tool permission
+> check, role-scoped data access).
 
-This is the detailed companion to the simplified *"What happens when you send a
-chat message"* diagram in the [README](../../README.md#what-happens-when-you-send-a-chat-message).
-It shows what the README leaves out: the `401` gate, how the role's tools reach
-the system prompt, the per-role tool filtering, the out-of-scope refusal branch,
-the embeddings call inside RAG, and the multi-step tool loop.
+This is the detailed companion to the simplified diagram in the
+[README](../../README.md#what-happens-when-you-send-a-chat-message). To stay
+readable it's split into two views: the **turn lifecycle** (auth gate → model
+loop → answer) and a zoom into **one tool call** (the per-role authorization).
+The handbook RAG sub-flow has its own doc, *HR Handbook RAG — Architecture*
+(`docs/architecture/hr-rag-architecture.md`, HARI-113), so it isn't expanded here.
 
-## Participants
-
-| Participant | Runs where | Source |
-|---|---|---|
-| **User (browser)** | Client | — |
-| **Chat UI** (`useChat`) | Client | `src/components/chat/chat.tsx` |
-| **`POST /api/chat`** (Route Handler) | Server | `src/app/api/chat/route.ts` |
-| **Auth.js** (`auth()`) | Server | `src/lib/auth.ts`, `src/lib/session.ts` |
-| **Model** (OpenRouter / Gateway) | External | `src/lib/ai/providers.ts` |
-| **HR Tools + RBAC** (`buildHrTools` / `withPermission` / `can`) | Server | `src/lib/ai/tools.ts`, `src/lib/rbac.ts` |
-| **Role-scoped data** (`lib/hr.ts`) | Server | `src/lib/hr.ts` |
-| **OpenRouter embeddings** | External | `src/lib/ai/embeddings.ts` |
-| **Postgres + pgvector** | Server | `prisma/` |
-
-## Sequence
+## 1. One turn, end to end
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor U as User (browser)
-    participant UI as Chat UI<br/>(useChat — chat.tsx)
-    participant API as POST /api/chat<br/>(Route Handler)
-    participant Auth as Auth.js<br/>auth()
-    participant LLM as Model<br/>(OpenRouter / Gateway)
-    participant Tools as HR Tools + RBAC<br/>(withPermission / can)
-    participant Data as Role-scoped data<br/>(lib/hr.ts)
-    participant Emb as OpenRouter<br/>embeddings
-    participant DB as Postgres<br/>+ pgvector
+    actor U as User
+    participant UI as Chat UI<br/>(useChat)
+    participant API as Server<br/>(/api/chat)
+    participant LLM as Model<br/>(OpenRouter)
 
-    U->>UI: Type a message<br/>("How many vacation days do I have?")
-    UI->>API: POST { messages, modelId }
-
-    API->>Auth: auth()
+    U->>UI: Type a message
+    UI->>API: POST { messages }
+    API->>API: auth() — resolve role from session
     alt No valid session
-        Auth-->>API: null
-        API-->>UI: 401 Unauthorized
-        UI-->>U: Prompt to sign in
+        API-->>UI: 401 — turn ends
     else Authenticated
-        Auth-->>API: session { role, employeeId, name }
-    end
-
-    Note over API: Build caller { role, employeeId, name }.<br/>buildHrTools(caller) advertises ONLY this role's tools<br/>(TOOL_CATALOGUE) — the same list is injected into the<br/>system prompt as the agent's capabilities.
-    API->>LLM: streamText(system, messages,<br/>tools = buildHrTools(caller),<br/>stopWhen = stepCountIs(8))
-
-    loop Agent loop (≤ 8 steps, until a final answer)
-        opt Model emits reasoning tokens
-            LLM-->>API: reasoning tokens
-            API-->>UI: stream reasoning part (sendReasoning: true)
-            UI-->>U: "Thinking…" panel
-        end
-
-        alt Model calls a tool
-            LLM->>Tools: tool call<br/>(only tools this role was given)
-            Tools->>Tools: can(role, permission)? (defense in depth)
-
-            alt Out-of-scope target (e.g. another team's request)
-                Tools-->>LLM: { refused, message } (no DB access)
-                API-->>UI: tool part renders NOTHING (agent works with authorized data)
-            else Granted — handbook tool (RAG)
-                Tools->>Emb: embed query (all-MiniLM-L6-v2, 384d)
-                Emb-->>Tools: query vector
-                Tools->>DB: pgvector cosine search (LIMIT k)
-                DB-->>Tools: top-k chunks + cosine similarity
-                Tools-->>LLM: { results: [ { section, content, similarity } ] }
-                API-->>UI: stream tool part → citations widget
-            else Granted — read via shared data layer
-                Tools->>Data: getDirectory / getLeaveBalances / getPendingApprovals<br/>(role-scoped WHERE)
-                Data->>DB: scoped query
-                DB-->>Data: rows (salary redacted unless salary:read:all)
-                Data-->>Tools: scoped result
-                Tools-->>LLM: tool result (JSON)
-                API-->>UI: stream tool part → generative widget<br/>(directory / leave)
-            else Granted — payslip / write tool (direct DB)
-                Tools->>DB: own query<br/>(getPayslip / requestTimeOff / approveLeave)
-                DB-->>Tools: rows
-                Tools-->>LLM: tool result (JSON)
-                API-->>UI: stream tool part → payslip / leave widget
+        Note over API: buildHrTools(caller) = ONLY this role's tools,<br/>also listed in the system prompt as its capabilities
+        API->>LLM: streamText(system, tools, stepCountIs(8))
+        loop Agent loop (≤ 8 steps, until a final answer)
+            alt Reasoning / answer tokens
+                LLM-->>API: stream tokens
+                API-->>UI: "Thinking…" panel / answer bubble
+            else Tool call (authorized — see view 2)
+                LLM->>API: tool call
+                API->>API: authorize + run (role-scoped)
+                API-->>LLM: tool result
+                API-->>UI: stream result → card
             end
-        else Model emits final answer
-            LLM-->>API: answer text tokens
-            API-->>UI: stream text part → markdown bubble
-            UI-->>U: Rendered answer (cites handbook sections)
         end
+        UI-->>U: Rendered answer
     end
 ```
 
+The Route Handler authenticates first (no session → `401`, before any model
+call), builds the role's toolset, streams the model, and loops until a final
+answer. Each tool call is authorized as shown next.
+
+## 2. Inside a tool call (authorization)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant LLM as Model
+    participant T as HR Tools<br/>(RBAC — can / withPermission)
+    participant DB as lib/hr + Postgres
+
+    LLM->>T: tool call (only tools this role was given)
+    T->>T: can(role, permission)? + scope the target
+    alt In scope
+        T->>DB: role-scoped query<br/>(WHERE by role, salary redacted)
+        DB-->>T: scoped rows
+        T-->>LLM: tool result (JSON) → UI card
+    else Out of scope
+        T-->>LLM: { refused } — no DB access
+        Note over T: UI renders nothing —<br/>agent works with authorized data
+    end
+```
+
+Every tool the model can call was already filtered to the role; the tool still
+re-checks `can(role, permission)` and scopes the target before touching the DB.
+In scope → a role-scoped read (salary redacted) → a UI card. Out of scope →
+`{ refused }`, no DB access, nothing rendered.
+
 ## Walkthrough
 
-### 1. Authorization gate (steps 3–6)
+### Authorization gate
 
 The Route Handler's **first** action is `auth()`. With no valid session it returns
 `401 Unauthorized` and the turn ends before any model call — chat is never served
@@ -108,14 +86,15 @@ to an unauthenticated caller. On success it reads `role`, `employeeId`, and `nam
 from the session; **the client never supplies the role**, so it can't be forged
 (`src/app/api/chat/route.ts`).
 
-### 2. Permission-scoped system prompt (step 7)
+### Capability-scoped system prompt
 
-The handler looks up the caller's permissions from `ROLE_PERMISSIONS[role]`, maps
-them to human labels via `PERMISSION_LABELS`, and lists them in the system prompt.
-This is defense in depth. Telling the model the rules helps it explain itself, but
-the prompt never enforces anything; the server re-checks every tool call (below).
+The handler lists the role's **tools** (each tool's name + summary, taken from the
+same `TOOL_CATALOGUE` used to build the toolset) in the system prompt, so the agent
+knows exactly what it can do — and the prompt can never advertise a tool the role
+wasn't given. This is for UX, not enforcement: the server re-checks every tool call
+(below).
 
-### 3. Streaming generation with tools (step 8)
+### Streaming generation with tools
 
 `streamText` is called with the assembled `system` prompt, the converted message
 history, the role's tool set from `buildHrTools(caller)`, and a hard stop of
@@ -123,7 +102,7 @@ history, the role's tool set from `buildHrTools(caller)`, and a hard stop of
 sendReasoning: true })`, so reasoning, tool calls, tool results, and answer text
 all stream to the client as typed UI-message parts.
 
-### 4. The agent loop (≤ 8 steps)
+### The agent loop (≤ 8 steps)
 
 Each step the model may **(a)** emit reasoning tokens (surfaced from any
 `<think>…</think>` block by `extractReasoningMiddleware` in
@@ -133,7 +112,7 @@ loop continues — this is what enables **multi-step** chains (e.g. *check leave
 balance → submit request*). The `stepCountIs(8)` cap bounds the loop so a model
 can't spin indefinitely.
 
-### 5. Per-role tools + per-tool authorization
+### Per-role tools + per-tool authorization
 
 The toolset is filtered up front: `buildHrTools(caller)` advertises **only** the
 tools the role may use (driven by `TOOL_CATALOGUE`), so an out-of-scope tool is
@@ -162,7 +141,7 @@ re-checks `can(role, permission)` **before** touching the database
   via a single `withPermission` wrapper, and derives the payslip from `employee.salary`
   — it is **not** routed through the `salary:read:all` redaction in `lib/hr.ts`.
 
-### 6. Finalization
+### Finalization
 
 When the model emits answer text instead of a tool call, tokens stream into the
 message bubble and render as Markdown (`src/components/chat/markdown.tsx`). For
