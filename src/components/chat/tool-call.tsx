@@ -30,11 +30,13 @@ type ToolPart = {
   errorText?: string;
 };
 
+// Silent utility tools — the agent uses them internally (date math) and states
+// the result in its answer; there's nothing meaningful to render.
+const SILENT_TOOLS = new Set(["getCurrentDateTime", "getDateInfo", "businessDaysBetween"]);
+
 export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boolean }) {
   const name = part.type.replace(/^tool-/, "");
-  // The calendar tool is a silent utility — the agent uses it internally and
-  // states the date in its answer; nothing to render.
-  if (name === "getCurrentDateTime") return null;
+  if (SILENT_TOOLS.has(name)) return null;
   const label = TOOL_LABELS[name] ?? name;
   const running = part.state === "input-streaming" || part.state === "input-available";
 

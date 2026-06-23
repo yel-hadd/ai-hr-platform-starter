@@ -217,7 +217,9 @@ describe("tool catalogue — irrelevant tools aren't injected per role", () => {
     const tools = buildHrTools(callers.employee);
     expect(Object.keys(tools).sort()).toEqual(
       [
-        "getCurrentDateTime", // utility, always available
+        "getCurrentDateTime", // utilities, always available
+        "getDateInfo",
+        "businessDaysBetween",
         "getEmployeeDirectory",
         "getLeaveBalance",
         "getPayslip",
@@ -227,9 +229,12 @@ describe("tool catalogue — irrelevant tools aren't injected per role", () => {
     );
   });
 
-  it("the calendar utility is offered to every role", () => {
+  it("the calendar utilities are offered to every role", () => {
     for (const c of [callers.employee, callers.manager, callers.hr]) {
-      expect(Object.keys(buildHrTools(c))).toContain("getCurrentDateTime");
+      const names = Object.keys(buildHrTools(c));
+      expect(names).toContain("getCurrentDateTime");
+      expect(names).toContain("getDateInfo");
+      expect(names).toContain("businessDaysBetween");
     }
   });
 
@@ -243,5 +248,44 @@ describe("tool catalogue — irrelevant tools aren't injected per role", () => {
     for (const c of [callers.employee, callers.manager, callers.hr]) {
       expect(toolsForRole(c.role).sort()).toEqual(Object.keys(buildHrTools(c)).sort());
     }
+  });
+});
+
+describe("calendar utilities — deterministic date math", () => {
+  it("getDateInfo returns the correct weekday and weekend flag", async () => {
+    const tools = buildHrTools(callers.employee);
+    const tue = await call(tools.getDateInfo, { date: "2026-06-23" });
+    expect(tue.weekday).toBe("Tuesday");
+    expect(tue.isWeekend).toBe(false);
+    const sat = await call(tools.getDateInfo, { date: "2026-06-27" });
+    expect(sat.weekday).toBe("Saturday");
+    expect(sat.isWeekend).toBe(true);
+  });
+
+  it("getDateInfo rejects a malformed date instead of guessing", async () => {
+    const tools = buildHrTools(callers.employee);
+    const out = await call(tools.getDateInfo, { date: "next monday" });
+    expect(out.error).toBeDefined();
+    expect(out.weekday).toBeUndefined();
+  });
+
+  it("businessDaysBetween counts Mon–Fri inclusively, ignoring weekends", async () => {
+    const tools = buildHrTools(callers.employee);
+    // Tue 2026-06-23 → Mon 2026-06-29: 7 calendar days, 5 working (Tue–Fri + Mon).
+    const out = await call(tools.businessDaysBetween, {
+      startDate: "2026-06-23",
+      endDate: "2026-06-29",
+    });
+    expect(out.calendarDays).toBe(7);
+    expect(out.businessDays).toBe(5);
+  });
+
+  it("businessDaysBetween rejects a reversed range", async () => {
+    const tools = buildHrTools(callers.employee);
+    const out = await call(tools.businessDaysBetween, {
+      startDate: "2026-06-29",
+      endDate: "2026-06-23",
+    });
+    expect(out.error).toMatch(/on or after/i);
   });
 });

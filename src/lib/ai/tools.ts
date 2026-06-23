@@ -109,10 +109,10 @@ function buildAllHrTools(caller: ToolCaller) {
   const canReadAnyPayslip = can(caller.role, "payslip:read:any");
 
   return {
-    // ── Calendar utility (no auth — current date/time) ──────────────────
+    // ── Calendar utilities (no auth, no UI — deterministic date helpers) ─
     getCurrentDateTime: tool({
       description:
-        "Get the current date, time, and weekday. Call this before resolving any relative date ('next Monday', 'tomorrow', 'in two weeks') so you anchor to the real calendar.",
+        "Get the current date, time, and weekday. The date is also in your system prompt; use this if you need the live time or want to double-check.",
       inputSchema: z.object({}),
       execute: async () => {
         const now = new Date();
@@ -122,6 +122,55 @@ function buildAllHrTools(caller: ToolCaller) {
           time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         };
+      },
+    }),
+
+    getDateInfo: tool({
+      description:
+        "Get the weekday and weekend status of a specific calendar date. Use it to VERIFY the day of week before stating it (e.g. confirm '2026-06-29' really is a Monday).",
+      inputSchema: z.object({
+        date: z.string().describe("A date in YYYY-MM-DD."),
+      }),
+      execute: async ({ date }) => {
+        if (!ISO_DATE.test(date)) return { error: "Date must be YYYY-MM-DD." };
+        const d = new Date(`${date}T00:00:00Z`);
+        if (Number.isNaN(d.getTime())) return { error: "Invalid calendar date." };
+        const dow = d.getUTCDay();
+        return {
+          date,
+          weekday: d.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }),
+          isWeekend: dow === 0 || dow === 6,
+        };
+      },
+    }),
+
+    businessDaysBetween: tool({
+      description:
+        "Count working days (Mon–Fri, inclusive of both ends) in a date range, alongside the total calendar days. Use it to tell the user how many working days a leave range actually spans.",
+      inputSchema: z.object({
+        startDate: z.string().describe("Start date, YYYY-MM-DD"),
+        endDate: z.string().describe("End date, YYYY-MM-DD"),
+      }),
+      execute: async ({ startDate, endDate }) => {
+        if (!ISO_DATE.test(startDate) || !ISO_DATE.test(endDate)) {
+          return { error: "Dates must be YYYY-MM-DD." };
+        }
+        const start = new Date(`${startDate}T00:00:00Z`);
+        const end = new Date(`${endDate}T00:00:00Z`);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+          return { error: "Invalid calendar date." };
+        }
+        if (end < start) return { error: "End date must be on or after the start date." };
+
+        let businessDays = 0;
+        const cur = new Date(start);
+        while (cur <= end) {
+          const dow = cur.getUTCDay();
+          if (dow !== 0 && dow !== 6) businessDays++;
+          cur.setUTCDate(cur.getUTCDate() + 1);
+        }
+        const calendarDays = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+        return { startDate, endDate, calendarDays, businessDays };
       },
     }),
 
@@ -339,6 +388,8 @@ type ToolName = keyof AllHrTools;
  */
 export const TOOL_CATALOGUE = [
   { name: "getCurrentDateTime", permission: null, summary: "The current date, time, and weekday (utility)." },
+  { name: "getDateInfo", permission: null, summary: "Weekday / weekend status for a given date (utility)." },
+  { name: "businessDaysBetween", permission: null, summary: "Working-day count between two dates (utility)." },
   { name: "searchHandbook", permission: "handbook:read", summary: "Search the employee handbook (RAG) and cite sections." },
   { name: "getEmployeeDirectory", permission: "directory:read:self", summary: "List employees the caller is allowed to see." },
   { name: "getLeaveBalance", permission: "leave:read:self", summary: "The caller's own time-off balances." },
