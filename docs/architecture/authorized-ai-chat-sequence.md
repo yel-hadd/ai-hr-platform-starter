@@ -2,79 +2,43 @@
 
 > Jira: HARI-111 · Parent: HARI-2 (Architecture)
 >
-> One chat turn on the `/chat` page, in two views: the turn lifecycle, and a
-> zoom into a single authorized tool call (session gate, per-tool permission
-> check, role-scoped data access).
+> One chat turn on the `/chat` page: a small diagram for the order of events, and
+> a table for what each tool call is allowed to do.
 
 This is the detailed companion to the simplified diagram in the
-[README](../../README.md#what-happens-when-you-send-a-chat-message). To stay
-readable it's split into two views: the **turn lifecycle** (auth gate → model
-loop → answer) and a zoom into **one tool call** (the per-role authorization).
-The handbook RAG sub-flow has its own doc, *HR Handbook RAG — Architecture*
+[README](../../README.md#what-happens-when-you-send-a-chat-message). The handbook
+RAG sub-flow has its own doc, *HR Handbook RAG — Architecture*
 (`docs/architecture/hr-rag-architecture.md`, HARI-113), so it isn't expanded here.
 
-## 1. One turn, end to end
+## One turn, end to end
 
 ```mermaid
 sequenceDiagram
-    autonumber
     actor U as User
-    participant UI as Chat UI<br/>(useChat)
-    participant API as Server<br/>(/api/chat)
-    participant LLM as Model<br/>(OpenRouter)
+    participant S as Server<br/>(/api/chat)
+    participant M as Model<br/>(OpenRouter)
 
-    U->>UI: Type a message
-    UI->>API: POST { messages }
-    API->>API: auth() — resolve role from session
-    alt No valid session
-        API-->>UI: 401 — turn ends
-    else Authenticated
-        Note over API: buildHrTools(caller) = ONLY this role's tools,<br/>also listed in the system prompt as its capabilities
-        API->>LLM: streamText(system, tools, stepCountIs(8))
-        loop Agent loop (≤ 8 steps, until a final answer)
-            alt Reasoning / answer tokens
-                LLM-->>API: stream tokens
-                API-->>UI: "Thinking…" panel / answer bubble
-            else Tool call (authorized — see view 2)
-                LLM->>API: tool call
-                API->>API: authorize + run (role-scoped)
-                API-->>LLM: tool result
-                API-->>UI: stream result → card
-            end
-        end
-        UI-->>U: Rendered answer
-    end
+    U->>S: message
+    S->>S: auth() + give the model ONLY this role's tools
+    S->>M: stream (agent loop, ≤ 8 steps)
+    M-->>S: reasoning / tool call / answer
+    S-->>U: answer
 ```
 
-The Route Handler authenticates first (no session → `401`, before any model
-call), builds the role's toolset, streams the model, and loops until a final
-answer. Each tool call is authorized as shown next.
+The server authenticates first — no session → `401`, before any model call. It
+then builds the role's toolset (and lists those tools in the system prompt),
+streams the model, and loops (reason → call a tool → answer) until done.
 
-## 2. Inside a tool call (authorization)
+## What a tool call is allowed to do
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant LLM as Model
-    participant T as HR Tools<br/>(RBAC — can / withPermission)
-    participant DB as lib/hr + Postgres
+The model is only ever handed the tools its role may use; each tool also re-checks
+the role and scopes the target **before** any database access:
 
-    LLM->>T: tool call (only tools this role was given)
-    T->>T: can(role, permission)? + scope the target
-    alt In scope
-        T->>DB: role-scoped query<br/>(WHERE by role, salary redacted)
-        DB-->>T: scoped rows
-        T-->>LLM: tool result (JSON) → UI card
-    else Out of scope
-        T-->>LLM: { refused } — no DB access
-        Note over T: UI renders nothing —<br/>agent works with authorized data
-    end
-```
-
-Every tool the model can call was already filtered to the role; the tool still
-re-checks `can(role, permission)` and scopes the target before touching the DB.
-In scope → a role-scoped read (salary redacted) → a UI card. Out of scope →
-`{ refused }`, no DB access, nothing rendered.
+| The tool call… | Result |
+|---|---|
+| is for in-scope data | role-scoped read (salary redacted unless `salary:read:all`) → a UI card |
+| targets something out of scope | `{ refused }` — no DB access, nothing rendered; the agent works with the data it's allowed to see |
+| isn't permitted for the role at all | not offered in the first place, so the model can't call it |
 
 ## Walkthrough
 
