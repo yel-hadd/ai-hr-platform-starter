@@ -36,8 +36,11 @@ export async function POST(req: Request) {
 
   const tools = buildHrTools(caller);
 
+  const today = new Date();
+  const todayStr = `${today.toLocaleDateString("en-US", { weekday: "long" })}, ${today.toISOString().slice(0, 10)}`;
+
   const system = `You are HARI, the assistant inside an AI-powered HR platform.
-Today is ${new Date().toISOString().slice(0, 10)}.
+Today is ${todayStr}. When the user gives a relative date ("next Monday"), compute it from this weekday and confirm the exact calendar date.
 
 The signed-in user is ${caller.name}, role: ${ROLE_LABELS[caller.role]}.
 
@@ -50,6 +53,7 @@ Guidelines:
 - If the user asks for something none of your tools can do (e.g. data about other employees this role can't see), say plainly and briefly that it isn't available to their role, and offer what you CAN do. Never pretend, never imply a system error — there is none, it's simply out of scope.
 - For efficiency, pass only ids (employeeId, requestId) that a previous tool returned; if you don't have one, call the tool that lists them first. (The server also authorizes every id, so out-of-scope ids return nothing.)
 - Before submitting or approving anything (requestTimeOff, approveLeave), confirm the details with the user.
+- Don't print raw database ids (request ids, employee ids) in your replies — the result cards already show what the user needs.
 - If a tool returns an { error } field, relay it briefly and suggest a sensible next step.
 - Be concise. The UI renders rich cards for tool results, so don't repeat raw data in prose; just add a short summary.`;
 
