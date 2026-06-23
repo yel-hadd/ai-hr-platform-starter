@@ -30,8 +30,11 @@ type ToolPart = {
   errorText?: string;
 };
 
-export function ToolCall({ part }: { part: ToolPart }) {
+export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boolean }) {
   const name = part.type.replace(/^tool-/, "");
+  // The calendar tool is a silent utility — the agent uses it internally and
+  // states the date in its answer; nothing to render.
+  if (name === "getCurrentDateTime") return null;
   const label = TOOL_LABELS[name] ?? name;
   const running = part.state === "input-streaming" || part.state === "input-available";
 
@@ -53,13 +56,19 @@ export function ToolCall({ part }: { part: ToolPart }) {
         </div>
       )}
 
-      {part.state === "output-available" && <ToolOutput name={name} output={part.output} />}
+      {part.state === "output-available" && (
+        <ToolOutput name={name} output={part.output} streaming={streaming} />
+      )}
     </div>
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ToolOutput({ name, output }: { name: string; output: any }) {
+function ToolOutput({
+  name,
+  output,
+  streaming,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+}: { name: string; output: any; streaming: boolean }) {
   if (!output) return null;
   // Scope refusals are intentionally invisible — the agent works with the
   // authorized data and explains in prose; we don't surface an error.
@@ -73,7 +82,7 @@ function ToolOutput({ name, output }: { name: string; output: any }) {
 
   switch (name) {
     case "searchHandbook":
-      return <Citations query={output.query} results={output.results} />;
+      return <Citations query={output.query} results={output.results} streaming={streaming} />;
     case "getEmployeeDirectory":
       return <DirectoryCards people={output.people} />;
     case "getLeaveBalance":

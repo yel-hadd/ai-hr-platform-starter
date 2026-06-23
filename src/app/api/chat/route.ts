@@ -30,7 +30,9 @@ export async function POST(req: Request) {
 
   // Capabilities == the tools this role is actually given (same catalogue that
   // gates exposure), so the prompt and the injected toolset can never disagree.
-  const capabilities = TOOL_CATALOGUE.filter((t) => can(caller.role, t.permission))
+  const capabilities = TOOL_CATALOGUE.filter(
+    (t) => t.permission === null || can(caller.role, t.permission),
+  )
     .map((t) => `- ${t.name}: ${t.summary}`)
     .join("\n");
 
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
   const todayStr = `${today.toLocaleDateString("en-US", { weekday: "long" })}, ${today.toISOString().slice(0, 10)}`;
 
   const system = `You are HARI, the assistant inside an AI-powered HR platform.
-Today is ${todayStr}. When the user gives a relative date ("next Monday"), compute it from this weekday and confirm the exact calendar date.
+Today is ${todayStr}. For any relative date ("next Monday", "tomorrow"), call getCurrentDateTime first to anchor it, then confirm the exact calendar date.
 
 The signed-in user is ${caller.name}, role: ${ROLE_LABELS[caller.role]}.
 

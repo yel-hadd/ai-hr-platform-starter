@@ -109,6 +109,22 @@ function buildAllHrTools(caller: ToolCaller) {
   const canReadAnyPayslip = can(caller.role, "payslip:read:any");
 
   return {
+    // ── Calendar utility (no auth — current date/time) ──────────────────
+    getCurrentDateTime: tool({
+      description:
+        "Get the current date, time, and weekday. Call this before resolving any relative date ('next Monday', 'tomorrow', 'in two weeks') so you anchor to the real calendar.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const now = new Date();
+        return {
+          date: now.toISOString().slice(0, 10),
+          weekday: now.toLocaleDateString("en-US", { weekday: "long" }),
+          time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        };
+      },
+    }),
+
     // ── RAG over the handbook ───────────────────────────────────────────
     searchHandbook: tool({
       description:
@@ -317,9 +333,12 @@ type ToolName = keyof AllHrTools;
  * The tool catalogue: every tool and the permission that gates ADVERTISING it.
  * The single source of "which tools does each role get" — used to expose tools
  * per role (below) and to document the surface (settings page / docs). To add a
- * tool: define it in buildAllHrTools and add one row here.
+ * tool: define it in buildAllHrTools and add one row here. `permission: null`
+ * marks a utility tool with no data access (e.g. the calendar) that every role
+ * always gets.
  */
 export const TOOL_CATALOGUE = [
+  { name: "getCurrentDateTime", permission: null, summary: "The current date, time, and weekday (utility)." },
   { name: "searchHandbook", permission: "handbook:read", summary: "Search the employee handbook (RAG) and cite sections." },
   { name: "getEmployeeDirectory", permission: "directory:read:self", summary: "List employees the caller is allowed to see." },
   { name: "getLeaveBalance", permission: "leave:read:self", summary: "The caller's own time-off balances." },
@@ -327,11 +346,16 @@ export const TOOL_CATALOGUE = [
   { name: "listPendingApprovals", permission: "leave:approve", summary: "List requests awaiting the caller's approval." },
   { name: "approveLeave", permission: "leave:approve", summary: "Approve or reject a pending request." },
   { name: "getPayslip", permission: "payslip:read:self", summary: "A payslip — own, or anyone visible with elevated rights." },
-] as const satisfies readonly { name: ToolName; permission: Permission; summary: string }[];
+] as const satisfies readonly { name: ToolName; permission: Permission | null; summary: string }[];
+
+/** Does this role get the catalogue entry? `null` permission = always (utility). */
+function roleHasTool(role: Role, permission: Permission | null): boolean {
+  return permission === null || can(role, permission);
+}
 
 /** Tool names a role is offered — handy for the settings UI and tests. */
 export function toolsForRole(role: Role): ToolName[] {
-  return TOOL_CATALOGUE.filter((t) => can(role, t.permission)).map((t) => t.name);
+  return TOOL_CATALOGUE.filter((t) => roleHasTool(role, t.permission)).map((t) => t.name);
 }
 
 /**
@@ -343,7 +367,7 @@ export function toolsForRole(role: Role): ToolName[] {
  */
 export function buildHrTools(caller: ToolCaller): Partial<AllHrTools> {
   const all = buildAllHrTools(caller);
-  const allowed = TOOL_CATALOGUE.filter((t) => can(caller.role, t.permission)).map(
+  const allowed = TOOL_CATALOGUE.filter((t) => roleHasTool(caller.role, t.permission)).map(
     (t) => [t.name, all[t.name]] as const,
   );
   return Object.fromEntries(allowed) as Partial<AllHrTools>;

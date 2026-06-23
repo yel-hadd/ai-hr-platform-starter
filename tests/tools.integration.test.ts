@@ -217,6 +217,7 @@ describe("tool catalogue — irrelevant tools aren't injected per role", () => {
     const tools = buildHrTools(callers.employee);
     expect(Object.keys(tools).sort()).toEqual(
       [
+        "getCurrentDateTime", // utility, always available
         "getEmployeeDirectory",
         "getLeaveBalance",
         "getPayslip",
@@ -224,6 +225,12 @@ describe("tool catalogue — irrelevant tools aren't injected per role", () => {
         "searchHandbook",
       ].sort(),
     );
+  });
+
+  it("the calendar utility is offered to every role", () => {
+    for (const c of [callers.employee, callers.manager, callers.hr]) {
+      expect(Object.keys(buildHrTools(c))).toContain("getCurrentDateTime");
+    }
   });
 
   it("manager additionally gets the approval tools", () => {
