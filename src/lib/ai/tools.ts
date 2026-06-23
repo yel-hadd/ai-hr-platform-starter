@@ -1,29 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────
-// AI tools. Guardrails live at TWO levels (see
-// docs/architecture/authorization-invariants.md):
-//
-//   • PROMPT level — the agent is told exactly which tools it has for its role,
-//     so it knows what it can and can't do and won't attempt the impossible.
-//   • CODE level — four rules, enforced regardless of what the model is told or
-//     tricked into:
-//       1. IDENTITY comes from the closed-over `caller` (resolved from the
-//          session in the route), never a tool argument. "Self" tools take no id.
-//       2. EXPOSURE is per role: `buildHrTools` advertises only the tools the
-//          caller's role can use (driven by TOOL_CATALOGUE), so an out-of-scope
-//          tool is never offered — the model can't even attempt it.
-//       3. PERMISSION is still checked before running (defense in depth), and
-//          every model-supplied id (employeeId, requestId) is AUTHORIZED
-//          server-side against the caller's scope, so a guessed id can't reach
-//          data: getPayslip resolves the target within directory scope;
-//          approveLeave re-checks the request belongs to the caller's reports.
-//       4. Scope refusals return `{ refused, message }` — the model reads the
-//          message and works with the authorized data; the UI renders NOTHING
-//          for it. So out-of-scope requests never produce a visible error.
-//          (Operational problems — bad dates, handbook down — still return
-//          `{ error }`, which the UI does show.) Where a parameter would only
-//          ever be out of scope for a role, it's dropped from that role's schema
-//          entirely (see getPayslip) so the query can't even be expressed.
-// All reads go through the same role-scoped helpers as the UI (lib/hr).
+// AI tools. Authorization is enforced in code, never in the prompt — full
+// contract in docs/architecture/authorization-invariants.md. In short:
+//   • Identity is the closed-over `caller` (from the session), never a tool
+//     argument — "self" tools take no id.
+//   • `buildHrTools` advertises ONLY the tools a role may use (TOOL_CATALOGUE),
+//     so an out-of-scope tool is never offered. Per-tool can()/scope checks
+//     below are defense in depth; every model-supplied id is authorized
+//     server-side against the caller's scope.
+//   • Scope refusals return `{ refused }` — silent: the agent works with the
+//     authorized data and the UI shows nothing. Operational errors return
+//     `{ error }` (shown). All reads go through the role-scoped lib/hr layer.
 // ─────────────────────────────────────────────────────────────────────────
 import { tool } from "ai";
 import { z } from "zod";
@@ -43,9 +29,8 @@ export type ToolCaller = {
   name: string;
 };
 
-// A scope refusal. The model reads `message` and works around it in prose; the
-// UI renders NOTHING for it (unlike `{ error }`, which is an operational problem
-// worth showing). So an out-of-scope request never produces a visible error.
+// A scope refusal: the agent relays `message`, the UI renders nothing (vs.
+// `{ error }`, an operational problem the UI does show).
 type Refusal = { refused: true; message: string };
 function refused(message: string): Refusal {
   return { refused: true, message };
