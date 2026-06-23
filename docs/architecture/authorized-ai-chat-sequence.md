@@ -53,7 +53,7 @@ sequenceDiagram
         Auth-->>API: session { role, employeeId, name }
     end
 
-    Note over API: Build caller { role, employeeId, name }.<br/>buildHrTools(caller) advertises ONLY this role's tools<br/>(TOOL_CATALOGUE); the same list is injected into the<br/>system prompt as the agent's capabilities.
+    Note over API: Build caller { role, employeeId, name }.<br/>buildHrTools(caller) advertises ONLY this role's tools<br/>(TOOL_CATALOGUE) — the same list is injected into the<br/>system prompt as the agent's capabilities.
     API->>LLM: streamText(system, messages,<br/>tools = buildHrTools(caller),<br/>stopWhen = stepCountIs(8))
 
     loop Agent loop (≤ 8 steps, until a final answer)
@@ -69,7 +69,7 @@ sequenceDiagram
 
             alt Out-of-scope target (e.g. another team's request)
                 Tools-->>LLM: { refused, message } (no DB access)
-                API-->>UI: tool part renders NOTHING; agent works with authorized data
+                API-->>UI: tool part renders NOTHING (agent works with authorized data)
             else Granted — handbook tool (RAG)
                 Tools->>Emb: embed query (all-MiniLM-L6-v2, 384d)
                 Emb-->>Tools: query vector
@@ -119,18 +119,18 @@ the prompt never enforces anything; the server re-checks every tool call (below)
 
 `streamText` is called with the assembled `system` prompt, the converted message
 history, the role's tool set from `buildHrTools(caller)`, and a hard stop of
-`stepCountIs(5)`. The response is returned via `toUIMessageStreamResponse({
+`stepCountIs(8)`. The response is returned via `toUIMessageStreamResponse({
 sendReasoning: true })`, so reasoning, tool calls, tool results, and answer text
 all stream to the client as typed UI-message parts.
 
-### 4. The agent loop (≤ 5 steps)
+### 4. The agent loop (≤ 8 steps)
 
 Each step the model may **(a)** emit reasoning tokens (surfaced from any
 `<think>…</think>` block by `extractReasoningMiddleware` in
 `src/lib/ai/providers.ts`) into the collapsible "Thinking…" panel, **(b)** call a
 tool, or **(c)** produce the final answer. After a tool result is fed back, the
 loop continues — this is what enables **multi-step** chains (e.g. *check leave
-balance → submit request*). The `stepCountIs(5)` cap bounds the loop so a model
+balance → submit request*). The `stepCountIs(8)` cap bounds the loop so a model
 can't spin indefinitely.
 
 ### 5. Per-role tools + per-tool authorization
