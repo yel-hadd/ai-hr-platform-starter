@@ -187,7 +187,9 @@ non-elevated user can't even ask for another's payslip); any residual refusal re
 that the assistant works around silently — the UI shows nothing, there's no "permission denied" card.
 
 > **Deep dive:** [Authorized AI chat — full sequence diagram](docs/architecture/authorized-ai-chat-sequence.md)
-> (auth gate, permission branches, RAG sub-flow, multi-step loop).
+> (auth gate, permission branches, RAG sub-flow, multi-step loop) ·
+> [Authorization invariants](docs/architecture/authorization-invariants.md) (the contributor contract) ·
+> [Authorized chat scenario](docs/architecture/chat-authorization-scenario.md) (the authorized / refusal / alert demo script).
 
 ### Role-based access control
 
