@@ -31,7 +31,10 @@ type ToolPart = {
 };
 
 // Silent utility tools — the agent uses them internally (date math) and states
-// the result in its answer; there's nothing meaningful to render.
+// the result in its answer; there's nothing meaningful to render. Mirrors the
+// `permission: null` utility rows in TOOL_CATALOGUE (lib/ai/tools.ts) — kept as a
+// small client-side list so this client component doesn't import server-only
+// tool code. Add a calendar/utility tool there → add its name here.
 const SILENT_TOOLS = new Set(["getCurrentDateTime", "getDateInfo", "businessDaysBetween"]);
 
 export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boolean }) {

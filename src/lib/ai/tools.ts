@@ -80,22 +80,31 @@ function ciEnum<const T extends [string, ...string[]]>(values: T) {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+// Parse a strict YYYY-MM-DD at UTC midnight, or null for a non-date OR an
+// impossible calendar date. V8 silently ROLLS bad days forward ("2026-06-31"
+// → Jul 1, "2026-02-30" → Mar 2) and only rejects bad months, so we round-trip
+// the result and reject anything that didn't survive unchanged.
+function parseUtcDate(s: string): Date | null {
+  if (!ISO_DATE.test(s)) return null;
+  const ms = Date.parse(`${s}T00:00:00Z`);
+  if (Number.isNaN(ms)) return null;
+  const d = new Date(ms);
+  return d.toISOString().slice(0, 10) === s ? d : null;
+}
+
 // Inclusive day count, or an error string if the range is malformed/reversed —
 // so a model passing a non-date or swapped dates fails loudly instead of
 // silently recording a 1-day request.
 function leaveDays(start: string, end: string): number | { error: string } {
-  if (!ISO_DATE.test(start) || !ISO_DATE.test(end)) {
-    return { error: "Dates must be YYYY-MM-DD." };
+  const startD = parseUtcDate(start);
+  const endD = parseUtcDate(end);
+  if (!startD || !endD) {
+    return { error: "Dates must be a valid calendar date in YYYY-MM-DD." };
   }
-  const startMs = Date.parse(`${start}T00:00:00Z`);
-  const endMs = Date.parse(`${end}T00:00:00Z`);
-  if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
-    return { error: "Invalid calendar date." };
-  }
-  if (endMs < startMs) {
+  if (endD < startD) {
     return { error: "End date must be on or after the start date." };
   }
-  return Math.round((endMs - startMs) / 86_400_000) + 1;
+  return Math.round((endD.getTime() - startD.getTime()) / 86_400_000) + 1;
 }
 
 /**
@@ -132,9 +141,8 @@ function buildAllHrTools(caller: ToolCaller) {
         date: z.string().describe("A date in YYYY-MM-DD."),
       }),
       execute: async ({ date }) => {
-        if (!ISO_DATE.test(date)) return { error: "Date must be YYYY-MM-DD." };
-        const d = new Date(`${date}T00:00:00Z`);
-        if (Number.isNaN(d.getTime())) return { error: "Invalid calendar date." };
+        const d = parseUtcDate(date);
+        if (!d) return { error: "Date must be a valid calendar date in YYYY-MM-DD." };
         const dow = d.getUTCDay();
         return {
           date,
@@ -152,13 +160,10 @@ function buildAllHrTools(caller: ToolCaller) {
         endDate: z.string().describe("End date, YYYY-MM-DD"),
       }),
       execute: async ({ startDate, endDate }) => {
-        if (!ISO_DATE.test(startDate) || !ISO_DATE.test(endDate)) {
-          return { error: "Dates must be YYYY-MM-DD." };
-        }
-        const start = new Date(`${startDate}T00:00:00Z`);
-        const end = new Date(`${endDate}T00:00:00Z`);
-        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-          return { error: "Invalid calendar date." };
+        const start = parseUtcDate(startDate);
+        const end = parseUtcDate(endDate);
+        if (!start || !end) {
+          return { error: "Dates must be a valid calendar date in YYYY-MM-DD." };
         }
         if (end < start) return { error: "End date must be on or after the start date." };
 

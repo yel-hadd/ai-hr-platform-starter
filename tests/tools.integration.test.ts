@@ -193,6 +193,16 @@ describe("requestTimeOff — write path", () => {
       endDate: "2026-09-01",
     });
     expect(malformed.error).toMatch(/YYYY-MM-DD/);
+
+    // An impossible day (June has 30 days) must be rejected, not silently
+    // rolled forward to July 1.
+    const impossible = await call(tools.requestTimeOff, {
+      type: "VACATION",
+      startDate: "2026-06-31",
+      endDate: "2026-07-02",
+    });
+    expect(impossible.error).toBeDefined();
+    expect(impossible.request).toBeUndefined();
   });
 });
 
@@ -262,11 +272,13 @@ describe("calendar utilities — deterministic date math", () => {
     expect(sat.isWeekend).toBe(true);
   });
 
-  it("getDateInfo rejects a malformed date instead of guessing", async () => {
+  it("getDateInfo rejects a malformed or impossible date instead of guessing", async () => {
     const tools = buildHrTools(callers.employee);
-    const out = await call(tools.getDateInfo, { date: "next monday" });
-    expect(out.error).toBeDefined();
-    expect(out.weekday).toBeUndefined();
+    for (const date of ["next monday", "2026-06-31", "2026-02-30", "2026-13-01"]) {
+      const out = await call(tools.getDateInfo, { date });
+      expect(out.error, `expected ${date} to be rejected`).toBeDefined();
+      expect(out.weekday).toBeUndefined();
+    }
   });
 
   it("businessDaysBetween counts Mon–Fri inclusively, ignoring weekends", async () => {
