@@ -27,7 +27,7 @@ OpenRouter (chat + embeddings) · Postgres + pgvector (`halfvec` + HNSW) · Pris
 - **AI tools** (`lib/ai/tools.ts`) are advertised **per role**: `buildHrTools(caller)` injects only
   the tools whose permission the role holds (via `TOOL_CATALOGUE`), so out-of-scope tools never reach
   the model. Per-tool `withPermission(...)` checks remain as defense in depth; any refusal returns a
-  plain `{ error }` (relayed by the agent), never a throw or a "denied" card. See
+  silent `{ refused }` (the agent works around it; the UI shows nothing), never a throw or a card. See
   `docs/architecture/authorization-invariants.md`.
 - **Embeddings** (`lib/ai/embeddings.ts`): model is env-selectable (`EMBEDDING_MODEL`) but the
   dimension is fixed by the migration (`halfvec(384)`). Changing the dimension = a new migration +

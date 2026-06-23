@@ -62,14 +62,13 @@ describe("getPayslip — self vs anyone", () => {
     expect(out.payslip.netMonthly).toBeGreaterThan(0);
   });
 
-  it("employee viewing someone else's payslip gets a clean error, no card, no data", async () => {
-    // getPayslip is offered to everyone (for their own), but the cross-person
-    // branch returns a plain { error } the agent relays — never a denied card.
+  it("employee's payslip tool is self-only — a passed id is ignored, never returns another's", async () => {
+    // The non-elevated tool has no employeeId field at all, and its execute
+    // ignores any id, so the agent can't even express a cross-person query.
     const tools = buildHrTools(callers.employee);
     const out = await call(tools.getPayslip, { employeeId: callers.manager.employeeId });
-    expect(out.payslip).toBeUndefined();
-    expect(out.error).toBeDefined();
-    expect(out.denied).toBeUndefined();
+    expect(out.payslip?.employeeName).toContain("Erin"); // own, not Marcus
+    expect(out.payslip?.employeeName).not.toContain("Marcus");
   });
 
   it("HR can view anyone's payslip by id", async () => {
@@ -84,7 +83,7 @@ describe("getPayslip — self vs anyone", () => {
     const tools = buildHrTools(callers.hr);
     const out = await call(tools.getPayslip, { employeeId: "clx0000000000000guessed0" });
     expect(out.payslip).toBeUndefined();
-    expect(out.error).toBeDefined();
+    expect(out.refused).toBe(true); // silent, model-only — not rendered
   });
 });
 
@@ -124,8 +123,8 @@ describe("approvals — per-role exposure", () => {
         requestId: foreign.id,
         decision: "APPROVE",
       });
-      expect(out.error).toBeDefined();
-      expect(out.denied).toBeUndefined();
+      expect(out.refused).toBe(true); // silent refusal, not a rendered error
+      expect(out.result).toBeUndefined();
       // And it must NOT have been approved as a side effect.
       const after = await prisma.leaveRequest.findUnique({ where: { id: foreign.id } });
       expect(after?.status).toBe("PENDING");
@@ -148,11 +147,18 @@ describe("tool input schemas — tolerant of model quirks", () => {
   });
 
   it("accepts null for optional fields (not just undefined)", () => {
+    // HR's payslip tool carries the optional employeeId target (employees' doesn't).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(() => (buildHrTools(callers.hr).getPayslip as any).inputSchema.parse({ employeeId: null })).not.toThrow();
     const tools = buildHrTools(callers.employee);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(() => (tools.getPayslip as any).inputSchema.parse({ employeeId: null })).not.toThrow();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(() => (tools.getEmployeeDirectory as any).inputSchema.parse({ filter: null })).not.toThrow();
+  });
+
+  it("an employee's payslip tool exposes no employeeId target at all", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const shape = (buildHrTools(callers.employee).getPayslip as any).inputSchema.shape;
+    expect(shape.employeeId).toBeUndefined();
   });
 });
 

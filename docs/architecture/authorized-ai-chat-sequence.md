@@ -67,9 +67,9 @@ sequenceDiagram
             LLM->>Tools: tool call<br/>(only tools this role was given)
             Tools->>Tools: can(role, permission)? (defense in depth)
 
-            alt Out-of-scope target (e.g. another's payslip, another team's request)
-                Tools-->>LLM: { error } (no DB access)
-                API-->>UI: stream tool part → neutral note (no "denied" card)
+            alt Out-of-scope target (e.g. another team's request)
+                Tools-->>LLM: { refused, message } (no DB access)
+                API-->>UI: tool part renders NOTHING; agent works with authorized data
             else Granted — handbook tool (RAG)
                 Tools->>Emb: embed query (all-MiniLM-L6-v2, 384d)
                 Emb-->>Tools: query vector
@@ -141,9 +141,10 @@ never offered and the model can't attempt it. Each tool's `execute` still
 re-checks `can(role, permission)` **before** touching the database
 (`src/lib/ai/tools.ts`) as defense in depth:
 
-- **Refused** (a target out of scope — someone else's payslip, another team's
-  request) → returns a plain `{ error }` with no DB access; the UI renders it as a
-  neutral note and the model relays it. Tools **fail closed** — no "denied" card.
+- **Refused** (a target out of scope — another team's request; non-elevated roles
+  can't even ask for another's payslip, the param is dropped from their schema) →
+  returns `{ refused, message }` with no DB access; the UI renders **nothing** and
+  the model works with the authorized data. Tools **fail closed** — no card.
 - **Granted — handbook (RAG)** → `searchHandbook` embeds the query via OpenRouter
   (`embedText`, 384-dim) and runs a pgvector cosine search; results stream into the
   **citations** widget. See the dedicated *HR Handbook RAG architecture*
@@ -188,7 +189,7 @@ role, because the **server** enforces the matrix regardless. This mirrors the
 |---|---|
 | No session | `401 Unauthorized`; no model call. |
 | Tool not permitted for role | Not advertised — `buildHrTools` never injects it, so the model can't call it. |
-| Target out of scope (other's payslip / another team's request) | `{ error }` (no DB hit) → neutral note; model relays it. |
+| Target out of scope (another team's request) | `{ refused }` (no DB hit) → UI shows nothing; agent works with authorized data. |
 | Handbook search unavailable (missing embedding key / unseeded) | `searchHandbook` catches and returns `{ results: [], error }` so the turn degrades gracefully instead of throwing. |
 | Model loops on tools | Bounded by `stopWhen: stepCountIs(8)`. |
 | Reasoning-only steps | Streamed to the "Thinking…" panel via `sendReasoning: true`. |

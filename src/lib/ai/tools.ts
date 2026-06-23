@@ -16,9 +16,13 @@
 //          server-side against the caller's scope, so a guessed id can't reach
 //          data: getPayslip resolves the target within directory scope;
 //          approveLeave re-checks the request belongs to the caller's reports.
-//       4. Authorization shortfalls return a plain `{ error }` the agent relays
-//          in prose — never a throw, never a "permission denied" card. Combined
-//          with per-role exposure, a correctly-configured role never hits one.
+//       4. Scope refusals return `{ refused, message }` — the model reads the
+//          message and works with the authorized data; the UI renders NOTHING
+//          for it. So out-of-scope requests never produce a visible error.
+//          (Operational problems — bad dates, handbook down — still return
+//          `{ error }`, which the UI does show.) Where a parameter would only
+//          ever be out of scope for a role, it's dropped from that role's schema
+//          entirely (see getPayslip) so the query can't even be expressed.
 // All reads go through the same role-scoped helpers as the UI (lib/hr).
 // ─────────────────────────────────────────────────────────────────────────
 import { tool } from "ai";
@@ -39,22 +43,27 @@ export type ToolCaller = {
   name: string;
 };
 
-type ToolError = { error: string };
+// A scope refusal. The model reads `message` and works around it in prose; the
+// UI renders NOTHING for it (unlike `{ error }`, which is an operational problem
+// worth showing). So an out-of-scope request never produces a visible error.
+type Refusal = { refused: true; message: string };
+function refused(message: string): Refusal {
+  return { refused: true, message };
+}
 
 /**
- * Run `fn` only if the caller holds `permission`, else return a plain { error }.
- * This is defense in depth: `buildHrTools` already declines to advertise a tool
- * the role can't use, so for a correctly-configured role this branch is never
- * reached. If it ever fires, it surfaces as a neutral note — never a card.
+ * Run `fn` only if the caller holds `permission`, else return a silent refusal.
+ * Defense in depth: `buildHrTools` already declines to advertise a tool the role
+ * can't use, so for a correctly-configured role this branch is never reached.
  */
 function withPermission<I, O>(
   caller: ToolCaller,
   permission: Permission,
   fn: (input: I) => Promise<O>,
-): (input: I) => Promise<O | ToolError> {
+): (input: I) => Promise<O | Refusal> {
   return async (input: I) => {
     if (!can(caller.role, permission)) {
-      return { error: `That action isn't available to your role (needs "${PERMISSION_LABELS[permission]}").` };
+      return refused(`That action isn't available to your role (needs "${PERMISSION_LABELS[permission]}").`);
     }
     return fn(input);
   };
@@ -94,6 +103,11 @@ function leaveDays(start: string, end: string): number | { error: string } {
  * `buildHrTools`, which advertises only the subset the role may use.
  */
 function buildAllHrTools(caller: ToolCaller) {
+  // Only callers who can read anyone's pay get a target parameter; everyone else
+  // gets a self-only payslip tool with no `employeeId` field — so the agent
+  // can't even attempt to query another person's payslip.
+  const canReadAnyPayslip = can(caller.role, "payslip:read:any");
+
   return {
     // ── RAG over the handbook ───────────────────────────────────────────
     searchHandbook: tool({
@@ -227,7 +241,7 @@ function buildAllHrTools(caller: ToolCaller) {
         // tool, but a requestId outside their team is still refused here.)
         const companyWide = can(caller.role, "directory:read:all");
         if (!companyWide && req.employee.managerId !== caller.employeeId) {
-          return { error: "That request is for someone outside your team, so you can't action it." };
+          return refused("That request is for someone outside your team, so you can't action it.");
         }
 
         // Only act on PENDING requests — re-approving would double-deduct the
@@ -264,30 +278,35 @@ function buildAllHrTools(caller: ToolCaller) {
       }),
     }),
 
-    // ── Payslip (self vs anyone) ────────────────────────────────────────
-    getPayslip: tool({
-      description:
-        "Get a payslip summary. Omit employeeId for your own payslip. Viewing someone else's needs elevated rights and only works for an employee you can see — pass an employeeId returned by getEmployeeDirectory, never a guessed one.",
-      inputSchema: z.object({
-        employeeId: z
-          .string()
-          .nullish()
-          .describe(
-            "An employeeId returned by getEmployeeDirectory — omit for your own. Out-of-scope or invented ids return nothing.",
-          ),
-      }),
-      // Delegates to the role-scoped data layer (lib/hr): the target is resolved
-      // server-side within the caller's directory scope, so a guessed id can
-      // never surface a real payslip. Shortfalls return a plain { error }.
-      execute: async ({ employeeId }) => {
-        const result = await getPayslip(caller, employeeId);
-        if (result.ok) return { payslip: result.payslip };
-        if (result.reason === "denied") {
-          return { error: "You can only view your own payslip — ask HR for anyone else's." };
-        }
-        return { error: "No payslip found for an employee you're allowed to view." };
-      },
-    }),
+    // ── Payslip ─────────────────────────────────────────────────────────
+    // Role-aware: elevated callers get an `employeeId` target; everyone else
+    // gets a self-only tool with no target field, so the agent only ever has
+    // access to its own pay — no out-of-scope query is even expressible.
+    getPayslip: canReadAnyPayslip
+      ? tool({
+          description:
+            "Get a payslip summary for an employee you can see. Omit employeeId for your own; to view someone else's, pass an employeeId returned by getEmployeeDirectory (never a guessed one).",
+          inputSchema: z.object({
+            employeeId: z
+              .string()
+              .nullish()
+              .describe("An employeeId returned by getEmployeeDirectory — omit for your own."),
+          }),
+          execute: async ({ employeeId }) => {
+            const result = await getPayslip(caller, employeeId);
+            if (result.ok) return { payslip: result.payslip };
+            return refused("No payslip found for an employee you can view.");
+          },
+        })
+      : tool({
+          description: "Get the current user's own payslip summary.",
+          inputSchema: z.object({}),
+          execute: async () => {
+            const result = await getPayslip(caller); // self only — no target accepted
+            if (result.ok) return { payslip: result.payslip };
+            return refused("No payslip is linked to your account.");
+          },
+        }),
   };
 }
 

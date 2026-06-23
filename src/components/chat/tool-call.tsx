@@ -61,6 +61,9 @@ export function ToolCall({ part }: { part: ToolPart }) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ToolOutput({ name, output }: { name: string; output: any }) {
   if (!output) return null;
+  // Scope refusals are intentionally invisible — the agent works with the
+  // authorized data and explains in prose; we don't surface an error.
+  if (output.refused) return null;
   if (output.error)
     return (
       <p className="rounded-lg border border-dashed p-2 text-xs text-muted-foreground">

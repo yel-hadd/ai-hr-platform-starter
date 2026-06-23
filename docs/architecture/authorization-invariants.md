@@ -26,8 +26,11 @@ never disagree.
 
 A consequence worth stating plainly: **a correctly-configured role never hits a
 "permission denied".** Out-of-scope tools aren't offered, so they can't be called;
-the few target-scoped refusals (someone else's payslip, another team's request)
-return a plain `{ error }` the agent relays in prose. No red "denied" card.
+where a parameter would only ever be out of scope for a role it's dropped from
+that role's tool schema entirely (so the query can't even be expressed — see
+`getPayslip`); and the few residual refusals return `{ refused, message }` that
+the agent relays in prose while the UI renders **nothing**. No card, no error
+note — the agent simply works with the authorized data.
 
 ## The two kinds of identifier
 
@@ -70,10 +73,13 @@ closure cannot see anything the session didn't put there.
      non-report's request even though they hold `leave:approve`.
    Both are locked by tests in `tests/tools.integration.test.ts`.
 
-6. **Fail closed, and quietly.** There is no free-form / SQL / fetch tool to
+6. **Fail closed, and invisibly.** There is no free-form / SQL / fetch tool to
    escalate through. A correctly-configured role never hits a denial (invariant
-   #3); the residual target-scoped refusals return a plain `{ error }` the agent
-   relays — never a throw, never a "permission denied" card, no data touched.
+   #3); the residual target-scoped refusals return `{ refused, message }` — the
+   model reads it and works with the authorized data, and the UI renders nothing.
+   Never a throw, never a card or error note, no data touched. (Operational
+   problems — bad dates, handbook down — still return `{ error }`, which the UI
+   *does* show, since those are worth surfacing.)
    There is no "alert" side channel — refusing *is* the alert.
 
 ## Checklist — adding a new AI tool
@@ -95,9 +101,10 @@ When you add a tool, verify each line:
 - [ ] **Any id argument is authorized against the caller's scope** before
       returning data — never trust that the model "got it from a prior tool".
       Resolve it through `directoryWhere(caller)` or an equivalent scoped query.
-- [ ] **Refusals return a plain `{ error: string }`**, never throw and never
-      `{ denied: true }` — so it surfaces as a neutral note the agent relays, not
-      a card.
+- [ ] **Scope refusals return `{ refused, message }`** (not `{ error }`, not a
+      throw, not `{ denied: true }`) — the agent relays it and the UI shows
+      nothing. Better still: if a parameter is only ever out of scope for the
+      role, drop it from that role's schema so the query can't be expressed.
 - [ ] **Add tests** for per-role exposure (the tool is/ isn't offered) and, if it
       takes an id, the out-of-scope-id path.
 
