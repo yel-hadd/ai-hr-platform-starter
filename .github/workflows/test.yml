@@ -46,5 +46,10 @@ jobs:
           npm run db:deploy
           npm run db:seed
 
+      - name: Build (Next.js)
+        run: npm run build
+        env:
+          AUTH_SECRET: ci-secret-not-used
+
       - name: Deterministic tests (no OpenRouter key required)
         run: npm test
