@@ -12,7 +12,9 @@ export function Reasoning({
   text: string;
   streaming: boolean;
 }) {
-  const [open, setOpen] = useState(true);
+  // Default collapsed: auto-expands while streaming (to show live thinking), then
+  // collapses to a one-line summary when done. Click to re-open.
+  const [open, setOpen] = useState(false);
   const expanded = streaming || open;
 
   return (

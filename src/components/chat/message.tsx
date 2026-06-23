@@ -70,7 +70,7 @@ export const ChatMessage = memo(function ChatMessage({
           }
 
           if (part.type.startsWith("tool-")) {
-            return <ToolCall key={i} part={part as never} />;
+            return <ToolCall key={i} part={part as never} streaming={streaming} />;
           }
 
           return null;

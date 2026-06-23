@@ -22,7 +22,7 @@ export const DEMO_USERS: DemoUser[] = [
     title: "Software Engineer",
     department: "Engineering",
     location: "Austin, TX",
-    blurb: "Sees only their own data. Tools that touch other people get denied.",
+    blurb: "Sees only their own data. The assistant is given only self-service tools — approvals and others' records aren't offered.",
   },
   {
     email: "manager@acme.test",
