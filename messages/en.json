@@ -114,7 +114,12 @@
     "modelRegistry": "AI model registry",
     "modelRegistryDescription": "Chat defaults to OpenRouter free models; the Vercel AI Gateway is selectable per request. Configure keys via environment variables.",
     "reasoning": "reasoning",
-    "default": "default"
+    "default": "default",
+    "localization": "Localization",
+    "localizationDescription": "Currency and timezone used across the app and by the AI assistant.",
+    "currency": "Currency",
+    "timezone": "Timezone",
+    "save": "Save"
   },
   "chat": {
     "assistant": "AI Assistant",

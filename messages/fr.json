@@ -114,7 +114,12 @@
     "modelRegistry": "Registre des modèles IA",
     "modelRegistryDescription": "Le chat utilise par défaut les modèles gratuits d'OpenRouter ; la passerelle Vercel AI est sélectionnable par requête. Configurez les clés via les variables d'environnement.",
     "reasoning": "raisonnement",
-    "default": "par défaut"
+    "default": "par défaut",
+    "localization": "Localisation",
+    "localizationDescription": "Devise et fuseau horaire utilisés dans toute l'application et par l'assistant IA.",
+    "currency": "Devise",
+    "timezone": "Fuseau horaire",
+    "save": "Enregistrer"
   },
   "chat": {
     "assistant": "Assistant IA",

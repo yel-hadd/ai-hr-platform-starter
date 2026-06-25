@@ -8,8 +8,11 @@ import {
 } from "@/lib/rbac";
 import { CHAT_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
 import { TOOL_CATALOGUE, toolsForRole } from "@/lib/ai/tools";
+import { CURRENCIES, TIMEZONES, getOrgSettings } from "@/lib/settings";
+import { updateOrgSettings } from "./actions";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -29,6 +32,7 @@ export default async function SettingsPage() {
   const tRoles = await getTranslations("roles");
   const tPerm = await getTranslations("permissions");
   const tSummary = await getTranslations("tools.summary");
+  const orgSettings = await getOrgSettings();
 
   return (
     <>
@@ -37,6 +41,42 @@ export default async function SettingsPage() {
         description={t("description")}
       />
       <div className="space-y-6 p-4 md:p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("localization")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-muted-foreground">{t("localizationDescription")}</p>
+            <form action={updateOrgSettings} className="flex flex-wrap items-end gap-4">
+              <label className="space-y-1 text-sm">
+                <span className="block text-muted-foreground">{t("currency")}</span>
+                <select
+                  name="currency"
+                  defaultValue={orgSettings.currency}
+                  className="block rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="block text-muted-foreground">{t("timezone")}</span>
+                <select
+                  name="timezone"
+                  defaultValue={orgSettings.timezone}
+                  className="block rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  {TIMEZONES.map((tz) => (
+                    <option key={tz} value={tz}>{tz}</option>
+                  ))}
+                </select>
+              </label>
+              <Button type="submit" size="sm">{t("save")}</Button>
+            </form>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>{t("permissionMatrix")}</CardTitle>

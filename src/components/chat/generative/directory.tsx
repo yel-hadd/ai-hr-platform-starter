@@ -1,9 +1,10 @@
 import { Mail, MapPin, Briefcase } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { type Role } from "@/lib/rbac";
-import { formatMAD } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { useOrgSettings } from "@/components/org-settings-provider";
 
 type Person = {
   id: string;
@@ -22,6 +23,8 @@ export function DirectoryCards({ people }: { people: Person[] }) {
   const t = useTranslations("directoryCard");
   const tCommon = useTranslations("common");
   const tRoles = useTranslations("roles");
+  const locale = useLocale();
+  const { currency } = useOrgSettings();
   if (people.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
@@ -67,7 +70,7 @@ export function DirectoryCards({ people }: { people: Person[] }) {
               </p>
               {p.salary != null && (
                 <p className="font-medium text-foreground">
-                  {formatMAD(p.salary)} {t("perYear")}
+                  {formatCurrency(p.salary, currency, locale)} {t("perYear")}
                 </p>
               )}
             </div>

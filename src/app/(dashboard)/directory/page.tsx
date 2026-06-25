@@ -1,8 +1,9 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/session";
 import { getDirectory } from "@/lib/hr";
 import { can } from "@/lib/rbac";
-import { formatMAD } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { getOrgSettings } from "@/lib/settings";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,6 +25,8 @@ export default async function DirectoryPage() {
   const t = await getTranslations("directory");
   const tRoles = await getTranslations("roles");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const { currency } = await getOrgSettings();
 
   const scope = can(user.role, "directory:read:all")
     ? t("scopeAll")
@@ -66,7 +69,7 @@ export default async function DirectoryPage() {
                   <TableCell>{e.managerName ?? tc("none")}</TableCell>
                   {showSalary && (
                     <TableCell className="text-right tabular-nums">
-                      {e.salary != null ? formatMAD(e.salary) : tc("none")}
+                      {e.salary != null ? formatCurrency(e.salary, currency, locale) : tc("none")}
                     </TableCell>
                   )}
                 </TableRow>

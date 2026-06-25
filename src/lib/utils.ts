@@ -5,14 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Salaries are in Moroccan dirham. One formatter, shared by the directory and
-// payslip cards so currency rendering can't drift between them.
-const madFormatter = new Intl.NumberFormat("fr-MA", {
-  style: "currency",
-  currency: "MAD",
-  maximumFractionDigits: 0,
-})
-
-export function formatMAD(value: number) {
-  return madFormatter.format(value)
+// Format a salary in the org's configured currency, grouped per the active UI
+// locale. Currency comes from OrgSettings (see lib/settings.ts); locale from
+// next-intl. One helper so the directory and payslip cards can't drift.
+export function formatCurrency(value: number, currency: string, locale = "fr") {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value)
 }

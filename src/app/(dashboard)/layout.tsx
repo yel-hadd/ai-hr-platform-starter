@@ -1,5 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/session";
+import { getOrgSettings } from "@/lib/settings";
+import { OrgSettingsProvider } from "@/components/org-settings-provider";
 import { Sidebar, MobileNav } from "@/components/layout/sidebar";
 
 export default async function DashboardLayout({
@@ -10,8 +12,10 @@ export default async function DashboardLayout({
   const user = await requireUser(); // redirects to /login if signed out
   const nav = { name: user.name, email: user.email, role: user.role };
   const t = await getTranslations("nav");
+  const orgSettings = await getOrgSettings();
 
   return (
+    <OrgSettingsProvider value={orgSettings}>
     <div className="flex h-dvh overflow-hidden">
       <a
         href="#main"
@@ -32,5 +36,6 @@ export default async function DashboardLayout({
         </main>
       </div>
     </div>
+    </OrgSettingsProvider>
   );
 }

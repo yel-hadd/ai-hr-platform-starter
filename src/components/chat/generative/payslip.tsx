@@ -1,6 +1,7 @@
 import { Receipt } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { formatMAD } from "@/lib/utils";
+import { useTranslations, useLocale } from "next-intl";
+import { formatCurrency } from "@/lib/utils";
+import { useOrgSettings } from "@/components/org-settings-provider";
 
 export function Payslip({
   payslip,
@@ -14,11 +15,13 @@ export function Payslip({
   };
 }) {
   const t = useTranslations("payslip");
+  const locale = useLocale();
+  const { currency } = useOrgSettings();
   const row = (label: string, value: number, strong = false) => (
     <div className="flex justify-between">
       <span className="text-muted-foreground">{label}</span>
       <span className={strong ? "font-semibold" : "tabular-nums"}>
-        {formatMAD(value)}
+        {formatCurrency(value, currency, locale)}
       </span>
     </div>
   );
