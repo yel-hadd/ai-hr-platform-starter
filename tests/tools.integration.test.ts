@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { buildHrTools, type ToolCaller } from "@/lib/ai/tools";
+import { buildHrTools, toolsForRole, type ToolCaller } from "@/lib/ai/tools";
 
 // Minimal ToolCallOptions stub for invoking tool.execute directly.
 const OPTS = { toolCallId: "test", messages: [] } as never;
@@ -14,13 +14,11 @@ const callers: Record<string, ToolCaller> = {};
 beforeAll(async () => {
   const users = await prisma.user.findMany({
     where: {
-
       email: { in: ["collaborateur@hari.ma", "manager@hari.ma", "rh@hari.ma"] },
     },
     include: { employee: { select: { id: true } } },
   });
   for (const u of users) {
-
     let key = u.email.split("@")[0];
     if (key === "collaborateur") key = "employee";
     if (key === "rh") key = "hr";
@@ -47,7 +45,6 @@ describe("getEmployeeDirectory — role scoping", () => {
   it("manager sees self + direct reports, salary still hidden", async () => {
     const tools = buildHrTools(callers.manager);
     const out = await call(tools.getEmployeeDirectory, {});
-
     expect(out.count).toBe(4);
     expect(out.people.every((p: { salary: number | null }) => p.salary === null)).toBe(true);
   });
@@ -55,7 +52,6 @@ describe("getEmployeeDirectory — role scoping", () => {
   it("HR sees the whole company with salaries visible", async () => {
     const tools = buildHrTools(callers.hr);
     const out = await call(tools.getEmployeeDirectory, {});
-
     expect(out.count).toBe(6);
     expect(out.people.some((p: { salary: number | null }) => typeof p.salary === "number")).toBe(true);
   });
@@ -69,27 +65,32 @@ describe("getPayslip — self vs anyone", () => {
     expect(out.payslip.netMonthly).toBeGreaterThan(0);
   });
 
-  it("employee is DENIED viewing someone else's payslip", async () => {
+  it("employee's payslip tool is self-only — a passed id is ignored, never returns another's", async () => {
     const tools = buildHrTools(callers.employee);
     const out = await call(tools.getPayslip, { employeeId: callers.manager.employeeId });
-    expect(out.denied).toBe(true);
-    expect(out.permission).toBe("payslip:read:any");
+    expect(out.payslip?.employeeName).toContain("Imane"); // own, not Karim
+    expect(out.payslip?.employeeName).not.toContain("Karim");
   });
 
   it("HR can view anyone's payslip by id", async () => {
     const tools = buildHrTools(callers.hr);
     const out = await call(tools.getPayslip, { employeeId: callers.employee.employeeId });
-
     expect(out.payslip?.employeeName).toContain("Imane");
+  });
+
+  it("a guessed / non-existent id yields a clean not-found, never a payslip", async () => {
+    const tools = buildHrTools(callers.hr);
+    const out = await call(tools.getPayslip, { employeeId: "clx0000000000000guessed0" });
+    expect(out.payslip).toBeUndefined();
+    expect(out.refused).toBe(true);
   });
 });
 
-describe("approvals — permission gating", () => {
-  it("employee is DENIED listing pending approvals", async () => {
+describe("approvals — per-role exposure", () => {
+  it("employee is NOT offered the approval tools at all", () => {
     const tools = buildHrTools(callers.employee);
-    const out = await call(tools.listPendingApprovals, {});
-    expect(out.denied).toBe(true);
-    expect(out.permission).toBe("leave:approve");
+    expect(tools.listPendingApprovals).toBeUndefined();
+    expect(tools.approveLeave).toBeUndefined();
   });
 
   it("manager sees pending approvals for their reports", async () => {
@@ -97,13 +98,38 @@ describe("approvals — permission gating", () => {
     const out = await call(tools.listPendingApprovals, {});
     expect(out.count).toBeGreaterThanOrEqual(2);
     const names = out.pending.map((p: { employeeName: string }) => p.employeeName);
-
     expect(names).toContain("Imane Chraibi");
   });
-  it("employee is DENIED approving leave", async () => {
-    const tools = buildHrTools(callers.employee);
-    const out = await call(tools.approveLeave, { requestId: "x", decision: "APPROVE" });
-    expect(out.denied).toBe(true);
+
+  it("manager approving a request from outside their team gets a clean error, no data change", async () => {
+    // Nadia (HR) does not report to Karim. Even though Karim IS offered approveLeave,
+    // a requestId pointing outside his reports is refused server-side and returns a
+    // plain { error } — not a denied card — and changes nothing.
+    const foreign = await prisma.leaveRequest.create({
+      data: {
+        employeeId: callers.hr.employeeId!,
+        type: "VACATION",
+        startDate: new Date("2026-09-01"),
+        endDate: new Date("2026-09-02"),
+        days: 2,
+        status: "PENDING",
+      },
+    });
+    try {
+      const tools = buildHrTools(callers.manager);
+      const out = await call(tools.approveLeave, {
+        requestId: foreign.id,
+        decision: "APPROVE",
+      });
+      // FIXED: Switched from `out.refused` to `out.error` to match the backend behavior
+      expect(out.error).toBeDefined();
+      expect(out.result).toBeUndefined();
+
+      const after = await prisma.leaveRequest.findUnique({ where: { id: foreign.id } });
+      expect(after?.status).toBe("PENDING");
+    } finally {
+      await prisma.leaveRequest.delete({ where: { id: foreign.id } });
+    }
   });
 });
 
@@ -120,11 +146,17 @@ describe("tool input schemas — tolerant of model quirks", () => {
   });
 
   it("accepts null for optional fields (not just undefined)", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(() => (buildHrTools(callers.hr).getPayslip as any).inputSchema.parse({ employeeId: null })).not.toThrow();
     const tools = buildHrTools(callers.employee);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(() => (tools.getPayslip as any).inputSchema.parse({ employeeId: null })).not.toThrow();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(() => (tools.getEmployeeDirectory as any).inputSchema.parse({ filter: null })).not.toThrow();
+  });
+
+  it("an employee's payslip tool exposes no employeeId target at all", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const shape = (buildHrTools(callers.employee).getPayslip as any).inputSchema.shape;
+    expect(shape.employeeId).toBeUndefined();
   });
 });
 
@@ -139,7 +171,6 @@ describe("requestTimeOff — write path", () => {
     expect(out.request.status).toBe("PENDING");
     expect(out.request.days).toBe(3);
 
-    // Cleanup so re-runs stay deterministic.
     await prisma.leaveRequest.delete({ where: { id: out.request.id } });
   });
 
@@ -159,6 +190,14 @@ describe("requestTimeOff — write path", () => {
       endDate: "2026-09-01",
     });
     expect(malformed.error).toMatch(/YYYY-MM-DD/);
+
+    const impossible = await call(tools.requestTimeOff, {
+      type: "VACATION",
+      startDate: "2026-06-31",
+      endDate: "2026-07-02",
+    });
+    expect(impossible.error).toBeDefined();
+    expect(impossible.request).toBeUndefined();
   });
 });
 
@@ -168,12 +207,91 @@ describe("approveLeave — only acts on PENDING", () => {
       where: { status: "APPROVED" },
     });
     expect(decided).not.toBeNull();
-    const tools = buildHrTools(callers.hr); // company-wide approver
+    const tools = buildHrTools(callers.hr);
     const out = await call(tools.approveLeave, {
       requestId: decided!.id,
       decision: "APPROVE",
     });
     expect(out.error).toMatch(/already approved/i);
     expect(out.result).toBeUndefined();
+  });
+});
+
+describe("tool catalogue — irrelevant tools aren't injected per role", () => {
+  it("employee gets only self-service tools (no approvals)", () => {
+    const tools = buildHrTools(callers.employee);
+    expect(Object.keys(tools).sort()).toEqual(
+      [
+        "getCurrentDateTime",
+        "getDateInfo",
+        "businessDaysBetween",
+        "getEmployeeDirectory",
+        "getLeaveBalance",
+        "getPayslip",
+        "requestTimeOff",
+        "searchHandbook",
+      ].sort(),
+    );
+  });
+
+  it("the calendar utilities are offered to every role", () => {
+    for (const c of [callers.employee, callers.manager, callers.hr]) {
+      const names = Object.keys(buildHrTools(c));
+      expect(names).toContain("getCurrentDateTime");
+      expect(names).toContain("getDateInfo");
+      expect(names).toContain("businessDaysBetween");
+    }
+  });
+
+  it("manager additionally gets the approval tools", () => {
+    const names = Object.keys(buildHrTools(callers.manager));
+    expect(names).toContain("listPendingApprovals");
+    expect(names).toContain("approveLeave");
+  });
+
+  it("toolsForRole matches what buildHrTools actually exposes", () => {
+    for (const c of [callers.employee, callers.manager, callers.hr]) {
+      expect(toolsForRole(c.role).sort()).toEqual(Object.keys(buildHrTools(c)).sort());
+    }
+  });
+});
+
+describe("calendar utilities — deterministic date math", () => {
+  it("getDateInfo returns the correct weekday and weekend flag", async () => {
+    const tools = buildHrTools(callers.employee);
+    const tue = await call(tools.getDateInfo, { date: "2026-06-23" });
+    expect(tue.weekday).toBe("Tuesday");
+    expect(tue.isWeekend).toBe(false);
+    const sat = await call(tools.getDateInfo, { date: "2026-06-27" });
+    expect(sat.weekday).toBe("Saturday");
+    expect(sat.isWeekend).toBe(true);
+  });
+
+  it("getDateInfo rejects a malformed or impossible date instead of guessing", async () => {
+    const tools = buildHrTools(callers.employee);
+    for (const date of ["next monday", "2026-06-31", "2026-02-30", "2026-13-01"]) {
+      const out = await call(tools.getDateInfo, { date });
+      expect(out.error, `expected ${date} to be rejected`).toBeDefined();
+      expect(out.weekday).toBeUndefined();
+    }
+  });
+
+  it("businessDaysBetween counts Mon–Fri inclusively, ignoring weekends", async () => {
+    const tools = buildHrTools(callers.employee);
+    const out = await call(tools.businessDaysBetween, {
+      startDate: "2026-06-23",
+      endDate: "2026-06-29",
+    });
+    expect(out.calendarDays).toBe(7);
+    expect(out.businessDays).toBe(5);
+  });
+
+  it("businessDaysBetween rejects a reversed range", async () => {
+    const tools = buildHrTools(callers.employee);
+    const out = await call(tools.businessDaysBetween, {
+      startDate: "2026-06-29",
+      endDate: "2026-06-23",
+    });
+    expect(out.error).toMatch(/on or after/i);
   });
 });
