@@ -82,3 +82,9 @@ docker compose up --build
 Lance Postgres + pgvector, Adminer (`:8080`) et l'appli Next.js (`:3000`). Les migrations et le seed s'appliquent automatiquement.
 
 Voir [`AGENTS.md`](./AGENTS.md) pour les commandes complètes et les conventions de code.
+
+## Travailler sur l'UI
+
+Avant de créer une page ou un composant, lire le [guide Frontend & UI](./docs/frontend.md) :
+thème (clair / sombre via tokens), composants shadcn (`base-nova` sur Base UI), structure
+du layout responsive, et la checklist accessibilité / responsive à valider avant chaque PR UI.

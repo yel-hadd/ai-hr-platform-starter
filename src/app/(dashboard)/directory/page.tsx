@@ -29,7 +29,7 @@ export default async function DirectoryPage() {
   return (
     <>
       <PageHeader title="Directory" description={scope} />
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <div className="rounded-lg border">
           <Table>
             <TableHeader>

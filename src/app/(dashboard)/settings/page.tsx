@@ -32,7 +32,7 @@ export default async function SettingsPage() {
         title="Settings"
         description="The single RBAC matrix that gates the UI, server actions, and AI tools."
       />
-      <div className="space-y-6 p-8">
+      <div className="space-y-6 p-4 md:p-8">
         <Card>
           <CardHeader>
             <CardTitle>Permission matrix</CardTitle>
