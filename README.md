@@ -104,10 +104,10 @@ Schema changes go through Prisma migrations: edit `schema.prisma`, run
 
 | Role | Email | Can do |
 |---|---|---|
-| Employee | `employee@acme.test` | Own profile, own leave/payslip, ask the handbook |
-| Manager | `manager@acme.test` | + see direct reports, approve their leave |
-| HR Admin | `hr@acme.test` | + whole company, salaries, any payslip |
-| Super Admin | `admin@acme.test` | + platform settings |
+| Employee | `collaborateur@hari.ma` | Own profile, own leave/payslip, ask the handbook |
+| Manager | `manager@hari.ma` | + see direct reports, approve their leave |
+| HR Admin | `rh@hari.ma` | + whole company, salaries, any payslip |
+| Super Admin | `admin@hari.ma` | + platform settings |
 
 ---
 

@@ -21,12 +21,15 @@ type Seed = {
 };
 
 const PEOPLE: Seed[] = [
-  { email: "admin@acme.test", name: "Sam Super", role: "SUPER_ADMIN", title: "Platform Administrator", department: "IT", location: "Remote", salary: 185000, login: true },
-  { email: "hr@acme.test", name: "Hana HR", role: "HR_ADMIN", title: "HR Business Partner", department: "People", location: "Remote", salary: 145000, login: true },
-  { email: "manager@acme.test", name: "Marcus Manager", role: "MANAGER", title: "Engineering Manager", department: "Engineering", location: "Austin, TX", salary: 165000, login: true },
-  { email: "employee@acme.test", name: "Erin Employee", role: "EMPLOYEE", title: "Software Engineer", department: "Engineering", location: "Austin, TX", salary: 120000, manager: "manager@acme.test", login: true },
-  { email: "nina@acme.test", name: "Nina Patel", role: "EMPLOYEE", title: "Frontend Engineer", department: "Engineering", location: "Remote", salary: 118000, manager: "manager@acme.test", login: false },
-  { email: "omar@acme.test", name: "Omar Said", role: "EMPLOYEE", title: "Backend Engineer", department: "Engineering", location: "Austin, TX", salary: 122000, manager: "manager@acme.test", login: false },
+  // Comptes de démonstration principaux 
+  { email: "admin@hari.ma", name: "Youssef Tazi", role: "SUPER_ADMIN", title: "Directeur des Systèmes d'Information", department: "DSI", location: "Distanciel", salary: 350000, login: true },
+  { email: "rh@hari.ma", name: "Nadia Benali", role: "HR_ADMIN", title: "Responsable Ressources Humaines", department: "Ressources Humaines", location: "Casablanca", salary: 250000, login: true },
+  { email: "manager@hari.ma", name: "Karim El Idrissi", role: "MANAGER", title: "Manager Technique", department: "IT", location: "Tétouan", salary: 300000, login: true },
+  { email: "collaborateur@hari.ma", name: "Imane Chraibi", role: "EMPLOYEE", title: "Ingénieure Logiciel Full Stack", department: "IT", location: "Tétouan", salary: 180000, manager: "manager@hari.ma", login: true },
+
+  // Comptes secondaires pour peupler l'annuaire et les équipes
+  { email: "a.mansouri@hari.ma", name: "Amina Mansouri", role: "EMPLOYEE", title: "Développeuse Frontend", department: "IT", location: "Rabat", salary: 150000, manager: "manager@hari.ma", login: false },
+  { email: "m.bennani@hari.ma", name: "Mehdi Bennani", role: "EMPLOYEE", title: "Développeur Backend", department: "IT", location: "Tétouan", salary: 160000, manager: "manager@hari.ma", login: false },
 ];
 
 async function seedPeople() {
@@ -78,13 +81,14 @@ async function seedPeople() {
   }
 
   // A couple of leave requests so approvals have something to show.
-  const erin = byEmail["employee@acme.test"];
-  const nina = byEmail["nina@acme.test"];
+  const imane = byEmail["collaborateur@hari.ma"];
+  const amina = byEmail["a.mansouri@hari.ma"];
+
   await prisma.leaveRequest.createMany({
     data: [
-      { employeeId: erin, type: "VACATION", startDate: new Date("2026-07-06"), endDate: new Date("2026-07-08"), days: 3, reason: "Long weekend trip", status: "PENDING" },
-      { employeeId: nina, type: "SICK", startDate: new Date("2026-06-22"), endDate: new Date("2026-06-22"), days: 1, reason: "Doctor appointment", status: "PENDING" },
-      { employeeId: erin, type: "VACATION", startDate: new Date("2026-04-10"), endDate: new Date("2026-04-11"), days: 2, reason: "Family event", status: "APPROVED" },
+      { employeeId: imane, type: "VACATION", startDate: new Date("2026-07-06"), endDate: new Date("2026-07-08"), days: 3, reason: "Voyage prolongé", status: "PENDING" },
+      { employeeId: amina, type: "SICK", startDate: new Date("2026-06-22"), endDate: new Date("2026-06-22"), days: 1, reason: "Rendez-vous médical", status: "PENDING" },
+      { employeeId: imane, type: "VACATION", startDate: new Date("2026-04-10"), endDate: new Date("2026-04-11"), days: 2, reason: "Événement familial", status: "APPROVED" },
     ],
   });
 
@@ -102,7 +106,7 @@ async function seedHandbook() {
   if (!process.env.OPENROUTER_API_KEY) {
     console.warn(
       "⚠ No OPENROUTER_API_KEY — skipping handbook embedding. " +
-        "RAG will return no results until you add the key and re-seed.",
+      "RAG will return no results until you add the key and re-seed.",
     );
     return;
   }
