@@ -26,49 +26,310 @@ Détail complet des 12 écarts : voir `docs/03-conception/conception.md`.
 
 ## 2. Diagramme MCD (modèle conceptuel de données)
 
-![Diagramme MCD](./diagrams/01-mcd.svg)
+```mermaid
+erDiagram
+    TENANT ||--o{ USER : possede
+    TENANT ||--o{ DEPARTMENT : possede
+    TENANT ||--o{ EMPLOYEE : possede
+    TENANT ||--o{ HR_DOCUMENT : possede
+    TENANT ||--o{ ALERT : possede
+    TENANT ||--o{ SECURITY_AUDIT_LOG : possede
 
-*Source éditable : [`diagrams/01-mcd.mmd`](./diagrams/01-mcd.mmd)*
+    ROLE ||--o{ USER : qualifie
+    ROLE ||--o{ HR_DOCUMENT : restreint
+
+    USER ||--o| EMPLOYEE : correspond_a
+    DEPARTMENT ||--o{ EMPLOYEE : regroupe
+    DEPARTMENT ||--o| EMPLOYEE : est_dirige_par
+    EMPLOYEE ||--o{ EMPLOYEE : encadre
+    EMPLOYEE ||--o{ ABSENCE : declare
+    EMPLOYEE ||--o{ WORKFLOW : suit
+    WORKFLOW ||--o{ WORKFLOW_TASK : contient
+
+    HR_DOCUMENT ||--o{ DOCUMENT_CHUNK : decoupe_en
+    USER ||--o{ CHAT_SESSION : ouvre
+    CHAT_SESSION ||--o{ AI_EVENT : genere
+
+    EMPLOYEE ||--o{ BURNOUT_RISK_ASSESSMENT : evalue
+    USER ||--o{ BURNOUT_RISK_ASSESSMENT : realise
+
+    AI_EVENT ||--o| ALERT : declenche
+    USER ||--o{ SECURITY_AUDIT_LOG : produit
+```
+
+*Source : [`diagrams/01-mcd.mmd`](./diagrams/01-mcd.mmd)*
 
 ---
 
 ## 3. Diagramme de classes (vue applicative)
 
-![Diagramme de classes](./diagrams/02-classes.svg)
+```mermaid
+classDiagram
+    class Tenant {
+        +uuid id
+        +string name
+        +string domain
+    }
+    class Role {
+        +uuid id
+        +string name
+        +jsonb permissions
+    }
+    class User {
+        +uuid id
+        +string email
+        +Role role
+        +boolean isActive
+    }
+    class Employee {
+        +uuid id
+        +string firstName
+        +string lastName
+        +Department department
+        +Employee manager
+        +string employmentStatus
+        +Date hireDate
+        +decimal salary
+    }
+    class Department {
+        +uuid id
+        +string name
+        +Employee manager
+    }
+    class Absence {
+        +uuid id
+        +Date startDate
+        +Date endDate
+        +string type
+        +string status
+    }
+    class Workflow {
+        +uuid id
+        +string type
+        +string status
+    }
+    class WorkflowTask {
+        +uuid id
+        +string title
+        +boolean isCompleted
+    }
+    class HrDocument {
+        +uuid id
+        +string title
+        +string content
+        +string status
+    }
+    class DocumentChunk {
+        +uuid id
+        +string content
+        +vector embedding
+    }
+    class ChatSession {
+        +uuid id
+        +Date startedAt
+    }
+    class AiEvent {
+        +uuid id
+        +string prompt
+        +boolean isSensitive
+        +boolean refusalTriggered
+    }
+    class BurnoutRiskAssessment {
+        +uuid id
+        +int aiRiskScore
+        +string aiExplanation
+        +string actionPlan
+    }
+    class Alert {
+        +uuid id
+        +string type
+        +string severity
+        +string status
+    }
+    class SecurityAuditLog {
+        +uuid id
+        +string action
+        +string ipAddress
+    }
 
-*Source éditable : [`diagrams/02-classes.mmd`](./diagrams/02-classes.mmd)*
+    Tenant "1" --> "*" User
+    Tenant "1" --> "*" Employee
+    Tenant "1" --> "*" Department
+    Role "1" --> "*" User
+    User "1" --> "0..1" Employee
+    Department "1" --> "*" Employee
+    Employee "1" --> "*" Employee : manage
+    Employee "1" --> "*" Absence
+    Employee "1" --> "*" Workflow
+    Workflow "1" --> "*" WorkflowTask
+    HrDocument "1" --> "*" DocumentChunk
+    User "1" --> "*" ChatSession
+    ChatSession "1" --> "*" AiEvent
+    Employee "1" --> "*" BurnoutRiskAssessment
+    AiEvent "0..1" --> "0..1" Alert
+    User "1" --> "*" SecurityAuditLog
+```
+
+*Source : [`diagrams/02-classes.mmd`](./diagrams/02-classes.mmd)*
 
 ---
 
 ## 4. Diagramme de séquence — exécution d'un workflow RH
 
-![Diagramme de séquence](./diagrams/03-sequence-workflow.svg)
+```mermaid
+sequenceDiagram
+    participant RH as Equipe RH
+    participant App as Application
+    participant DB as Base de donnees (hr_core)
+    participant Collab as Collaborateur
+    participant Agent as Agent IA
 
-*Source éditable : [`diagrams/03-sequence-workflow.mmd`](./diagrams/03-sequence-workflow.mmd)*
+    RH->>App: Creer un workflow (type = Onboarding / Offboarding)
+    App->>DB: INSERT hr_core.workflow(employee_id, type, status='In Progress')
+    App->>Agent: Generer les etapes associees au poste/departement
+    Agent->>DB: INSERT hr_core.workflow_task[] (title, description)
+    App-->>Collab: Notification du parcours assigne
+
+    loop Pour chaque tache
+        Collab->>App: Marquer une tache comme completee
+        App->>DB: UPDATE workflow_task.is_completed = true
+        App->>App: Verifie si toutes les taches sont terminees
+    end
+
+    alt Toutes les taches terminees
+        App->>DB: UPDATE workflow.status = 'Completed'
+        App-->>RH: Notification de cloture du workflow
+    else Etape en retard
+        App->>DB: SELECT workflow_task non completees
+        App-->>RH: Alerte de suivi
+    end
+```
+
+*Source : [`diagrams/03-sequence-workflow.mmd`](./diagrams/03-sequence-workflow.mmd)*
 
 ---
 
 ## 5. Diagramme d'architecture générale du projet
 
-![Diagramme d'architecture](./diagrams/04-architecture.svg)
+```mermaid
+flowchart TB
+    subgraph Client
+        Browser["Navigateur - Next.js App Router (React 19)"]
+    end
 
-*Source éditable : [`diagrams/04-architecture.mmd`](./diagrams/04-architecture.mmd)*
+    subgraph App["Application Next.js 16"]
+        UI["UI - Tailwind v4 + shadcn/ui"]
+        API["Route Handlers"]
+        RBAC["RBAC - auth.role / auth.user"]
+        HR["Couche donnees RH - hr_core.*"]
+        AITools["Outils IA - withPermission"]
+        Embeddings["Pipeline embeddings"]
+    end
+
+    subgraph AI["IA / RAG"]
+        LLM["OpenRouter - chat + embeddings"]
+        RAGStore["ai.hr_document + ai.document_chunk"]
+    end
+
+    subgraph Audit["Securite & audit"]
+        Alerts["audit.alert"]
+        Logs["audit.security_audit_log"]
+    end
+
+    subgraph DB["PostgreSQL"]
+        Schemas["Schemas : auth . hr_core . ai . audit"]
+    end
+
+    Browser --> UI --> API
+    API --> RBAC --> HR
+    API --> AITools --> RBAC
+    AITools --> Embeddings --> LLM
+    AITools --> RAGStore
+    AITools -.refus / comportement suspect.-> Alerts
+    API -.actions sensibles.-> Logs
+    HR --> Schemas
+    RAGStore --> Schemas
+    Alerts --> Schemas
+    Logs --> Schemas
+```
+
+*Source : [`diagrams/04-architecture.mmd`](./diagrams/04-architecture.mmd)*
 
 ---
 
 ## 6. Schéma de workflow (cycle de vie `hr_core.workflow` / `workflow_task`)
 
-![Schéma de workflow](./diagrams/05-workflow-state.svg)
+```mermaid
+stateDiagram-v2
+    [*] --> EnCours : creation du workflow (onboarding / offboarding)
 
-*Source éditable : [`diagrams/05-workflow-state.mmd`](./diagrams/05-workflow-state.mmd)*
+    state EnCours {
+        [*] --> TacheAssignee
+        TacheAssignee --> TacheCompletee : collaborateur valide la tache
+        TacheCompletee --> TacheAssignee : tache suivante assignee
+        TacheAssignee --> EnRetard : echeance depassee sans validation
+        EnRetard --> TacheCompletee : validation tardive
+    }
+
+    EnCours --> Termine : toutes les taches completees
+    EnCours --> Annule : workflow annule (ex. depart anticipe)
+    Termine --> [*]
+    Annule --> [*]
+```
+
+*Source : [`diagrams/05-workflow-state.mmd`](./diagrams/05-workflow-state.mmd)*
 
 ---
 
 ## 6 bis. Diagramme d'architecture applicative
 
-![Diagramme d'architecture applicative](./diagrams/06-architecture-applicative.svg)
+```mermaid
+flowchart LR
+    subgraph Interfaces
+        Collab["Portail Collaborateur"]
+        Manager["Dashboard Manager"]
+        RHUI["Espace RH / Direction"]
+        AdminUI["Supervision Administrateur"]
+    end
 
-*Source éditable : [`diagrams/06-architecture-applicative.mmd`](./diagrams/06-architecture-applicative.mmd)*
+    subgraph Domaines["Domaines applicatifs"]
+        Assistant["Assistant conversationnel RH"]
+        DocGen["Moteur de generation documentaire"]
+        Dashboard["Tableau de bord automatise + predictif"]
+        AlertEngine["Systeme d'alerte (risques sociaux + securite)"]
+        Supervision["Module de supervision des usages IA"]
+        Onboarding["Agents IA - onboarding"]
+        Offboarding["Agents IA - offboarding"]
+    end
+
+    subgraph Plateforme
+        RBACCore["RBAC (auth.role / auth.user)"]
+        DataLayer["Couche donnees (hr_core.*)"]
+        AuditLog["Journalisation / audit"]
+    end
+
+    Collab --> Assistant
+    Collab --> DocGen
+    Collab --> Onboarding
+    Manager --> Dashboard
+    Manager --> AlertEngine
+    RHUI --> Dashboard
+    RHUI --> DocGen
+    RHUI --> Offboarding
+    AdminUI --> Supervision
+    AdminUI --> AlertEngine
+
+    Assistant --> RBACCore
+    DocGen --> RBACCore
+    Dashboard --> DataLayer
+    Onboarding --> DataLayer
+    Offboarding --> DataLayer
+    Supervision --> AuditLog
+    AlertEngine --> AuditLog
+    RBACCore --> DataLayer
+```
+
+*Source : [`diagrams/06-architecture-applicative.mmd`](./diagrams/06-architecture-applicative.mmd)*
 
 Vue complémentaire au §5 (architecture technique) : elle relie les **interfaces** (portails par
 profil), les **domaines applicatifs** (assistant, génération documentaire, dashboard, alertes,
@@ -78,10 +339,10 @@ conforme à `AGENTS.md` ("Authorization is always server-side").
 
 ---
 
-> Les diagrammes ont été générés avec [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli)
-> (`@mermaid-js/mermaid-cli`) à partir des fichiers source `.mmd` du dossier
-> [`diagrams/`](./diagrams/). Pour régénérer après une modification :
-> `npx -y @mermaid-js/mermaid-cli -i diagrams/<fichier>.mmd -o diagrams/<fichier>.svg -b transparent`
+> Les diagrammes sont écrits en [Mermaid](https://mermaid.js.org/) et rendus directement par
+> GitHub / les visualiseurs Markdown compatibles. Les fichiers source `.mmd` du dossier
+> [`diagrams/`](./diagrams/) restent la référence éditable — les blocs ci-dessus en sont une copie
+> à jour à insérer manuellement après toute modification.
 
 ---
 
