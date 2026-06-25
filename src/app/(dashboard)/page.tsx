@@ -26,7 +26,7 @@ export default async function OverviewPage() {
         title={`Welcome back, ${user.name.split(" ")[0]}`}
         description={`You're signed in as ${ROLE_LABELS[user.role]}. What you see below is shaped by your permissions.`}
       />
-      <div className="space-y-6 p-8">
+      <div className="space-y-6 p-4 md:p-8">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
             icon={<Users className="size-5" />}
