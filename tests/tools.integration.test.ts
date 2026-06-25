@@ -11,19 +11,22 @@ function call(t: any, input: unknown) {
 
 const callers: Record<string, ToolCaller> = {};
 
+// Demo emails → the stable fixture keys used throughout this file. Keeping the
+// map explicit (rather than deriving keys from the email local-part) means a
+// future email rename is a one-line change here, not a silent miss.
+const CALLER_KEY_BY_EMAIL: Record<string, "employee" | "manager" | "hr"> = {
+  "collaborateur@hari.ma": "employee",
+  "manager@hari.ma": "manager",
+  "rh@hari.ma": "hr",
+};
+
 beforeAll(async () => {
   const users = await prisma.user.findMany({
-    where: {
-      email: { in: ["collaborateur@hari.ma", "manager@hari.ma", "rh@hari.ma"] },
-    },
+    where: { email: { in: Object.keys(CALLER_KEY_BY_EMAIL) } },
     include: { employee: { select: { id: true } } },
   });
   for (const u of users) {
-    let key = u.email.split("@")[0];
-    if (key === "collaborateur") key = "employee";
-    if (key === "rh") key = "hr";
-
-    callers[key] = {
+    callers[CALLER_KEY_BY_EMAIL[u.email]] = {
       role: u.role,
       employeeId: u.employee!.id,
       name: u.name,
@@ -45,7 +48,7 @@ describe("getEmployeeDirectory — role scoping", () => {
   it("manager sees self + direct reports, salary still hidden", async () => {
     const tools = buildHrTools(callers.manager);
     const out = await call(tools.getEmployeeDirectory, {});
-    expect(out.count).toBe(4);
+    expect(out.count).toBe(4); // Karim + Imane + Amina + Mehdi
     expect(out.people.every((p: { salary: number | null }) => p.salary === null)).toBe(true);
   });
 
@@ -66,6 +69,8 @@ describe("getPayslip — self vs anyone", () => {
   });
 
   it("employee's payslip tool is self-only — a passed id is ignored, never returns another's", async () => {
+    // The non-elevated tool has no employeeId field at all, and its execute
+    // ignores any id, so the agent can't even express a cross-person query.
     const tools = buildHrTools(callers.employee);
     const out = await call(tools.getPayslip, { employeeId: callers.manager.employeeId });
     expect(out.payslip?.employeeName).toContain("Imane"); // own, not Karim
@@ -79,16 +84,19 @@ describe("getPayslip — self vs anyone", () => {
   });
 
   it("a guessed / non-existent id yields a clean not-found, never a payslip", async () => {
+    // Even with payslip:read:any, an id outside the caller's directory scope
+    // (here: one that doesn't exist) must resolve to nothing — no leak, no throw.
     const tools = buildHrTools(callers.hr);
     const out = await call(tools.getPayslip, { employeeId: "clx0000000000000guessed0" });
     expect(out.payslip).toBeUndefined();
-    expect(out.refused).toBe(true);
+    expect(out.refused).toBe(true); // silent, model-only — not rendered
   });
 });
 
 describe("approvals — per-role exposure", () => {
   it("employee is NOT offered the approval tools at all", () => {
     const tools = buildHrTools(callers.employee);
+    // Out-of-scope tools aren't injected, so the model can't even attempt them.
     expect(tools.listPendingApprovals).toBeUndefined();
     expect(tools.approveLeave).toBeUndefined();
   });
@@ -96,7 +104,7 @@ describe("approvals — per-role exposure", () => {
   it("manager sees pending approvals for their reports", async () => {
     const tools = buildHrTools(callers.manager);
     const out = await call(tools.listPendingApprovals, {});
-    expect(out.count).toBeGreaterThanOrEqual(2);
+    expect(out.count).toBeGreaterThanOrEqual(2); // Imane + Amina seeded
     const names = out.pending.map((p: { employeeName: string }) => p.employeeName);
     expect(names).toContain("Imane Chraibi");
   });
@@ -121,10 +129,9 @@ describe("approvals — per-role exposure", () => {
         requestId: foreign.id,
         decision: "APPROVE",
       });
-
-      expect(out.refused).toBe(true);
+      expect(out.refused).toBe(true); // silent refusal, not a rendered error
       expect(out.result).toBeUndefined();
-
+      // And it must NOT have been approved as a side effect.
       const after = await prisma.leaveRequest.findUnique({ where: { id: foreign.id } });
       expect(after?.status).toBe("PENDING");
     } finally {
@@ -146,6 +153,7 @@ describe("tool input schemas — tolerant of model quirks", () => {
   });
 
   it("accepts null for optional fields (not just undefined)", () => {
+    // HR's payslip tool carries the optional employeeId target (employees' doesn't).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(() => (buildHrTools(callers.hr).getPayslip as any).inputSchema.parse({ employeeId: null })).not.toThrow();
     const tools = buildHrTools(callers.employee);
@@ -171,6 +179,7 @@ describe("requestTimeOff — write path", () => {
     expect(out.request.status).toBe("PENDING");
     expect(out.request.days).toBe(3);
 
+    // Cleanup so re-runs stay deterministic.
     await prisma.leaveRequest.delete({ where: { id: out.request.id } });
   });
 
@@ -191,6 +200,8 @@ describe("requestTimeOff — write path", () => {
     });
     expect(malformed.error).toMatch(/YYYY-MM-DD/);
 
+    // An impossible day (June has 30 days) must be rejected, not silently
+    // rolled forward to July 1.
     const impossible = await call(tools.requestTimeOff, {
       type: "VACATION",
       startDate: "2026-06-31",
@@ -207,7 +218,7 @@ describe("approveLeave — only acts on PENDING", () => {
       where: { status: "APPROVED" },
     });
     expect(decided).not.toBeNull();
-    const tools = buildHrTools(callers.hr);
+    const tools = buildHrTools(callers.hr); // company-wide approver
     const out = await call(tools.approveLeave, {
       requestId: decided!.id,
       decision: "APPROVE",
@@ -222,7 +233,7 @@ describe("tool catalogue — irrelevant tools aren't injected per role", () => {
     const tools = buildHrTools(callers.employee);
     expect(Object.keys(tools).sort()).toEqual(
       [
-        "getCurrentDateTime",
+        "getCurrentDateTime", // utilities, always available
         "getDateInfo",
         "businessDaysBetween",
         "getEmployeeDirectory",
@@ -278,6 +289,7 @@ describe("calendar utilities — deterministic date math", () => {
 
   it("businessDaysBetween counts Mon–Fri inclusively, ignoring weekends", async () => {
     const tools = buildHrTools(callers.employee);
+    // Tue 2026-06-23 → Mon 2026-06-29: 7 calendar days, 5 working (Tue–Fri + Mon).
     const out = await call(tools.businessDaysBetween, {
       startDate: "2026-06-23",
       endDate: "2026-06-29",
