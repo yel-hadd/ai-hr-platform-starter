@@ -6,8 +6,8 @@ import {
 } from "ai";
 import { auth } from "@/lib/auth";
 import { getChatModel } from "@/lib/ai/providers";
-import { buildHrTools, TOOL_CATALOGUE } from "@/lib/ai/tools";
-import { can, ROLE_LABELS } from "@/lib/rbac";
+import { buildHrTools } from "@/lib/ai/tools";
+import { ROLE_LABELS } from "@/lib/rbac";
 
 export const maxDuration = 60;
 
@@ -28,15 +28,13 @@ export async function POST(req: Request) {
     name: session.user.name ?? "the user",
   };
 
-  // Capabilities == the tools this role is actually given (same catalogue that
-  // gates exposure), so the prompt and the injected toolset can never disagree.
-  const capabilities = TOOL_CATALOGUE.filter(
-    (t) => t.permission === null || can(caller.role, t.permission),
-  )
-    .map((t) => `- ${t.name}: ${t.summary}`)
-    .join("\n");
-
   const tools = buildHrTools(caller);
+
+  // Capabilities == the tools actually injected for this caller, so the prompt
+  // and the injected toolset can never disagree.
+  const capabilities = Object.entries(tools)
+    .map(([name, t]) => `- ${name}: ${t.description}`)
+    .join("\n");
 
   const now = new Date();
   const currentDateTime = now.toLocaleString("en-US", {
