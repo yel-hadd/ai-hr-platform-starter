@@ -14,12 +14,17 @@ const callers: Record<string, ToolCaller> = {};
 beforeAll(async () => {
   const users = await prisma.user.findMany({
     where: {
-      email: { in: ["employee@acme.test", "manager@acme.test", "hr@acme.test"] },
+
+      email: { in: ["collaborateur@hari.ma", "manager@hari.ma", "rh@hari.ma"] },
     },
     include: { employee: { select: { id: true } } },
   });
   for (const u of users) {
-    const key = u.email.split("@")[0];
+
+    let key = u.email.split("@")[0];
+    if (key === "collaborateur") key = "employee";
+    if (key === "rh") key = "hr";
+
     callers[key] = {
       role: u.role,
       employeeId: u.employee!.id,
@@ -42,13 +47,15 @@ describe("getEmployeeDirectory — role scoping", () => {
   it("manager sees self + direct reports, salary still hidden", async () => {
     const tools = buildHrTools(callers.manager);
     const out = await call(tools.getEmployeeDirectory, {});
-    expect(out.count).toBe(4); // Marcus + Erin + Nina + Omar
+
+    expect(out.count).toBe(4);
     expect(out.people.every((p: { salary: number | null }) => p.salary === null)).toBe(true);
   });
 
   it("HR sees the whole company with salaries visible", async () => {
     const tools = buildHrTools(callers.hr);
     const out = await call(tools.getEmployeeDirectory, {});
+
     expect(out.count).toBe(6);
     expect(out.people.some((p: { salary: number | null }) => typeof p.salary === "number")).toBe(true);
   });
@@ -72,7 +79,8 @@ describe("getPayslip — self vs anyone", () => {
   it("HR can view anyone's payslip by id", async () => {
     const tools = buildHrTools(callers.hr);
     const out = await call(tools.getPayslip, { employeeId: callers.employee.employeeId });
-    expect(out.payslip?.employeeName).toContain("Erin");
+
+    expect(out.payslip?.employeeName).toContain("Imane");
   });
 });
 
@@ -87,11 +95,11 @@ describe("approvals — permission gating", () => {
   it("manager sees pending approvals for their reports", async () => {
     const tools = buildHrTools(callers.manager);
     const out = await call(tools.listPendingApprovals, {});
-    expect(out.count).toBeGreaterThanOrEqual(2); // Erin + Nina seeded
+    expect(out.count).toBeGreaterThanOrEqual(2);
     const names = out.pending.map((p: { employeeName: string }) => p.employeeName);
-    expect(names).toContain("Erin Employee");
-  });
 
+    expect(names).toContain("Imane Chraibi");
+  });
   it("employee is DENIED approving leave", async () => {
     const tools = buildHrTools(callers.employee);
     const out = await call(tools.approveLeave, { requestId: "x", decision: "APPROVE" });
