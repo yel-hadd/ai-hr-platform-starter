@@ -52,14 +52,14 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
   return (
     <div className="flex h-full flex-col">
       {/* Model selector */}
-      <div className="flex items-center justify-between gap-2 border-b px-8 py-3">
-        <div className="flex items-center gap-2 text-sm">
-          <Bot className="size-4 text-primary" />
-          <span className="font-medium">AI Assistant</span>
-          <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
+      <div className="flex items-center justify-between gap-2 border-b px-4 py-3 md:px-8">
+        <div className="flex min-w-0 items-center gap-2 text-sm">
+          <Bot className="size-4 shrink-0 text-primary" />
+          <span className="truncate font-medium">AI Assistant</span>
+          <Badge variant="secondary" className="shrink-0">{ROLE_LABELS[user.role]}</Badge>
         </div>
         <Select value={modelId} onValueChange={(v) => v && setModelId(v)}>
-          <SelectTrigger className="w-[220px]" size="sm" aria-label="AI model">
+          <SelectTrigger className="w-[150px] shrink-0 sm:w-[220px]" size="sm" aria-label="AI model">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -78,7 +78,7 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
           role="log"
           aria-live="polite"
           aria-label="Conversation"
-          className="mx-auto max-w-3xl space-y-6 px-6 py-6"
+          className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6"
         >
           {messages.length === 0 && (
             <div className="space-y-4 pt-10 text-center">

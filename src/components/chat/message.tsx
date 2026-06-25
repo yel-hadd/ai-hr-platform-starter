@@ -41,8 +41,10 @@ export const ChatMessage = memo(function ChatMessage({
 
       <div
         className={cn(
-          "min-w-0 max-w-[85%] space-y-2",
-          isUser && "flex flex-col items-end",
+          "min-w-0 space-y-2",
+          // Assistant column is a stable full width so tool cards don't reflow as
+          // tokens stream; the user's bubble stays content-sized and right-aligned.
+          isUser ? "flex max-w-[85%] flex-col items-end" : "flex-1",
         )}
       >
         {message.parts.map((part, i) => {
@@ -55,7 +57,7 @@ export const ChatMessage = memo(function ChatMessage({
                   "rounded-lg px-3 py-2 text-sm leading-relaxed",
                   isUser
                     ? "whitespace-pre-wrap bg-primary text-primary-foreground"
-                    : "bg-muted",
+                    : "w-fit max-w-full bg-muted",
                 )}
               >
                 {isUser ? part.text : <Markdown>{part.text}</Markdown>}
