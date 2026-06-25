@@ -17,7 +17,7 @@ export function CredentialsForm() {
         name="email"
         type="email"
         aria-label="Email"
-        placeholder="email@acme.test"
+        placeholder="email@hari.ma"
         required
         aria-invalid={!!state?.error}
         aria-describedby={describedBy}
