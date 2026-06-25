@@ -20,7 +20,12 @@ export default async function DashboardLayout({
       <Sidebar user={nav} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <MobileNav user={nav} />
-        <main id="main" className="flex-1 overflow-y-auto">
+        <main
+          id="main"
+          tabIndex={0}
+          aria-label="Main content"
+          className="flex-1 overflow-y-auto"
+        >
           {children}
         </main>
       </div>

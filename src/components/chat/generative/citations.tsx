@@ -26,6 +26,7 @@ export function Citations({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={expanded}
         className="flex w-full items-center gap-2 px-3 py-2 text-muted-foreground"
       >
         <BookOpen className="size-4 shrink-0" />

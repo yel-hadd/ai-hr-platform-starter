@@ -60,9 +60,9 @@ export default async function SettingsPage() {
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
                           {can(r, p) ? (
-                            <Check className="mx-auto size-4 text-green-600" />
+                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">Allowed</span></>
                           ) : (
-                            <X className="mx-auto size-4 text-muted-foreground/40" />
+                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">Not allowed</span></>
                           )}
                         </TableCell>
                       ))}
@@ -105,9 +105,9 @@ export default async function SettingsPage() {
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
                           {toolsForRole(r).includes(t.name) ? (
-                            <Check className="mx-auto size-4 text-green-600" />
+                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">Allowed</span></>
                           ) : (
-                            <X className="mx-auto size-4 text-muted-foreground/40" />
+                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">Not allowed</span></>
                           )}
                         </TableCell>
                       ))}

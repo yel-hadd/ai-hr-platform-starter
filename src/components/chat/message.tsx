@@ -24,8 +24,13 @@ export const ChatMessage = memo(function ChatMessage({
   );
 
   return (
-    <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
+    <div
+      role="group"
+      aria-label={isUser ? "You" : "Assistant"}
+      className={cn("flex gap-3", isUser && "flex-row-reverse")}
+    >
       <div
+        aria-hidden="true"
         className={cn(
           "flex size-8 shrink-0 items-center justify-center rounded-full",
           isUser ? "bg-muted" : "bg-primary text-primary-foreground",

@@ -127,6 +127,13 @@
   html {
     @apply font-sans;
   }
+  /* Visible keyboard focus for elements without their own ring (links, the
+     scrollable <main>, raw buttons). shadcn primitives set their own ring and
+     override this via the utilities layer. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
 /* Accessibility: honor the OS "reduce motion" setting everywhere. */

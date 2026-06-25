@@ -23,16 +23,16 @@ export default async function LoginPage() {
           HARI
         </div>
         <div className="space-y-4 max-w-md">
-          <h1 className="text-3xl font-semibold leading-tight">
+          <p className="text-3xl font-semibold leading-tight">
             An AI-powered HR platform starter.
-          </h1>
+          </p>
           <p className="text-neutral-400">
             A reference implementation showing RBAC-gated AI tools, RAG over your
             handbook, streaming reasoning, and generative chat UI — on Next.js,
             Postgres + pgvector, and the Vercel AI SDK.
           </p>
         </div>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-neutral-400">
           Demo build · pick any role to explore how permissions shape the experience.
         </p>
       </section>
@@ -41,7 +41,7 @@ export default async function LoginPage() {
       <section className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md space-y-6">
           <div className="space-y-1">
-            <h2 className="text-2xl font-semibold">Sign in</h2>
+            <h1 className="text-2xl font-semibold">Sign in</h1>
             <p className="text-sm text-muted-foreground">
               Choose a demo role — each has different permissions.
             </p>
@@ -59,7 +59,13 @@ export default async function LoginPage() {
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{u.blurb}</p>
                     </div>
-                    <Button type="submit" size="sm" variant="ghost" className="shrink-0">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      variant="ghost"
+                      className="shrink-0"
+                      aria-label={`Sign in as ${u.name}, ${ROLE_LABELS[u.role]}`}
+                    >
                       Enter <ArrowRight className="size-4" />
                     </Button>
                   </CardContent>
@@ -78,7 +84,7 @@ export default async function LoginPage() {
 
           <p className="text-center text-xs text-muted-foreground">
             All demo accounts use the password{" "}
-            <code className="rounded bg-muted px-1 py-0.5">{DEMO_PASSWORD}</code>
+            <code className="rounded bg-muted px-1 py-0.5 text-foreground">{DEMO_PASSWORD}</code>
           </p>
         </div>
       </section>
