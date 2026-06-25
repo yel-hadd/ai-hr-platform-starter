@@ -1,11 +1,7 @@
 import { CalendarDays, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
-
-// Leave type/status come from the DB as fixed enums; this narrows the string for
-// the type-safe translator without changing the runtime value.
-type LeaveTypeKey = "VACATION" | "SICK" | "PERSONAL";
-const asLeaveType = (s: string) => s as LeaveTypeKey;
+import { asLeaveType } from "@/lib/leave";
 
 type Balance = {
   type: string;

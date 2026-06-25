@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { getChatModel } from "@/lib/ai/providers";
 import { buildHrTools, TOOL_CATALOGUE } from "@/lib/ai/tools";
 import { can, ROLE_LABELS } from "@/lib/rbac";
+import { localeConfig } from "@/i18n/routing";
 import { getLocale } from "next-intl/server";
 
 export const maxDuration = 60;
@@ -42,8 +43,7 @@ export async function POST(req: Request) {
   // The UI locale (NEXT_LOCALE cookie). The assistant answers in this language,
   // and "today" is formatted for it, so dates in the prompt read naturally.
   const locale = await getLocale();
-  const language = locale === "fr" ? "French" : "English";
-  const dateLocale = locale === "fr" ? "fr-FR" : "en-US";
+  const { language, dateLocale } = localeConfig[locale];
 
   const now = new Date();
   const currentDateTime = now.toLocaleString(dateLocale, {

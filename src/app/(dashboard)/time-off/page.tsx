@@ -6,6 +6,7 @@ import {
   getPendingApprovals,
 } from "@/lib/hr";
 import { can } from "@/lib/rbac";
+import { asLeaveType, asLeaveStatus } from "@/lib/leave";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,7 @@ export default async function TimeOffPage() {
             <Card key={b.type}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium capitalize text-muted-foreground">
-                  {tType(b.type as Parameters<typeof tType>[0])}
+                  {tType(asLeaveType(b.type))}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -127,7 +128,7 @@ async function LeaveTable({
           {rows.map((r) => (
             <TableRow key={r.id}>
               {showWho && <TableCell className="font-medium">{r.employeeName}</TableCell>}
-              <TableCell className="capitalize">{tType(r.type as Parameters<typeof tType>[0])}</TableCell>
+              <TableCell className="capitalize">{tType(asLeaveType(r.type))}</TableCell>
               <TableCell className="tabular-nums">
                 {r.startDate} → {r.endDate}
               </TableCell>
@@ -137,7 +138,7 @@ async function LeaveTable({
               </TableCell>
               <TableCell className="text-right">
                 <Badge variant={STATUS_VARIANT[r.status] ?? "outline"}>
-                  {tStatus(r.status as Parameters<typeof tStatus>[0])}
+                  {tStatus(asLeaveStatus(r.status))}
                 </Badge>
               </TableCell>
             </TableRow>
