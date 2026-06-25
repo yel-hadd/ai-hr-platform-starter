@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2, Wrench, AlertTriangle } from "lucide-react";
-import { DeniedCard } from "./generative/denied";
 import { Citations } from "./generative/citations";
 import { DirectoryCards } from "./generative/directory";
 import {
@@ -31,8 +30,16 @@ type ToolPart = {
   errorText?: string;
 };
 
-export function ToolCall({ part }: { part: ToolPart }) {
+// Silent utility tools — the agent uses them internally (date math) and states
+// the result in its answer; there's nothing meaningful to render. Mirrors the
+// `permission: null` utility rows in TOOL_CATALOGUE (lib/ai/tools.ts) — kept as a
+// small client-side list so this client component doesn't import server-only
+// tool code. Add a calendar/utility tool there → add its name here.
+const SILENT_TOOLS = new Set(["getCurrentDateTime", "getDateInfo", "businessDaysBetween"]);
+
+export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boolean }) {
   const name = part.type.replace(/^tool-/, "");
+  if (SILENT_TOOLS.has(name)) return null;
   const label = TOOL_LABELS[name] ?? name;
   const running = part.state === "input-streaming" || part.state === "input-available";
 
@@ -54,15 +61,23 @@ export function ToolCall({ part }: { part: ToolPart }) {
         </div>
       )}
 
-      {part.state === "output-available" && <ToolOutput name={name} output={part.output} />}
+      {part.state === "output-available" && (
+        <ToolOutput name={name} output={part.output} streaming={streaming} />
+      )}
     </div>
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ToolOutput({ name, output }: { name: string; output: any }) {
+function ToolOutput({
+  name,
+  output,
+  streaming,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+}: { name: string; output: any; streaming: boolean }) {
   if (!output) return null;
-  if (output.denied) return <DeniedCard reason={output.reason} />;
+  // Scope refusals are intentionally invisible — the agent works with the
+  // authorized data and explains in prose; we don't surface an error.
+  if (output.refused) return null;
   if (output.error)
     return (
       <p className="rounded-lg border border-dashed p-2 text-xs text-muted-foreground">
@@ -72,7 +87,7 @@ function ToolOutput({ name, output }: { name: string; output: any }) {
 
   switch (name) {
     case "searchHandbook":
-      return <Citations query={output.query} results={output.results} />;
+      return <Citations query={output.query} results={output.results} streaming={streaming} />;
     case "getEmployeeDirectory":
       return <DirectoryCards people={output.people} />;
     case "getLeaveBalance":

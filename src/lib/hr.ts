@@ -3,8 +3,9 @@
 // pages and the AI tools, so the chatbot can never see more than the UI.
 // Every function takes the caller's { role, employeeId } and scopes results.
 // ─────────────────────────────────────────────────────────────────────────
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { can, type Role } from "@/lib/rbac";
+import { can, type Permission, type Role } from "@/lib/rbac";
 
 export type Caller = { role: Role; employeeId: string | null };
 
@@ -21,28 +22,33 @@ export type DirectoryEntry = {
   salary: number | null; // null unless caller may read compensation
 };
 
-/** Employees visible to the caller, scoped by role. */
-export async function getDirectory(caller: Caller): Promise<DirectoryEntry[]> {
-  const seesSalary = can(caller.role, "salary:read:all");
-
-  let where = {};
-  if (can(caller.role, "directory:read:all")) {
-    where = {};
-  } else if (can(caller.role, "directory:read:team")) {
+/**
+ * The set of employees the caller may see, as a Prisma WHERE. This is the single
+ * source of "directory scope": reused by getDirectory AND getPayslip so a tool
+ * can never reach an employee the dashboard wouldn't show for that role. A
+ * caller with no employeeId matches the sentinel "__none__" → empty set.
+ */
+function directoryWhere(caller: Caller): Prisma.EmployeeWhereInput {
+  if (can(caller.role, "directory:read:all")) return {};
+  if (can(caller.role, "directory:read:team")) {
     // Self + direct reports.
-    where = {
+    return {
       OR: [
         { id: caller.employeeId ?? "__none__" },
         { managerId: caller.employeeId ?? "__none__" },
       ],
     };
-  } else {
-    // Self only.
-    where = { id: caller.employeeId ?? "__none__" };
   }
+  // Self only.
+  return { id: caller.employeeId ?? "__none__" };
+}
+
+/** Employees visible to the caller, scoped by role. */
+export async function getDirectory(caller: Caller): Promise<DirectoryEntry[]> {
+  const seesSalary = can(caller.role, "salary:read:all");
 
   const rows = await prisma.employee.findMany({
-    where,
+    where: directoryWhere(caller),
     include: {
       user: { select: { name: true, email: true, role: true } },
       manager: { include: { user: { select: { name: true } } } },
@@ -141,4 +147,59 @@ export async function getPendingApprovals(caller: Caller): Promise<LeaveRequestV
     orderBy: { createdAt: "asc" },
   });
   return rows.map(toRequestView);
+}
+
+export type PayslipView = {
+  employeeName: string;
+  period: string;
+  grossMonthly: number;
+  tax: number;
+  netMonthly: number;
+};
+
+/** Distinguishes "you can't" from "no such visible employee" without leaking which. */
+export type PayslipResult =
+  | { ok: true; payslip: PayslipView }
+  | { ok: false; reason: "denied"; permission: Permission }
+  | { ok: false; reason: "not_found" };
+
+/**
+ * A payslip for `targetId` (defaults to the caller), scoped two ways:
+ *  1. permission — own payslip needs `payslip:read:self`, anyone else's needs
+ *     `payslip:read:any`;
+ *  2. visibility — the target must be inside the caller's directory scope
+ *     (`directoryWhere`), so a guessed/hallucinated id can never resolve to a
+ *     real person. The id is resolved server-side, never trusted blindly.
+ */
+export async function getPayslip(
+  caller: Caller,
+  targetId?: string | null,
+): Promise<PayslipResult> {
+  const wantsOther = !!targetId && targetId !== caller.employeeId;
+  const permission: Permission = wantsOther ? "payslip:read:any" : "payslip:read:self";
+  if (!can(caller.role, permission)) return { ok: false, reason: "denied", permission };
+
+  const resolvedId = wantsOther ? targetId! : caller.employeeId;
+  if (!resolvedId) return { ok: false, reason: "not_found" };
+
+  // One scoped query: the id AND the caller's visibility predicate must match,
+  // so we never read outside what getDirectory would return for this role.
+  const target = await prisma.employee.findFirst({
+    where: { AND: [directoryWhere(caller), { id: resolvedId }] },
+    include: { user: { select: { name: true } } },
+  });
+  if (!target) return { ok: false, reason: "not_found" };
+
+  const grossMonthly = Math.round(target.salary / 12);
+  const tax = Math.round(grossMonthly * 0.22);
+  return {
+    ok: true,
+    payslip: {
+      employeeName: target.user.name,
+      period: "Most recent month",
+      grossMonthly,
+      tax,
+      netMonthly: grossMonthly - tax,
+    },
+  };
 }

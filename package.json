@@ -2,6 +2,10 @@
   "name": "hr-boilerplate",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22 <23",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,6 +18,8 @@
     "db:studio": "prisma studio",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "test:all": "vitest run && vitest run --config vitest.live.config.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
