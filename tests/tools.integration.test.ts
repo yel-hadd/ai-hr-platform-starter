@@ -121,8 +121,8 @@ describe("approvals — per-role exposure", () => {
         requestId: foreign.id,
         decision: "APPROVE",
       });
-      // FIXED: Switched from `out.refused` to `out.error` to match the backend behavior
-      expect(out.error).toBeDefined();
+
+      expect(out.refused).toBe(true);
       expect(out.result).toBeUndefined();
 
       const after = await prisma.leaveRequest.findUnique({ where: { id: foreign.id } });

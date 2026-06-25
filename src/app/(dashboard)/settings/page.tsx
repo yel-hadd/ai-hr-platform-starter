@@ -8,6 +8,7 @@ import {
   ROLE_LABELS,
 } from "@/lib/rbac";
 import { CHAT_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
+import { TOOL_CATALOGUE, toolsForRole } from "@/lib/ai/tools";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +60,51 @@ export default async function SettingsPage() {
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
                           {can(r, p) ? (
+                            <Check className="mx-auto size-4 text-green-600" />
+                          ) : (
+                            <X className="mx-auto size-4 text-muted-foreground/40" />
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>AI tools by role</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-muted-foreground">
+              The assistant is only given the tools a role may use — out-of-scope
+              tools are never injected, so the model can&apos;t attempt them.
+            </p>
+            <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[16rem]">Tool</TableHead>
+                    {ROLES.map((r) => (
+                      <TableHead key={r} className="text-center">
+                        {ROLE_LABELS[r]}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {TOOL_CATALOGUE.map((t) => (
+                    <TableRow key={t.name}>
+                      <TableCell>
+                        <code className="text-xs font-medium">{t.name}</code>
+                        <p className="text-xs text-muted-foreground">{t.summary}</p>
+                      </TableCell>
+                      {ROLES.map((r) => (
+                        <TableCell key={r} className="text-center">
+                          {toolsForRole(r).includes(t.name) ? (
                             <Check className="mx-auto size-4 text-green-600" />
                           ) : (
                             <X className="mx-auto size-4 text-muted-foreground/40" />
