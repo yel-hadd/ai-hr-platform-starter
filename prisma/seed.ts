@@ -3,6 +3,7 @@ import "dotenv/config"; // self-contained when run directly via tsx
 import { PrismaClient, type Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { embedTexts, toVectorLiteral } from "../src/lib/ai/embeddings";
+import { DEMO_USERS } from "../src/lib/demo-users";
 import { HANDBOOK } from "./handbook";
 
 const prisma = new PrismaClient();
@@ -20,12 +21,28 @@ type Seed = {
   login: boolean; // demo login account?
 };
 
+// Seed-only attributes for the demo login accounts. Their identity fields
+// (name, role, title, department, location) come from the shared DEMO_USERS so
+// the seed and the login page can never disagree about who these accounts are.
+const DEMO_EXTRAS: Record<string, { salary: number; manager?: string }> = {
+  "admin@hari.ma": { salary: 350000 },
+  "rh@hari.ma": { salary: 250000 },
+  "manager@hari.ma": { salary: 300000 },
+  "collaborateur@hari.ma": { salary: 180000, manager: "manager@hari.ma" },
+};
+
 const PEOPLE: Seed[] = [
-  // Comptes de démonstration principaux 
-  { email: "admin@hari.ma", name: "Youssef Tazi", role: "SUPER_ADMIN", title: "Directeur des Systèmes d'Information", department: "DSI", location: "Distanciel", salary: 350000, login: true },
-  { email: "rh@hari.ma", name: "Nadia Benali", role: "HR_ADMIN", title: "Responsable Ressources Humaines", department: "Ressources Humaines", location: "Casablanca", salary: 250000, login: true },
-  { email: "manager@hari.ma", name: "Karim El Idrissi", role: "MANAGER", title: "Manager Technique", department: "IT", location: "Tétouan", salary: 300000, login: true },
-  { email: "collaborateur@hari.ma", name: "Imane Chraibi", role: "EMPLOYEE", title: "Ingénieure Logiciel Full Stack", department: "IT", location: "Tétouan", salary: 180000, manager: "manager@hari.ma", login: true },
+  // Comptes de démonstration principaux (identité partagée avec la page de connexion)
+  ...DEMO_USERS.map((u) => ({
+    email: u.email,
+    name: u.name,
+    role: u.role,
+    title: u.title,
+    department: u.department,
+    location: u.location,
+    ...DEMO_EXTRAS[u.email],
+    login: true,
+  })),
 
   // Comptes secondaires pour peupler l'annuaire et les équipes
   { email: "a.mansouri@hari.ma", name: "Amina Mansouri", role: "EMPLOYEE", title: "Développeuse Frontend", department: "IT", location: "Rabat", salary: 150000, manager: "manager@hari.ma", login: false },
