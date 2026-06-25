@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { getChatModel } from "@/lib/ai/providers";
 import { buildHrTools, TOOL_CATALOGUE } from "@/lib/ai/tools";
 import { can, ROLE_LABELS } from "@/lib/rbac";
+import { getLocale } from "next-intl/server";
 
 export const maxDuration = 60;
 
@@ -38,8 +39,14 @@ export async function POST(req: Request) {
 
   const tools = buildHrTools(caller);
 
+  // The UI locale (NEXT_LOCALE cookie). The assistant answers in this language,
+  // and "today" is formatted for it, so dates in the prompt read naturally.
+  const locale = await getLocale();
+  const language = locale === "fr" ? "French" : "English";
+  const dateLocale = locale === "fr" ? "fr-FR" : "en-US";
+
   const now = new Date();
-  const currentDateTime = now.toLocaleString("en-US", {
+  const currentDateTime = now.toLocaleString(dateLocale, {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -51,6 +58,7 @@ export async function POST(req: Request) {
   const isoDate = now.toISOString().slice(0, 10);
 
   const system = `You are HARI, the assistant inside an AI-powered HR platform.
+Always respond to the user in ${language}, regardless of the language these instructions are written in. Translate any tool result you relay (including error messages) into ${language}.
 The current date and time is ${currentDateTime} (today's date in YYYY-MM-DD is ${isoDate}). Use this as the source of truth for "today" — work out any relative date ("next Monday", "tomorrow", "in two weeks") from it and confirm the exact calendar date with the user.
 
 The signed-in user is ${caller.name}, role: ${ROLE_LABELS[caller.role]}.

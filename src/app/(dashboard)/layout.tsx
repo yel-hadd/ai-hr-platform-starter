@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/session";
 import { Sidebar, MobileNav } from "@/components/layout/sidebar";
 
@@ -8,6 +9,7 @@ export default async function DashboardLayout({
 }) {
   const user = await requireUser(); // redirects to /login if signed out
   const nav = { name: user.name, email: user.email, role: user.role };
+  const t = await getTranslations("nav");
 
   return (
     <div className="flex h-dvh overflow-hidden">
@@ -15,7 +17,7 @@ export default async function DashboardLayout({
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
       >
-        Skip to content
+        {t("skipToContent")}
       </a>
       <Sidebar user={nav} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -23,7 +25,7 @@ export default async function DashboardLayout({
         <main
           id="main"
           tabIndex={0}
-          aria-label="Main content"
+          aria-label={t("mainContent")}
           className="flex-1 overflow-y-auto"
         >
           {children}

@@ -1,4 +1,5 @@
 import { Receipt } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { formatMAD } from "@/lib/utils";
 
 export function Payslip({
@@ -12,6 +13,7 @@ export function Payslip({
     netMonthly: number;
   };
 }) {
+  const t = useTranslations("payslip");
   const row = (label: string, value: number, strong = false) => (
     <div className="flex justify-between">
       <span className="text-muted-foreground">{label}</span>
@@ -28,10 +30,10 @@ export function Payslip({
       </div>
       <p className="mb-2 text-xs text-muted-foreground">{payslip.period}</p>
       <div className="space-y-1">
-        {row("Gross", payslip.grossMonthly)}
-        {row("Tax (22%)", -payslip.tax)}
+        {row(t("gross"), payslip.grossMonthly)}
+        {row(t("tax"), -payslip.tax)}
         <div className="my-1 border-t" />
-        {row("Net", payslip.netMonthly, true)}
+        {row(t("net"), payslip.netMonthly, true)}
       </div>
     </div>
   );

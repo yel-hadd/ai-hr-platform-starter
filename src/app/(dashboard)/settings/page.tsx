@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/session";
 import {
   can,
   PERMISSIONS,
-  PERMISSION_LABELS,
   ROLES,
-  ROLE_LABELS,
 } from "@/lib/rbac";
 import { CHAT_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
 import { TOOL_CATALOGUE, toolsForRole } from "@/lib/ai/tools";
@@ -26,26 +25,31 @@ export default async function SettingsPage() {
   const user = await requireUser();
   if (!can(user.role, "admin:settings")) redirect("/"); // belt-and-suspenders
 
+  const t = await getTranslations("settings");
+  const tRoles = await getTranslations("roles");
+  const tPerm = await getTranslations("permissions");
+  const tSummary = await getTranslations("tools.summary");
+
   return (
     <>
       <PageHeader
-        title="Settings"
-        description="The single RBAC matrix that gates the UI, server actions, and AI tools."
+        title={t("title")}
+        description={t("description")}
       />
       <div className="space-y-6 p-4 md:p-8">
         <Card>
           <CardHeader>
-            <CardTitle>Permission matrix</CardTitle>
+            <CardTitle>{t("permissionMatrix")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[14rem]">Permission</TableHead>
+                    <TableHead className="min-w-[14rem]">{t("permission")}</TableHead>
                     {ROLES.map((r) => (
                       <TableHead key={r} className="text-center">
-                        {ROLE_LABELS[r]}
+                        {tRoles(r)}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -54,15 +58,15 @@ export default async function SettingsPage() {
                   {PERMISSIONS.map((p) => (
                     <TableRow key={p}>
                       <TableCell>
-                        <span className="font-medium">{PERMISSION_LABELS[p]}</span>
+                        <span className="font-medium">{tPerm(p)}</span>
                         <code className="ml-2 text-xs text-muted-foreground">{p}</code>
                       </TableCell>
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
                           {can(r, p) ? (
-                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">Allowed</span></>
+                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">{t("allowed")}</span></>
                           ) : (
-                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">Not allowed</span></>
+                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">{t("notAllowed")}</span></>
                           )}
                         </TableCell>
                       ))}
@@ -76,38 +80,37 @@ export default async function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>AI tools by role</CardTitle>
+            <CardTitle>{t("aiToolsByRole")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="mb-3 text-sm text-muted-foreground">
-              The assistant is only given the tools a role may use — out-of-scope
-              tools are never injected, so the model can&apos;t attempt them.
+              {t("aiToolsDescription")}
             </p>
             <div className="overflow-x-auto rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[16rem]">Tool</TableHead>
+                    <TableHead className="min-w-[16rem]">{t("tool")}</TableHead>
                     {ROLES.map((r) => (
                       <TableHead key={r} className="text-center">
-                        {ROLE_LABELS[r]}
+                        {tRoles(r)}
                       </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {TOOL_CATALOGUE.map((t) => (
-                    <TableRow key={t.name}>
+                  {TOOL_CATALOGUE.map((tool) => (
+                    <TableRow key={tool.name}>
                       <TableCell>
-                        <code className="text-xs font-medium">{t.name}</code>
-                        <p className="text-xs text-muted-foreground">{t.summary}</p>
+                        <code className="text-xs font-medium">{tool.name}</code>
+                        <p className="text-xs text-muted-foreground">{tSummary(tool.name)}</p>
                       </TableCell>
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
-                          {toolsForRole(r).includes(t.name) ? (
-                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">Allowed</span></>
+                          {toolsForRole(r).includes(tool.name) ? (
+                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">{t("allowed")}</span></>
                           ) : (
-                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">Not allowed</span></>
+                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">{t("notAllowed")}</span></>
                           )}
                         </TableCell>
                       ))}
@@ -121,12 +124,11 @@ export default async function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>AI model registry</CardTitle>
+            <CardTitle>{t("modelRegistry")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Chat defaults to OpenRouter free models; the Vercel AI Gateway is
-              selectable per request. Configure keys via environment variables.
+              {t("modelRegistryDescription")}
             </p>
             <div className="grid gap-2">
               {CHAT_MODELS.map((m) => (
@@ -140,8 +142,8 @@ export default async function SettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{m.provider}</Badge>
-                    {m.reasoning && <Badge variant="secondary">reasoning</Badge>}
-                    {m.id === DEFAULT_MODEL_ID && <Badge>default</Badge>}
+                    {m.reasoning && <Badge variant="secondary">{t("reasoning")}</Badge>}
+                    {m.id === DEFAULT_MODEL_ID && <Badge>{t("default")}</Badge>}
                   </div>
                 </div>
               ))}

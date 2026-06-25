@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Wrench, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Citations } from "./generative/citations";
 import { DirectoryCards } from "./generative/directory";
 import {
@@ -10,16 +11,6 @@ import {
   PendingApprovals,
 } from "./generative/leave";
 import { Payslip } from "./generative/payslip";
-
-const TOOL_LABELS: Record<string, string> = {
-  searchHandbook: "Searching the handbook",
-  getEmployeeDirectory: "Looking up the directory",
-  getLeaveBalance: "Checking leave balance",
-  requestTimeOff: "Submitting time-off request",
-  listPendingApprovals: "Fetching pending approvals",
-  approveLeave: "Processing approval",
-  getPayslip: "Retrieving payslip",
-};
 
 type ToolPart = {
   type: string; // "tool-<name>"
@@ -38,9 +29,12 @@ type ToolPart = {
 const SILENT_TOOLS = new Set(["getCurrentDateTime", "getDateInfo", "businessDaysBetween"]);
 
 export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boolean }) {
+  const t = useTranslations("tools");
   const name = part.type.replace(/^tool-/, "");
   if (SILENT_TOOLS.has(name)) return null;
-  const label = TOOL_LABELS[name] ?? name;
+  // `name` is dynamic; narrow the key to the translator's expected type.
+  const statusKey = `status.${name}` as Parameters<typeof t>[0];
+  const label = t.has(statusKey) ? t(statusKey) : name;
   const running = part.state === "input-streaming" || part.state === "input-available";
 
   return (
@@ -64,7 +58,7 @@ export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boole
           role="alert"
           className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive"
         >
-          <AlertTriangle className="size-3.5" /> {part.errorText ?? "Tool error"}
+          <AlertTriangle className="size-3.5" /> {part.errorText ?? t("error")}
         </div>
       )}
 

@@ -11,7 +11,6 @@ export type DemoUser = {
   title: string;
   department: string;
   location: string;
-  blurb: string; // affiché sur la carte de connexion
 };
 
 export const DEMO_USERS: DemoUser[] = [
@@ -22,7 +21,6 @@ export const DEMO_USERS: DemoUser[] = [
     title: "Ingénieure Logiciel Full Stack",
     department: "IT",
     location: "Tétouan",
-    blurb: "Ne voit que ses propres données. L'assistant IA n'a accès qu'à des outils en libre-service (pas de vue sur les autres employés ni de droits de validation).",
   },
   {
     email: "manager@hari.ma",
@@ -31,7 +29,6 @@ export const DEMO_USERS: DemoUser[] = [
     title: "Manager Technique",
     department: "IT",
     location: "Tétouan",
-    blurb: "A une visibilité sur son équipe directe et peut approuver leurs demandes de congés.",
   },
   {
     email: "rh@hari.ma",
@@ -40,7 +37,6 @@ export const DEMO_USERS: DemoUser[] = [
     title: "Responsable Ressources Humaines",
     department: "Ressources Humaines",
     location: "Casablanca",
-    blurb: "Accès global à l'annuaire de toute l'entreprise, aux rémunérations et aux fiches de paie.",
   },
   {
     email: "admin@hari.ma",
@@ -49,6 +45,5 @@ export const DEMO_USERS: DemoUser[] = [
     title: "Directeur des Systèmes d'Information",
     department: "DSI",
     location: "Distanciel",
-    blurb: "Possède tous les droits RH, plus l'accès aux paramètres techniques de la plateforme.",
   },
 ];
