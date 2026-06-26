@@ -30,20 +30,17 @@ export async function POST(req: Request) {
     name: session.user.name ?? "the user",
   };
 
-  // Capabilities == the tools this role is actually given (same catalogue that
-  // gates exposure), so the prompt and the injected toolset can never disagree.
-  const capabilities = TOOL_CATALOGUE.filter(
-    (t) => t.permission === null || can(caller.role, t.permission),
-  )
-    .map((t) => `- ${t.name}: ${t.summary}`)
-    .join("\n");
-
   const tools = buildHrTools(caller);
 
   // The UI locale (NEXT_LOCALE cookie). The assistant answers in this language,
   // and "today" is formatted for it, so dates in the prompt read naturally.
   const locale = await getLocale();
   const { language, dateLocale } = localeConfig[locale];
+  // Capabilities == the tools actually injected for this caller, so the prompt
+  // and the injected toolset can never disagree.
+  const capabilities = Object.entries(tools)
+    .map(([name, t]) => `- ${name}: ${t.description}`)
+    .join("\n");
 
   const now = new Date();
   const currentDateTime = now.toLocaleString(dateLocale, {
