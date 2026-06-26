@@ -1,12 +1,12 @@
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/session";
-import { getLang } from "@/lib/lang";
-import { T, type Translations } from "@/lib/i18n";
 import {
   getLeaveBalances,
   getMyLeaveRequests,
   getPendingApprovals,
 } from "@/lib/hr";
 import { can } from "@/lib/rbac";
+import { asLeaveType, asLeaveStatus } from "@/lib/leave";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,22 +25,11 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   REJECTED: "destructive",
 };
 
-const LEAVE_TYPE_KEYS: Record<string, keyof Translations> = {
-  VACATION: "leave_vacation",
-  SICK: "leave_sick",
-  PERSONAL: "leave_personal",
-};
-
-const STATUS_KEYS: Record<string, keyof Translations> = {
-  APPROVED: "status_approved",
-  PENDING: "status_pending",
-  REJECTED: "status_rejected",
-};
-
 export default async function TimeOffPage() {
-  const [user, lang] = await Promise.all([requireUser(), getLang()]);
-  const t = T[lang] as Translations;
+  const user = await requireUser();
   const caller = { role: user.role, employeeId: user.employeeId };
+  const t = await getTranslations("timeOff");
+  const tType = await getTranslations("leaveType");
 
   const [balances, requests, approvals] = await Promise.all([
     user.employeeId ? getLeaveBalances(user.employeeId) : Promise.resolve([]),
@@ -51,23 +40,24 @@ export default async function TimeOffPage() {
   return (
     <>
       <PageHeader
-        title="Time Off"
-        description="Tip: request time off or approve requests by asking the AI Assistant."
+        title={t("title")}
+        description={t("description")}
       />
       <div className="space-y-6 p-4 md:p-8">
         <div className="grid gap-4 sm:grid-cols-3">
           {balances.map((b) => (
             <Card key={b.type}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t[LEAVE_TYPE_KEYS[b.type] ?? "leave_vacation"]}
+                <CardTitle className="text-sm font-medium capitalize text-muted-foreground">
+                  {tType(asLeaveType(b.type))}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-semibold">
                   {b.remainingDays}
                   <span className="text-sm font-normal text-muted-foreground">
-                    {" "}/ {b.totalDays} {t.timeoff_days_unit}
+                    {" "}
+                    {t("outOf", { count: b.totalDays })}
                   </span>
                 </p>
               </CardContent>
@@ -76,17 +66,17 @@ export default async function TimeOffPage() {
         </div>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold">{t.timeoff_my_requests}</h2>
-          <LeaveTable rows={requests} showWho={false} t={t} />
+          <h2 className="text-sm font-semibold">{t("myRequests")}</h2>
+          <LeaveTable rows={requests} showWho={false} />
         </section>
 
         {can(user.role, "leave:approve") && (
           <section className="space-y-3">
             <h2 className="text-sm font-semibold">
-              {t.timeoff_pending}{" "}
+              {t("pendingApprovals")}{" "}
               <Badge variant="secondary">{approvals.length}</Badge>
             </h2>
-            <LeaveTable rows={approvals} showWho t={t} />
+            <LeaveTable rows={approvals} showWho />
           </section>
         )}
       </div>
@@ -94,10 +84,9 @@ export default async function TimeOffPage() {
   );
 }
 
-function LeaveTable({
+async function LeaveTable({
   rows,
   showWho,
-  t,
 }: {
   rows: {
     id: string;
@@ -110,23 +99,15 @@ function LeaveTable({
     reason: string | null;
   }[];
   showWho: boolean;
-  t: Translations;
 }) {
-  const LEAVE_TYPE_KEYS: Record<string, keyof Translations> = {
-    VACATION: "leave_vacation",
-    SICK: "leave_sick",
-    PERSONAL: "leave_personal",
-  };
-  const STATUS_KEYS: Record<string, keyof Translations> = {
-    APPROVED: "status_approved",
-    PENDING: "status_pending",
-    REJECTED: "status_rejected",
-  };
-
+  const t = await getTranslations("timeOff");
+  const tType = await getTranslations("leaveType");
+  const tStatus = await getTranslations("leaveStatus");
+  const tc = await getTranslations("common");
   if (rows.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        {t.timeoff_nothing}
+        {t("empty")}
       </p>
     );
   }
@@ -135,29 +116,29 @@ function LeaveTable({
       <Table>
         <TableHeader>
           <TableRow>
-            {showWho && <TableHead>{t.timeoff_employee}</TableHead>}
-            <TableHead>{t.timeoff_type}</TableHead>
-            <TableHead>{t.timeoff_dates}</TableHead>
-            <TableHead>{t.timeoff_days_col}</TableHead>
-            <TableHead>{t.timeoff_reason}</TableHead>
-            <TableHead className="text-right">{t.timeoff_status}</TableHead>
+            {showWho && <TableHead>{t("employee")}</TableHead>}
+            <TableHead>{t("type")}</TableHead>
+            <TableHead>{t("dates")}</TableHead>
+            <TableHead>{t("days")}</TableHead>
+            <TableHead>{t("reason")}</TableHead>
+            <TableHead className="text-right">{t("status")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((r) => (
             <TableRow key={r.id}>
               {showWho && <TableCell className="font-medium">{r.employeeName}</TableCell>}
-              <TableCell>{t[LEAVE_TYPE_KEYS[r.type] ?? "leave_vacation"]}</TableCell>
+              <TableCell className="capitalize">{tType(asLeaveType(r.type))}</TableCell>
               <TableCell className="tabular-nums">
-                {r.startDate} &rarr; {r.endDate}
+                {r.startDate} → {r.endDate}
               </TableCell>
               <TableCell>{r.days}</TableCell>
               <TableCell className="max-w-[16rem] truncate text-muted-foreground">
-                {r.reason ?? "—"}
+                {r.reason ?? tc("none")}
               </TableCell>
               <TableCell className="text-right">
                 <Badge variant={STATUS_VARIANT[r.status] ?? "outline"}>
-                  {t[STATUS_KEYS[r.status] ?? "status_pending"]}
+                  {tStatus(asLeaveStatus(r.status))}
                 </Badge>
               </TableCell>
             </TableRow>

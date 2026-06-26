@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Wrench, AlertTriangle } from "lucide-react";
-import { useT } from "@/lib/lang-context";
+import { useTranslations } from "next-intl";
 import { Citations } from "./generative/citations";
 import { DirectoryCards } from "./generative/directory";
 import {
@@ -13,7 +13,7 @@ import {
 import { Payslip } from "./generative/payslip";
 
 type ToolPart = {
-  type: string;
+  type: string; // "tool-<name>"
   state: "input-streaming" | "input-available" | "output-available" | "output-error";
   input?: unknown;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,24 +21,20 @@ type ToolPart = {
   errorText?: string;
 };
 
+// Silent utility tools — the agent uses them internally (date math) and states
+// the result in its answer; there's nothing meaningful to render. Mirrors the
+// `permission: null` utility rows in TOOL_CATALOGUE (lib/ai/tools.ts) — kept as a
+// small client-side list so this client component doesn't import server-only
+// tool code. Add a calendar/utility tool there → add its name here.
 const SILENT_TOOLS = new Set(["getCurrentDateTime", "getDateInfo", "businessDaysBetween"]);
 
 export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boolean }) {
-  const t = useT();
-
-  const TOOL_LABELS: Record<string, string> = {
-    searchHandbook: t.tool_search_handbook,
-    getEmployeeDirectory: t.tool_directory,
-    getLeaveBalance: t.tool_leave_balance,
-    requestTimeOff: t.tool_request_time_off,
-    listPendingApprovals: t.tool_pending_approvals,
-    approveLeave: t.tool_approve,
-    getPayslip: t.tool_payslip,
-  };
-
+  const t = useTranslations("tools");
   const name = part.type.replace(/^tool-/, "");
   if (SILENT_TOOLS.has(name)) return null;
-  const label = TOOL_LABELS[name] ?? name;
+  // `name` is dynamic; narrow the key to the translator's expected type.
+  const statusKey = `status.${name}` as Parameters<typeof t>[0];
+  const label = t.has(statusKey) ? t(statusKey) : name;
   const running = part.state === "input-streaming" || part.state === "input-available";
 
   return (
@@ -62,7 +58,7 @@ export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boole
           role="alert"
           className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive"
         >
-          <AlertTriangle className="size-3.5" /> {part.errorText ?? "Tool error"}
+          <AlertTriangle className="size-3.5" /> {part.errorText ?? t("error")}
         </div>
       )}
 
@@ -80,6 +76,8 @@ function ToolOutput({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: { name: string; output: any; streaming: boolean }) {
   if (!output) return null;
+  // Scope refusals are intentionally invisible — the agent works with the
+  // authorized data and explains in prose; we don't surface an error.
   if (output.refused) return null;
   if (output.error)
     return (

@@ -1,8 +1,9 @@
+import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/session";
-import { getLang } from "@/lib/lang";
-import { T, translateField, TITLE_MAP, DEPT_MAP, LOCATION_MAP } from "@/lib/i18n";
 import { getDirectory } from "@/lib/hr";
 import { can } from "@/lib/rbac";
+import { formatCurrency } from "@/lib/utils";
+import { getOrgSettings } from "@/lib/settings";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,42 +15,39 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const ROLE_LABEL_KEYS = {
-  EMPLOYEE: "role_employee",
-  MANAGER: "role_manager",
-  HR_ADMIN: "role_hr_admin",
-  SUPER_ADMIN: "role_super_admin",
-} as const;
-
 export default async function DirectoryPage() {
-  const [user, lang] = await Promise.all([requireUser(), getLang()]);
-  const t = T[lang] as { [K in keyof typeof T.fr]: string };
+  const user = await requireUser();
   const directory = await getDirectory({
     role: user.role,
     employeeId: user.employeeId,
   });
   const showSalary = can(user.role, "salary:read:all");
+  const t = await getTranslations("directory");
+  const tRoles = await getTranslations("roles");
+  const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const { currency } = await getOrgSettings();
 
   const scope = can(user.role, "directory:read:all")
-    ? t.dir_scope_all
+    ? t("scopeAll")
     : can(user.role, "directory:read:team")
-      ? t.dir_scope_team
-      : t.dir_scope_self;
+      ? t("scopeTeam")
+      : t("scopeSelf");
 
   return (
     <>
-      <PageHeader title="Directory" description={scope} />
+      <PageHeader title={t("title")} description={scope} />
       <div className="p-4 md:p-8">
         <div className="rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t.dir_name}</TableHead>
-                <TableHead>{t.dir_title_col}</TableHead>
-                <TableHead>{t.dir_dept}</TableHead>
-                <TableHead>{t.dir_location}</TableHead>
-                <TableHead>{t.dir_manager}</TableHead>
-                {showSalary && <TableHead className="text-right">{t.dir_salary}</TableHead>}
+                <TableHead>{t("name")}</TableHead>
+                <TableHead>{t("jobTitle")}</TableHead>
+                <TableHead>{t("department")}</TableHead>
+                <TableHead>{t("location")}</TableHead>
+                <TableHead>{t("manager")}</TableHead>
+                {showSalary && <TableHead className="text-right">{t("salary")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -58,20 +56,20 @@ export default async function DirectoryPage() {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {e.name}
-                      {e.isSelf && <Badge variant="outline">{t.dir_me}</Badge>}
+                      {e.isSelf && <Badge variant="outline">{tc("you")}</Badge>}
                       <Badge variant="secondary" className="text-[10px]">
-                        {t[ROLE_LABEL_KEYS[e.role]]}
+                        {tRoles(e.role)}
                       </Badge>
                     </div>
                     <span className="text-xs text-muted-foreground">{e.email}</span>
                   </TableCell>
-                  <TableCell>{translateField(e.title, lang, TITLE_MAP)}</TableCell>
-                  <TableCell>{translateField(e.department, lang, DEPT_MAP)}</TableCell>
-                  <TableCell>{translateField(e.location, lang, LOCATION_MAP)}</TableCell>
-                  <TableCell>{e.managerName ?? "—"}</TableCell>
+                  <TableCell>{e.title}</TableCell>
+                  <TableCell>{e.department}</TableCell>
+                  <TableCell>{e.location}</TableCell>
+                  <TableCell>{e.managerName ?? tc("none")}</TableCell>
                   {showSalary && (
                     <TableCell className="text-right tabular-nums">
-                      ${e.salary?.toLocaleString() ?? "—"}
+                      {e.salary != null ? formatCurrency(e.salary, currency, locale) : tc("none")}
                     </TableCell>
                   )}
                 </TableRow>

@@ -12,6 +12,8 @@ the same without coordinating on every detail.
   components are built on **Base UI** (`@base-ui/react`), not Radix. Practical
   difference: composition uses a `render` prop, not `asChild`.
 - **next-themes** for light / dark / system, applied as a `class` on `<html>`.
+- **next-intl** for English / French — every user-facing string goes through a
+  translation key, never a hardcoded literal. See [`docs/i18n.md`](./i18n.md).
 - **lucide-react** for icons.
 
 ## Theming and color
@@ -63,6 +65,9 @@ The dashboard shell is `src/app/(dashboard)/layout.tsx`:
   container so the page itself never scrolls sideways.
 - Gate anything role-specific with `can(role, …)` from `lib/rbac.ts` on the server.
   The sidebar already hides links a role can't use.
+- **No hardcoded user-facing text.** Every label, placeholder, and `aria-label` goes
+  through a translation key in `messages/{en,fr}.json` via `t("…")`. See
+  [`docs/i18n.md`](./i18n.md).
 
 ## Accessibility floor
 
@@ -84,5 +89,6 @@ Every screen should clear this bar; it's cheap if you start with it.
 - [ ] Works at a **narrow width** (~375px) and at desktop; no horizontal page scroll.
 - [ ] Colors come from tokens, not raw `white`/`black`/`gray`/hex.
 - [ ] Keyboard-only: can reach and operate every control; focus is visible.
+- [ ] No hardcoded copy — strings are translation keys present in **both** `en.json` and `fr.json`; checked in **English and French**.
 - [ ] Icon-only controls have an `aria-label`.
 - [ ] `npm run lint` and `npx tsc --noEmit` are clean.

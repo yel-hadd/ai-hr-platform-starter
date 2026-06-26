@@ -1,6 +1,7 @@
 import { CalendarDays, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
-import { useT, useLang } from "@/lib/lang-context";
+import { asLeaveType } from "@/lib/leave";
 
 type Balance = {
   type: string;
@@ -9,23 +10,16 @@ type Balance = {
   remainingDays: number;
 };
 
-const LEAVE_TYPE_KEYS: Record<string, "leave_vacation" | "leave_sick" | "leave_personal"> = {
-  VACATION: "leave_vacation",
-  SICK: "leave_sick",
-  PERSONAL: "leave_personal",
-};
-
 export function LeaveBalances({ balances }: { balances: Balance[] }) {
-  const t = useT();
+  const t = useTranslations("leave");
+  const tType = useTranslations("leaveType");
   return (
     <div className="grid grid-cols-3 gap-2">
       {balances.map((b) => {
         const pct = b.totalDays ? (b.remainingDays / b.totalDays) * 100 : 0;
         return (
           <div key={b.type} className="rounded-lg border bg-card p-3 text-sm">
-            <p className="text-xs text-muted-foreground">
-              {t[LEAVE_TYPE_KEYS[b.type] ?? "leave_vacation"]}
-            </p>
+            <p className="text-xs text-muted-foreground">{tType(asLeaveType(b.type))}</p>
             <p className="mt-1 text-lg font-semibold">
               {b.remainingDays}
               <span className="text-xs font-normal text-muted-foreground">
@@ -37,7 +31,7 @@ export function LeaveBalances({ balances }: { balances: Balance[] }) {
               aria-valuenow={b.remainingDays}
               aria-valuemin={0}
               aria-valuemax={b.totalDays}
-              aria-label={`${b.type.toLowerCase()} days remaining`}
+              aria-label={t("daysRemainingLabel", { type: tType(asLeaveType(b.type)) })}
               className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
             >
               <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
@@ -55,12 +49,6 @@ const STATUS = {
   REJECTED: { icon: XCircle, cls: "text-destructive", variant: "destructive" as const },
 };
 
-const STATUS_LABEL_KEYS: Record<string, "status_approved" | "status_pending" | "status_rejected"> = {
-  APPROVED: "status_approved",
-  PENDING: "status_pending",
-  REJECTED: "status_rejected",
-};
-
 export function LeaveRequestCard({
   request,
 }: {
@@ -73,24 +61,25 @@ export function LeaveRequestCard({
     status: keyof typeof STATUS;
   };
 }) {
-  const t = useT();
+  const t = useTranslations("leave");
+  const tType = useTranslations("leaveType");
+  const tStatus = useTranslations("leaveStatus");
   const s = STATUS[request.status] ?? STATUS.PENDING;
   const Icon = s.icon;
-  const dayWord = request.days === 1 ? t.leave_day : t.leave_days;
   return (
     <div className="rounded-lg border bg-card p-3 text-sm">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 font-medium">
           <CalendarDays className="size-4 text-muted-foreground" />
-          {t[LEAVE_TYPE_KEYS[request.type] ?? "leave_vacation"]} &middot; {request.days} {dayWord}
+          {t("duration", { type: tType(asLeaveType(request.type)), count: request.days })}
         </span>
         <Badge variant={s.variant}>
           <Icon className={`mr-1 size-3 ${s.cls}`} />
-          {t[STATUS_LABEL_KEYS[request.status] ?? "status_pending"]}
+          {tStatus(request.status)}
         </Badge>
       </div>
       <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-        {request.startDate} &rarr; {request.endDate}
+        {request.startDate} → {request.endDate}
       </p>
       {request.reason && <p className="mt-1 text-xs">{request.reason}</p>}
     </div>
@@ -107,28 +96,21 @@ export function ApprovalResultCard({
     status: keyof typeof STATUS;
   };
 }) {
-  const t = useT();
-  const lang = useLang();
+  const t = useTranslations("leave");
+  const tType = useTranslations("leaveType");
   const s = STATUS[result.status] ?? STATUS.PENDING;
   const Icon = s.icon;
-  const dayWord = result.days === 1 ? t.leave_day : t.leave_days;
-  const typeLabel = t[LEAVE_TYPE_KEYS[result.type] ?? "leave_vacation"];
-  const statusLabel = t[STATUS_LABEL_KEYS[result.status] ?? "status_pending"];
-
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-card p-3 text-sm">
       <Icon className={`size-5 ${s.cls}`} />
-      {lang === "fr" ? (
-        <span>
-          La demande de <strong>{result.employeeName}</strong> de {result.days} {dayWord} ({typeLabel}){" "}
-          {t.leave_approval_result} <strong>{statusLabel}</strong>.
-        </span>
-      ) : (
-        <span>
-          <strong>{result.employeeName}</strong>&apos;s {result.days}-{dayWord} {typeLabel} request{" "}
-          {t.leave_approval_result} <strong>{statusLabel}</strong>.
-        </span>
-      )}
+      <span>
+        {t("approvalResult", {
+          name: result.employeeName,
+          days: result.days,
+          type: tType(asLeaveType(result.type)),
+          status: result.status,
+        })}
+      </span>
     </div>
   );
 }
@@ -146,12 +128,12 @@ export function PendingApprovals({
     reason: string | null;
   }[];
 }) {
-  const t = useT();
-
+  const t = useTranslations("leave");
+  const tType = useTranslations("leaveType");
   if (pending.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-        {t.leave_no_pending}
+        {t("noPendingApprovals")}
       </p>
     );
   }
@@ -162,11 +144,11 @@ export function PendingApprovals({
           <div className="flex items-center justify-between">
             <span className="font-medium">{r.employeeName}</span>
             <span className="text-xs text-muted-foreground">
-              {t[LEAVE_TYPE_KEYS[r.type] ?? "leave_vacation"]} &middot; {r.days}d
+              {tType(asLeaveType(r.type))} · {r.days}d
             </span>
           </div>
           <p className="text-xs text-muted-foreground tabular-nums">
-            {r.startDate} &rarr; {r.endDate}
+            {r.startDate} → {r.endDate}
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">id: {r.id}</p>
         </div>

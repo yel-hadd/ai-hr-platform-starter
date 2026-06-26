@@ -2,11 +2,20 @@
 
 import { useId, useState } from "react";
 import { Brain, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/lang-context";
 
-export function Reasoning({ text, streaming }: { text: string; streaming: boolean }) {
-  const t = useT();
+// Collapsible "thinking" panel. Auto-expands while streaming, collapses when done.
+export function Reasoning({
+  text,
+  streaming,
+}: {
+  text: string;
+  streaming: boolean;
+}) {
+  // Default collapsed: auto-expands while streaming (to show live thinking), then
+  // collapses to a one-line summary when done. Click to re-open.
+  const t = useTranslations("reasoning");
   const [open, setOpen] = useState(false);
   const expanded = streaming || open;
   const panelId = useId();
@@ -21,7 +30,7 @@ export function Reasoning({ text, streaming }: { text: string; streaming: boolea
         className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground"
       >
         <Brain className={cn("size-3.5", streaming && "animate-pulse")} />
-        {streaming ? t.reasoning_thinking : t.reasoning_done}
+        {streaming ? t("thinking") : t("thoughtProcess")}
         <ChevronDown
           className={cn(
             "ml-auto size-3.5 transition-transform",

@@ -7,6 +7,7 @@
 | Framework | Next.js 16 (App Router, React 19) | Un seul codebase UI + API ; Server Components gardent les données côté serveur |
 | Langage | TypeScript strict | Types propagés de la base (Prisma) jusqu'à l'UI |
 | Style | Tailwind v4 + shadcn/ui | Composants accessibles possédés (`components/ui`), pas de dette de design |
+| i18n | next-intl (FR/EN, mode cookie) | Toute chaîne UI passe par une clé `messages/{en,fr}.json` ; l'assistant répond dans la langue active |
 | IA | Vercel AI SDK | `streamText` + `useChat` : streaming, tool-calling, raisonnement, multi-step |
 | Fournisseurs IA | OpenRouter (par défaut, modèles gratuits) + Vercel AI Gateway | Changement de modèle = une chaîne de configuration |
 | Base de données | PostgreSQL + pgvector (`halfvec`) | Une seule base pour le relationnel et la recherche vectorielle |
@@ -51,9 +52,21 @@ ce que l'UI montrerait pour ce rôle.
 9. Requêtes paramétrées (Prisma) ; la requête vectorielle brute lie l'embedding en paramètre
    (`$1::halfvec`).
 
+## Internationalisation & paramètres d'organisation
+
+- **Bilingue FR/EN** via **next-intl** en mode cookie (`NEXT_LOCALE`, sans préfixe d'URL ni
+  middleware) : chaque chaîne visible est une clé dans `messages/{en,fr}.json` (jamais un littéral),
+  type-vérifiée sur `en.json`. L'assistant IA répond dans la langue active. Détails dans
+  [`docs/i18n.md`](../i18n.md) et [`docs/frontend.md`](../frontend.md).
+- **Devise et fuseau horaire** sont des paramètres d'organisation qu'un super-admin modifie dans
+  *Paramètres* (modèle `OrgSettings`, défauts MAD / UTC) ; les cartes de salaire les formatent et le
+  prompt de l'assistant en est informé (montants dans la devise configurée, dates dans le fuseau).
+
 ## Personnalisation
 
 - **Ajouter un modèle** : étendre `CHAT_MODELS` dans `lib/ai/providers.ts`.
+- **Ajouter une chaîne / une langue** : ajouter la clé dans `messages/{en,fr}.json` (les deux), ou
+  une locale dans `src/i18n/routing.ts` + un catalogue `messages/<locale>.json`.
 - **Ajouter une permission** : l'ajouter à `PERMISSIONS` dans `lib/rbac.ts`, l'assigner à un rôle,
   l'utiliser via `can()` / `withPermission()`.
 - **Ajouter un outil** : ajouter un `tool({...})` dans `lib/ai/tools.ts` (protégé par

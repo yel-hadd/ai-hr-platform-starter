@@ -18,3 +18,11 @@ cadrage, expression des besoins, conception (UML), planification (Jira), réalis
 
 > Le dossier [`uml/`](uml/) contient les sources des diagrammes (format Mermaid, lisible
 > directement sur GitHub/GitLab ou via une extension Markdown).
+
+## Guides techniques
+
+En complément de la démarche projet ci-dessus :
+
+- [`frontend.md`](frontend.md) — stack UI, theming, accessibilité, conventions de page.
+- [`i18n.md`](i18n.md) — internationalisation FR/EN (next-intl), devise & fuseau horaire configurables.
+- [`architecture/`](architecture/) — invariants d'autorisation et scénario de chat sécurisé.

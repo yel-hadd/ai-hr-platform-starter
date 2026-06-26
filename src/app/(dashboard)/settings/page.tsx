@@ -1,18 +1,18 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/session";
-import { getLang } from "@/lib/lang";
-import { T, type Translations } from "@/lib/i18n";
 import {
   can,
   PERMISSIONS,
   ROLES,
-  type Role,
-  type Permission,
 } from "@/lib/rbac";
 import { CHAT_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
 import { TOOL_CATALOGUE, toolsForRole } from "@/lib/ai/tools";
+import { CURRENCIES, TIMEZONES, getOrgSettings } from "@/lib/settings";
+import { updateOrgSettings } from "./actions";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -24,54 +24,72 @@ import {
 } from "@/components/ui/table";
 import { Check, X } from "lucide-react";
 
-const ROLE_LABEL_KEYS: Record<Role, keyof Translations> = {
-  EMPLOYEE: "role_employee",
-  MANAGER: "role_manager",
-  HR_ADMIN: "role_hr_admin",
-  SUPER_ADMIN: "role_super_admin",
-};
-
-const PERM_LABEL_KEYS: Record<Permission, keyof Translations> = {
-  "directory:read:self": "perm_dir_self",
-  "directory:read:team": "perm_dir_team",
-  "directory:read:all": "perm_dir_all",
-  "salary:read:all": "perm_salary",
-  "leave:request": "perm_leave_request",
-  "leave:read:self": "perm_leave_self",
-  "leave:read:team": "perm_leave_team",
-  "leave:approve": "perm_leave_approve",
-  "payslip:read:self": "perm_payslip_self",
-  "payslip:read:any": "perm_payslip_any",
-  "handbook:read": "perm_handbook",
-  "employee:manage": "perm_employee_manage",
-  "admin:settings": "perm_admin_settings",
-};
-
 export default async function SettingsPage() {
-  const [user, lang] = await Promise.all([requireUser(), getLang()]);
-  const t = T[lang] as Translations;
-  if (!can(user.role, "admin:settings")) redirect("/");
+  const user = await requireUser();
+  if (!can(user.role, "admin:settings")) redirect("/"); // belt-and-suspenders
+
+  const t = await getTranslations("settings");
+  const tRoles = await getTranslations("roles");
+  const tPerm = await getTranslations("permissions");
+  const tSummary = await getTranslations("tools.summary");
+  const orgSettings = await getOrgSettings();
 
   return (
     <>
       <PageHeader
-        title="Settings"
-        description="The single RBAC matrix that gates the UI, server actions, and AI tools."
+        title={t("title")}
+        description={t("description")}
       />
       <div className="space-y-6 p-4 md:p-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t.settings_perm_matrix}</CardTitle>
+            <CardTitle>{t("localization")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-muted-foreground">{t("localizationDescription")}</p>
+            <form action={updateOrgSettings} className="flex flex-wrap items-end gap-4">
+              <label className="space-y-1 text-sm">
+                <span className="block text-muted-foreground">{t("currency")}</span>
+                <select
+                  name="currency"
+                  defaultValue={orgSettings.currency}
+                  className="block rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="block text-muted-foreground">{t("timezone")}</span>
+                <select
+                  name="timezone"
+                  defaultValue={orgSettings.timezone}
+                  className="block rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  {TIMEZONES.map((tz) => (
+                    <option key={tz} value={tz}>{tz}</option>
+                  ))}
+                </select>
+              </label>
+              <Button type="submit" size="sm">{t("save")}</Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("permissionMatrix")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[14rem]">{t.settings_perm_col}</TableHead>
+                    <TableHead className="min-w-[14rem]">{t("permission")}</TableHead>
                     {ROLES.map((r) => (
                       <TableHead key={r} className="text-center">
-                        {t[ROLE_LABEL_KEYS[r]]}
+                        {tRoles(r)}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -80,15 +98,15 @@ export default async function SettingsPage() {
                   {PERMISSIONS.map((p) => (
                     <TableRow key={p}>
                       <TableCell>
-                        <span className="font-medium">{t[PERM_LABEL_KEYS[p]]}</span>
+                        <span className="font-medium">{tPerm(p)}</span>
                         <code className="ml-2 text-xs text-muted-foreground">{p}</code>
                       </TableCell>
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
                           {can(r, p) ? (
-                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">Allowed</span></>
+                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">{t("allowed")}</span></>
                           ) : (
-                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">Not allowed</span></>
+                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">{t("notAllowed")}</span></>
                           )}
                         </TableCell>
                       ))}
@@ -102,21 +120,20 @@ export default async function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>AI tools by role</CardTitle>
+            <CardTitle>{t("aiToolsByRole")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="mb-3 text-sm text-muted-foreground">
-              The assistant is only given the tools a role may use — out-of-scope
-              tools are never injected, so the model can&apos;t attempt them.
+              {t("aiToolsDescription")}
             </p>
             <div className="overflow-x-auto rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[16rem]">Tool</TableHead>
+                    <TableHead className="min-w-[16rem]">{t("tool")}</TableHead>
                     {ROLES.map((r) => (
                       <TableHead key={r} className="text-center">
-                        {t[ROLE_LABEL_KEYS[r]]}
+                        {tRoles(r)}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -126,14 +143,14 @@ export default async function SettingsPage() {
                     <TableRow key={tool.name}>
                       <TableCell>
                         <code className="text-xs font-medium">{tool.name}</code>
-                        <p className="text-xs text-muted-foreground">{tool.summary}</p>
+                        <p className="text-xs text-muted-foreground">{tSummary(tool.name)}</p>
                       </TableCell>
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
-                          {toolsForRole(r).includes(t.name) ? (
-                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">Allowed</span></>
+                          {toolsForRole(r).includes(tool.name) ? (
+                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">{t("allowed")}</span></>
                           ) : (
-                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">Not allowed</span></>
+                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">{t("notAllowed")}</span></>
                           )}
                         </TableCell>
                       ))}
@@ -147,10 +164,12 @@ export default async function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t.settings_model_registry}</CardTitle>
+            <CardTitle>{t("modelRegistry")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">{t.settings_model_desc}</p>
+            <p className="text-sm text-muted-foreground">
+              {t("modelRegistryDescription")}
+            </p>
             <div className="grid gap-2">
               {CHAT_MODELS.map((m) => (
                 <div
@@ -163,8 +182,8 @@ export default async function SettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{m.provider}</Badge>
-                    {m.reasoning && <Badge variant="secondary">{t.settings_reasoning}</Badge>}
-                    {m.id === DEFAULT_MODEL_ID && <Badge>{t.settings_default}</Badge>}
+                    {m.reasoning && <Badge variant="secondary">{t("reasoning")}</Badge>}
+                    {m.id === DEFAULT_MODEL_ID && <Badge>{t("default")}</Badge>}
                   </div>
                 </div>
               ))}

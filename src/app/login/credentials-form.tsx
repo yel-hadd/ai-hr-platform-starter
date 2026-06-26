@@ -1,13 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { loginWithCredentials } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useT } from "@/lib/lang-context";
 
 export function CredentialsForm() {
-  const t = useT();
+  const t = useTranslations("login");
   const [state, formAction, pending] = useActionState(loginWithCredentials, {});
 
   const errorId = "login-error";
@@ -18,8 +18,8 @@ export function CredentialsForm() {
       <Input
         name="email"
         type="email"
-        aria-label="Email"
-        placeholder="email@hari.ma"
+        aria-label={t("email")}
+        placeholder={t("emailPlaceholder")}
         required
         aria-invalid={!!state?.error}
         aria-describedby={describedBy}
@@ -27,8 +27,8 @@ export function CredentialsForm() {
       <Input
         name="password"
         type="password"
-        aria-label="Password"
-        placeholder="Password"
+        aria-label={t("password")}
+        placeholder={t("passwordPlaceholder")}
         required
         aria-invalid={!!state?.error}
         aria-describedby={describedBy}
@@ -39,7 +39,7 @@ export function CredentialsForm() {
         </p>
       )}
       <Button type="submit" disabled={pending}>
-        {pending ? t.login_signing_in : t.login_sign_in}
+        {pending ? t("signingIn") : t("signIn")}
       </Button>
     </form>
   );

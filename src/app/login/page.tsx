@@ -1,38 +1,23 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
-import { getLang } from "@/lib/lang";
-import { T, type Translations } from "@/lib/i18n";
-import { LangProvider } from "@/lib/lang-context";
-import { LangToggle } from "@/components/lang-toggle";
-import { DEMO_USERS } from "@/lib/demo-users";
-import type { Role } from "@/lib/rbac";
+import { DEMO_USERS, DEMO_PASSWORD } from "@/lib/demo-users";
 import { loginAs } from "./actions";
 import { CredentialsForm } from "./credentials-form";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Bot, ArrowRight } from "lucide-react";
-import { DEMO_PASSWORD } from "@/lib/demo-users";
-
-const ROLE_LABEL_KEYS: Record<Role, keyof Translations> = {
-  EMPLOYEE: "role_employee",
-  MANAGER: "role_manager",
-  HR_ADMIN: "role_hr_admin",
-  SUPER_ADMIN: "role_super_admin",
-};
-
-const BLURB_KEYS: Record<Role, keyof Translations> = {
-  EMPLOYEE: "blurb_employee",
-  MANAGER: "blurb_manager",
-  HR_ADMIN: "blurb_hr",
-  SUPER_ADMIN: "blurb_admin",
-};
 
 export default async function LoginPage() {
-  const [session, lang] = await Promise.all([auth(), getLang()]);
+  const session = await auth();
   if (session?.user) redirect("/");
-  const t = T[lang] as Translations;
+
+  const t = await getTranslations("login");
+  const tRoles = await getTranslations("roles");
+  const tDemo = await getTranslations("login.demo");
 
   return (
     <main className="min-h-dvh grid lg:grid-cols-2">
@@ -44,26 +29,27 @@ export default async function LoginPage() {
         </div>
         <div className="space-y-4 max-w-md">
           <p className="text-3xl font-semibold leading-tight">
-            An AI-powered HR platform starter.
+            {t("pitchTitle")}
           </p>
           <p className="text-neutral-400">
-            A reference implementation showing RBAC-gated AI tools, RAG over your
-            handbook, streaming reasoning, and generative chat UI — on Next.js,
-            Postgres + pgvector, and the Vercel AI SDK.
+            {t("pitchDescription")}
           </p>
         </div>
         <p className="text-xs text-neutral-400">
-          Demo build · pick any role to explore how permissions shape the experience.
+          {t("demoBuild")}
         </p>
       </section>
 
       {/* Login side */}
-      <section className="flex items-center justify-center p-6 sm:p-12">
+      <section className="relative flex items-center justify-center p-6 sm:p-12">
+        <div className="absolute right-4 top-4">
+          <LanguageSwitcher />
+        </div>
         <div className="w-full max-w-md space-y-6">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold">Sign in</h1>
+            <h1 className="text-2xl font-semibold">{t("signIn")}</h1>
             <p className="text-sm text-muted-foreground">
-              Choose a demo role — each has different permissions.
+              {t("chooseRole")}
             </p>
           </div>
 
@@ -75,18 +61,18 @@ export default async function LoginPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium truncate">{u.name}</span>
-                        <Badge variant="secondary">{ROLE_LABELS[u.role]}</Badge>
+                        <Badge variant="secondary">{tRoles(u.role)}</Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{u.blurb}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{tDemo(u.role)}</p>
                     </div>
                     <Button
                       type="submit"
                       size="sm"
                       variant="ghost"
                       className="shrink-0"
-                      aria-label={`Sign in as ${u.name}, ${ROLE_LABELS[u.role]}`}
+                      aria-label={t("signInAs", { name: u.name, role: tRoles(u.role) })}
                     >
-                      Enter <ArrowRight className="size-4" />
+                      {t("enter")} <ArrowRight className="size-4" />
                     </Button>
                   </CardContent>
                 </Card>
@@ -96,15 +82,19 @@ export default async function LoginPage() {
 
           <div className="flex items-center gap-3">
             <Separator className="flex-1" />
-            <span className="text-xs text-muted-foreground">or sign in manually</span>
+            <span className="text-xs text-muted-foreground">{t("orManually")}</span>
             <Separator className="flex-1" />
           </div>
 
           <CredentialsForm />
 
           <p className="text-center text-xs text-muted-foreground">
-            All demo accounts use the password{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-foreground">{DEMO_PASSWORD}</code>
+            {t.rich("passwordNote", {
+              code: (chunks) => (
+                <code className="rounded bg-muted px-1 py-0.5 text-foreground">{chunks}</code>
+              ),
+              password: DEMO_PASSWORD,
+            })}
           </p>
         </div>
       </section>
