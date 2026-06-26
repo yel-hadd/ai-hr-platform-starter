@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import "dotenv/config"; // self-contained when run directly via tsx
-import { PrismaClient, type Role } from "@prisma/client";
+import { PrismaClient, type Role, EmploymentStatus, EmploymentType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { embedTexts, toVectorLiteral } from "../src/lib/ai/embeddings";
 import { DEMO_USERS } from "../src/lib/demo-users";
@@ -19,6 +19,8 @@ type Seed = {
   salary: number;
   manager?: string; // email of manager
   login: boolean; // demo login account?
+  status?: "ACTIVE" | "ON_LEAVE" | "TERMINATED";
+  employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACTOR";
 };
 
 // Seed-only attributes for the demo login accounts. Their identity fields
@@ -46,6 +48,7 @@ const PEOPLE: Seed[] = [
 
   // Comptes secondaires pour peupler l'annuaire et les équipes
   { email: "a.mansouri@hari.ma", name: "Amina Mansouri", role: "EMPLOYEE", title: "Développeuse Frontend", department: "IT", location: "Rabat", salary: 150000, manager: "manager@hari.ma", login: false },
+  { email: "a.elmarrouni@hari.ma", name: "Ahmed El marrouni", role: "EMPLOYEE", title: "Développeuse Full stack", department: "IT", location: "Tetouan", salary: 150000, manager: "manager@hari.ma", login: false, employmentType: "CONTRACTOR" },
   { email: "m.bennani@hari.ma", name: "Mehdi Bennani", role: "EMPLOYEE", title: "Développeur Backend", department: "IT", location: "Tétouan", salary: 160000, manager: "manager@hari.ma", login: false },
 ];
 
@@ -72,6 +75,9 @@ async function seedPeople() {
             location: p.location,
             salary: p.salary,
             startDate: new Date("2023-01-15"),
+            status: (p.status as EmploymentStatus) ?? EmploymentStatus.ACTIVE,
+            employmentType: (p.employmentType as EmploymentType) ?? EmploymentType.FULL_TIME,
+
             leaveBalances: {
               create: [
                 { type: "VACATION", totalDays: 20, usedDays: 4 },
@@ -84,8 +90,12 @@ async function seedPeople() {
       },
       include: { employee: true },
     });
-    byEmail[p.email] = user.employee!.id;
+    // byEmail[p.email] = user.employee!.id;
+    if (!user.employee) throw new Error(`Employee not created for ${p.email}`);
+    byEmail[p.email] = user.employee.id;
+
   }
+
 
   // Pass 2: wire up manager relationships.
   for (const p of PEOPLE) {

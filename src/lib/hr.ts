@@ -6,6 +6,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { can, type Permission, type Role } from "@/lib/rbac";
+import type { EmploymentStatus, EmploymentType } from "@prisma/client";
 
 export type Caller = { role: Role; employeeId: string | null };
 
@@ -20,6 +21,8 @@ export type DirectoryEntry = {
   managerName: string | null;
   isSelf: boolean;
   salary: number | null; // null unless caller may read compensation
+  status: EmploymentStatus;
+  employmentType: EmploymentType;
 };
 
 /**
@@ -29,10 +32,14 @@ export type DirectoryEntry = {
  * caller with no employeeId matches the sentinel "__none__" → empty set.
  */
 function directoryWhere(caller: Caller): Prisma.EmployeeWhereInput {
-  if (can(caller.role, "directory:read:all")) return {};
+  // HR sees everyone, but let's filter out TERMINATED by default so the directory stays clean
+  if (can(caller.role, "directory:read:all")) {
+    return { status: { not: "TERMINATED" } };
+  }
   if (can(caller.role, "directory:read:team")) {
     // Self + direct reports.
     return {
+      status: { not: "TERMINATED" },
       OR: [
         { id: caller.employeeId ?? "__none__" },
         { managerId: caller.employeeId ?? "__none__" },
@@ -40,7 +47,10 @@ function directoryWhere(caller: Caller): Prisma.EmployeeWhereInput {
     };
   }
   // Self only.
-  return { id: caller.employeeId ?? "__none__" };
+  return {
+    id: caller.employeeId ?? "__none__",
+    status: { not: "TERMINATED" }
+  };
 }
 
 /** Employees visible to the caller, scoped by role. */
@@ -67,6 +77,8 @@ export async function getDirectory(caller: Caller): Promise<DirectoryEntry[]> {
     managerName: e.manager?.user.name ?? null,
     isSelf: e.id === caller.employeeId,
     salary: seesSalary ? e.salary : null,
+    status: e.status,
+    employmentType: e.employmentType,
   }));
 }
 
@@ -137,9 +149,9 @@ export async function getPendingApprovals(caller: Caller): Promise<LeaveRequestV
   const where = can(caller.role, "directory:read:all")
     ? { status: "PENDING" as const }
     : {
-        status: "PENDING" as const,
-        employee: { managerId: caller.employeeId ?? "__none__" },
-      };
+      status: "PENDING" as const,
+      employee: { managerId: caller.employeeId ?? "__none__" },
+    };
 
   const rows = await prisma.leaveRequest.findMany({
     where,
