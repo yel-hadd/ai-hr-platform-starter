@@ -22,7 +22,9 @@ export const DEFAULT_ORG_SETTINGS: OrgSettingsValues = {
 const SINGLETON_ID = "singleton";
 
 // Reads the single org-settings row, creating it with defaults on first access.
-// `cache` dedupes the query within a single server request.
+// `cache` dedupes the query within a single server request. Values are clamped to
+// the supported lists so a stale/hand-edited row can never feed an invalid currency
+// to Intl.NumberFormat or an invalid timezone to Intl.DateTimeFormat (which throw).
 export const getOrgSettings = cache(async (): Promise<OrgSettingsValues> => {
   const row = await prisma.orgSettings.upsert({
     where: { id: SINGLETON_ID },
@@ -30,7 +32,14 @@ export const getOrgSettings = cache(async (): Promise<OrgSettingsValues> => {
     create: { id: SINGLETON_ID },
     select: { currency: true, timezone: true },
   });
-  return row;
+  return {
+    currency: (CURRENCIES as readonly string[]).includes(row.currency)
+      ? row.currency
+      : DEFAULT_ORG_SETTINGS.currency,
+    timezone: (TIMEZONES as readonly string[]).includes(row.timezone)
+      ? row.timezone
+      : DEFAULT_ORG_SETTINGS.timezone,
+  };
 });
 
 export async function writeOrgSettings(values: OrgSettingsValues) {
