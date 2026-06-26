@@ -75,7 +75,7 @@ export default async function DirectoryPage({ searchParams }: Props) {
       <div className="space-y-6 p-4 md:p-8">
         <DirectoryFilters departments={facets.departments} cities={facets.cities} />
 
-        <div className="overflow-x-auto rounded-lg border">
+        <div className="rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
