@@ -91,9 +91,7 @@
     "filters": "Filtres",
     "searchPlaceholder": "Rechercher un collaborateur…",
     "optionPlaceholder": "Filtrer…",
-    "noResults": "Aucun employé ne correspond aux filtres sélectionnés.",
-    "profileNotFound": "Profil introuvable",
-    "profileNotFoundBody": "Votre compte n'est lié à aucun profil collaborateur actif. Veuillez contacter les RH ou votre administrateur."
+    "noResults": "Aucun employé ne correspond aux filtres sélectionnés."
   },
   "employmentStatus": {
     "ACTIVE": "Actif",

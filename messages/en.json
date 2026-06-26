@@ -91,9 +91,7 @@
     "filters": "Filters",
     "searchPlaceholder": "Search team members…",
     "optionPlaceholder": "Filter…",
-    "noResults": "No employees match the selected filters.",
-    "profileNotFound": "Profile not found",
-    "profileNotFoundBody": "Your account isn't linked to an active employee profile. Please contact HR or your administrator."
+    "noResults": "No employees match the selected filters."
   },
   "employmentStatus": {
     "ACTIVE": "Active",
