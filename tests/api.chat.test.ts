@@ -21,6 +21,12 @@ vi.mock("@/lib/ai/tools", () => ({
   buildHrTools: vi.fn(() => ({})),
 }));
 
+// The route resolves the active locale + org currency/timezone for the prompt.
+vi.mock("next-intl/server", () => ({ getLocale: vi.fn(async () => "en") }));
+vi.mock("@/lib/settings", () => ({
+  getOrgSettings: vi.fn(async () => ({ currency: "MAD", timezone: "UTC" })),
+}));
+
 beforeEach(() => {
   authMock.mockReset();
   streamTextMock.mockReset();

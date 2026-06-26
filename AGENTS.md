@@ -5,8 +5,8 @@ RBAC-gated tools, handbook RAG (pgvector), streaming reasoning, tool-call UI, an
 UI. See `README.md` for the full architecture and diagrams.
 
 ## Stack
-Next.js 16 (App Router, React 19) · TypeScript · Tailwind v4 + shadcn/ui · Vercel AI SDK v6 ·
-OpenRouter (chat + embeddings) · Postgres + pgvector (`halfvec` + HNSW) · Prisma · Auth.js v5.
+Next.js 16 (App Router, React 19) · TypeScript · Tailwind v4 + shadcn/ui · next-intl (EN/FR) ·
+Vercel AI SDK v6 · OpenRouter (chat + embeddings) · Postgres + pgvector (`halfvec` + HNSW) · Prisma · Auth.js v5.
 
 > Next.js 16 / React 19 are recent majors — when an API surprises you, check the official docs
 > for that version rather than assuming older behavior.
@@ -35,4 +35,8 @@ OpenRouter (chat + embeddings) · Postgres + pgvector (`halfvec` + HNSW) · Pris
 - **Schema changes** go through `prisma migrate` and are committed under `prisma/migrations/`. The
   pgvector extension, the `halfvec` column, and the HNSW index live in the migration SQL (Prisma
   can't model an index on an `Unsupported` column).
+- **i18n is mandatory for UI.** The app is English + French via **next-intl** in cookie mode
+  (`NEXT_LOCALE`, no URL prefixes, no middleware). Every user-facing string is a key in
+  `messages/{en,fr}.json` — never a hardcoded literal; the AI answers in the active locale.
+  Keys are type-checked against `en.json`. See `docs/i18n.md`.
 - Secrets stay in `.env` (git-ignored) and are read only in server code / Route Handlers.
