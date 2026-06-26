@@ -45,43 +45,23 @@ describe("getEmployeeDirectory — role scoping", () => {
     expect(out.people[0].salary).toBeNull();
   });
 
-  it("manager sees self + direct reports, salary still hidden", async () => {
-    // const tools = buildHrTools(callers.manager);
-    // const out = await call(tools.getEmployeeDirectory, {});
-    // // expect(out.count).toBe(7); // Karim + Imane + Amina + Mehdi + ahmed 
-    // expect(out.count).toBe(expectedEmployees.length);
-    // expect(out.people.every((p: { salary: number | null }) => p.salary === null)).toBe(true);
-    const tools = buildHrTools(callers.hr);
+  it("manager sees self + direct reports (active roster), salary still hidden", async () => {
+    const tools = buildHrTools(callers.manager);
     const out = await call(tools.getEmployeeDirectory, {});
-
-    console.log(out.count);
-    console.table(
-      out.people.map((p: any) => ({
-        name: p.name,
-        title: p.title,
-        status: p.status,
-      }))
-    );
+    // Karim + 7 reports, minus the 2 TERMINATED (hidden by default) = 6.
+    expect(out.count).toBe(6);
+    expect(out.people.every((p: { salary: number | null }) => p.salary === null)).toBe(true);
+    // TERMINATED employees are excluded from the default directory.
+    expect(out.people.some((p: { status: string }) => p.status === "TERMINATED")).toBe(false);
   });
 
-  it("HR sees the whole company with salaries visible", async () => {
-    // const tools = buildHrTools(callers.hr);
-    // const out = await call(tools.getEmployeeDirectory, {});
-    // // expect(out.count).toBe(10);
-    // expect(out.count).toBe(expectedEmployees.length);
-    // expect(out.people.some((p: { salary: number | null }) => typeof p.salary === "number")).toBe(true);
-
+  it("HR sees the whole company (active roster) with salaries visible", async () => {
     const tools = buildHrTools(callers.hr);
     const out = await call(tools.getEmployeeDirectory, {});
-
-    console.log(out.count);
-    console.table(
-      out.people.map((p: any) => ({
-        name: p.name,
-        title: p.title,
-        status: p.status,
-      }))
-    );
+    // 10 seeded employees, minus the 2 TERMINATED = 8.
+    expect(out.count).toBe(8);
+    expect(out.people.some((p: { salary: number | null }) => typeof p.salary === "number")).toBe(true);
+    expect(out.people.some((p: { status: string }) => p.status === "TERMINATED")).toBe(false);
   });
 });
 

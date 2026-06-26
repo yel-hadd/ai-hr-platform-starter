@@ -27,19 +27,17 @@ export type DirectoryEntry = {
 
 /**
  * The set of employees the caller may see, as a Prisma WHERE. This is the single
- * source of "directory scope": reused by getDirectory AND getPayslip so a tool
- * can never reach an employee the dashboard wouldn't show for that role. A
- * caller with no employeeId matches the sentinel "__none__" → empty set.
+ * source of "directory scope": reused by getDirectory, getDirectoryFacets AND
+ * getPayslip so a tool can never reach an employee the dashboard wouldn't show
+ * for that role. A caller with no employeeId matches the sentinel "__none__" →
+ * empty set. Scope only — it must NOT encode employment-status filtering (that
+ * would also hide e.g. a TERMINATED employee's payslip from HR).
  */
 function directoryWhere(caller: Caller): Prisma.EmployeeWhereInput {
-  // HR sees everyone, but let's filter out TERMINATED by default so the directory stays clean
-  if (can(caller.role, "directory:read:all")) {
-    return { status: { not: "TERMINATED" } };
-  }
+  if (can(caller.role, "directory:read:all")) return {};
   if (can(caller.role, "directory:read:team")) {
     // Self + direct reports.
     return {
-      status: { not: "TERMINATED" },
       OR: [
         { id: caller.employeeId ?? "__none__" },
         { managerId: caller.employeeId ?? "__none__" },
@@ -47,18 +45,54 @@ function directoryWhere(caller: Caller): Prisma.EmployeeWhereInput {
     };
   }
   // Self only.
-  return {
-    id: caller.employeeId ?? "__none__",
-    status: { not: "TERMINATED" }
-  };
+  return { id: caller.employeeId ?? "__none__" };
 }
 
-/** Employees visible to the caller, scoped by role. */
-export async function getDirectory(caller: Caller): Promise<DirectoryEntry[]> {
+const EMPLOYMENT_STATUSES = ["ACTIVE", "ON_LEAVE", "TERMINATED"] as const;
+
+export type DirectoryFilters = {
+  search?: string;
+  status?: string[];
+  departments?: string[];
+  cities?: string[];
+};
+
+/**
+ * Status clause for the directory listing. Honors an explicit (validated) status
+ * filter from the UI; otherwise hides TERMINATED so the default directory stays
+ * clean. Invalid status values are ignored, never passed to Prisma.
+ */
+function statusClause(status: string[] | undefined): Prisma.EmployeeWhereInput {
+  const valid = (status ?? []).filter(
+    (s): s is EmploymentStatus => (EMPLOYMENT_STATUSES as readonly string[]).includes(s),
+  );
+  return valid.length ? { status: { in: valid } } : { status: { not: "TERMINATED" } };
+}
+
+/** Employees visible to the caller, scoped by role and narrowed by UI filters. */
+export async function getDirectory(
+  caller: Caller,
+  filters: DirectoryFilters = {},
+): Promise<DirectoryEntry[]> {
   const seesSalary = can(caller.role, "salary:read:all");
 
+  const and: Prisma.EmployeeWhereInput[] = [
+    directoryWhere(caller), // role scope — always first
+    statusClause(filters.status),
+  ];
+  if (filters.search) {
+    and.push({
+      OR: [
+        { user: { name: { contains: filters.search, mode: "insensitive" } } },
+        { user: { email: { contains: filters.search, mode: "insensitive" } } },
+      ],
+    });
+  }
+  if (filters.departments?.length) and.push({ department: { in: filters.departments } });
+  if (filters.cities?.length) and.push({ location: { in: filters.cities } });
+
   const rows = await prisma.employee.findMany({
-    where: directoryWhere(caller),
+    where: { AND: and },
     include: {
       user: { select: { name: true, email: true, role: true } },
       manager: { include: { user: { select: { name: true } } } },
@@ -80,6 +114,20 @@ export async function getDirectory(caller: Caller): Promise<DirectoryEntry[]> {
     status: e.status,
     employmentType: e.employmentType,
   }));
+}
+
+/** Distinct departments/cities WITHIN the caller's scope — for filter options. */
+export async function getDirectoryFacets(
+  caller: Caller,
+): Promise<{ departments: string[]; cities: string[] }> {
+  const rows = await prisma.employee.findMany({
+    where: directoryWhere(caller),
+    select: { department: true, location: true },
+  });
+  return {
+    departments: Array.from(new Set(rows.map((r) => r.department))).sort(),
+    cities: Array.from(new Set(rows.map((r) => r.location))).sort(),
+  };
 }
 
 export type LeaveBalanceView = {

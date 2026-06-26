@@ -4,8 +4,9 @@ import { useRef, useEffect, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { ArrowUp, Square, Bot } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { CHAT_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
-import { ROLE_LABELS, type Role } from "@/lib/rbac";
+import { type Role } from "@/lib/rbac";
 import { ChatMessage } from "./message";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,14 +19,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const SUGGESTIONS = [
-  "What is our parental leave policy?",
-  "How many vacation days do I have left?",
-  "Show me the team directory",
-  "Show me my latest payslip",
-];
+const SUGGESTION_KEYS = [
+  "suggestion1",
+  "suggestion2",
+  "suggestion3",
+  "suggestion4",
+] as const;
 
 export function Chat({ user }: { user: { name: string; role: Role } }) {
+  const t = useTranslations("chat");
+  const tRoles = useTranslations("roles");
   const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -55,11 +58,11 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
       <div className="flex items-center justify-between gap-2 border-b px-4 py-3 md:px-8">
         <div className="flex min-w-0 items-center gap-2 text-sm">
           <Bot className="size-4 shrink-0 text-primary" />
-          <span className="truncate font-medium">AI Assistant</span>
-          <Badge variant="secondary" className="shrink-0">{ROLE_LABELS[user.role]}</Badge>
+          <span className="truncate font-medium">{t("assistant")}</span>
+          <Badge variant="secondary" className="shrink-0">{tRoles(user.role)}</Badge>
         </div>
         <Select value={modelId} onValueChange={(v) => v && setModelId(v)}>
-          <SelectTrigger className="w-[150px] shrink-0 sm:w-[220px]" size="sm" aria-label="AI model">
+          <SelectTrigger className="w-[150px] shrink-0 sm:w-[220px]" size="sm" aria-label={t("modelLabel")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -77,7 +80,7 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
         <div
           role="log"
           aria-live="polite"
-          aria-label="Conversation"
+          aria-label={t("conversation")}
           className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6"
         >
           {messages.length === 0 && (
@@ -86,19 +89,19 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
                 <Bot className="size-6 text-primary" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">How can I help, {user.name.split(" ")[0]}?</h2>
+                <h2 className="text-lg font-semibold">{t("greeting", { name: user.name.split(" ")[0] })}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Ask about policies, your time off, the directory, or payslips.
+                  {t("greetingDescription")}
                 </p>
               </div>
               <div className="mx-auto grid max-w-md gap-2 sm:grid-cols-2">
-                {SUGGESTIONS.map((s) => (
+                {SUGGESTION_KEYS.map((key) => (
                   <button
-                    key={s}
-                    onClick={() => submit(s)}
+                    key={key}
+                    onClick={() => submit(t(key))}
                     className="rounded-lg border bg-card p-3 text-left text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
                   >
-                    {s}
+                    {t(key)}
                   </button>
                 ))}
               </div>
@@ -118,8 +121,7 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
               role="alert"
               className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
             >
-              Something went wrong. Check that the provider API key is set in your
-              environment.
+              {t("error")}
             </p>
           )}
         </div>
@@ -139,8 +141,8 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
                 submit(input);
               }
             }}
-            aria-label="Message"
-            placeholder="Ask anything… (Shift+Enter for newline)"
+            aria-label={t("messageLabel")}
+            placeholder={t("placeholder")}
             rows={1}
             className="max-h-40 min-h-[44px] resize-none"
           />
@@ -149,7 +151,7 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
               size="icon"
               variant="secondary"
               onClick={() => stop()}
-              aria-label="Stop generating"
+              aria-label={t("stop")}
               className="size-11 shrink-0"
             >
               <Square className="size-4" />
@@ -159,7 +161,7 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
               size="icon"
               onClick={() => submit(input)}
               disabled={!input.trim()}
-              aria-label="Send message"
+              aria-label={t("send")}
               className="size-11 shrink-0"
             >
               <ArrowUp className="size-4" />

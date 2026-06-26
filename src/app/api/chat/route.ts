@@ -6,8 +6,11 @@ import {
 } from "ai";
 import { auth } from "@/lib/auth";
 import { getChatModel } from "@/lib/ai/providers";
-import { buildHrTools, TOOL_CATALOGUE } from "@/lib/ai/tools";
-import { can, ROLE_LABELS } from "@/lib/rbac";
+import { buildHrTools } from "@/lib/ai/tools";
+import { ROLE_LABELS } from "@/lib/rbac";
+import { localeConfig } from "@/i18n/routing";
+import { getOrgSettings } from "@/lib/settings";
+import { getLocale } from "next-intl/server";
 
 export const maxDuration = 60;
 
@@ -28,30 +31,40 @@ export async function POST(req: Request) {
     name: session.user.name ?? "the user",
   };
 
-  // Capabilities == the tools this role is actually given (same catalogue that
-  // gates exposure), so the prompt and the injected toolset can never disagree.
-  const capabilities = TOOL_CATALOGUE.filter(
-    (t) => t.permission === null || can(caller.role, t.permission),
-  )
-    .map((t) => `- ${t.name}: ${t.summary}`)
-    .join("\n");
-
   const tools = buildHrTools(caller);
 
+  // Capabilities == the tools actually injected for this caller, so the prompt
+  // and the injected toolset can never disagree.
+  const capabilities = Object.entries(tools)
+    .map(([name, t]) => `- ${name}: ${t.description}`)
+    .join("\n");
+
+  // The UI locale (NEXT_LOCALE cookie). The assistant answers in this language,
+  // and "today" is formatted for it, so dates in the prompt read naturally.
+  const locale = await getLocale();
+  const { language, dateLocale } = localeConfig[locale];
+
+  // Org-wide currency + timezone (super-admin configurable). The assistant must
+  // state money in this currency and reason about "now" in this timezone.
+  const { currency, timezone } = await getOrgSettings();
+
   const now = new Date();
-  const currentDateTime = now.toLocaleString("en-US", {
+  const currentDateTime = now.toLocaleString(dateLocale, {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: timezone,
     timeZoneName: "short",
   });
   const isoDate = now.toISOString().slice(0, 10);
 
   const system = `You are HARI, the assistant inside an AI-powered HR platform.
-The current date and time is ${currentDateTime} (today's date in YYYY-MM-DD is ${isoDate}). Use this as the source of truth for "today" — work out any relative date ("next Monday", "tomorrow", "in two weeks") from it and confirm the exact calendar date with the user.
+Always respond to the user in ${language}, regardless of the language these instructions are written in. Translate any tool result you relay (including error messages) into ${language}.
+The current date and time is ${currentDateTime} (today's date in YYYY-MM-DD is ${isoDate}), in the organization's timezone ${timezone}. Use this as the source of truth for "today" — work out any relative date ("next Monday", "tomorrow", "in two weeks") from it and confirm the exact calendar date with the user.
+All monetary amounts in this organization are in ${currency}. Always state salaries and pay in ${currency} — never convert to or assume another currency (e.g. don't write € or $); the result cards already format the amount.
 
 The signed-in user is ${caller.name}, role: ${ROLE_LABELS[caller.role]}.
 
