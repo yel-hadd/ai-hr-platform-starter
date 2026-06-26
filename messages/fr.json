@@ -85,7 +85,23 @@
     "department": "Département",
     "location": "Lieu",
     "manager": "Manager",
-    "salary": "Salaire"
+    "salary": "Salaire",
+    "status": "Statut",
+    "employmentType": "Type",
+    "filters": "Filtres",
+    "searchPlaceholder": "Rechercher un collaborateur…",
+    "optionPlaceholder": "Filtrer…",
+    "noResults": "Aucun employé ne correspond aux filtres sélectionnés."
+  },
+  "employmentStatus": {
+    "ACTIVE": "Actif",
+    "ON_LEAVE": "En congé",
+    "TERMINATED": "Parti"
+  },
+  "employmentTypeLabel": {
+    "FULL_TIME": "Temps plein",
+    "PART_TIME": "Temps partiel",
+    "CONTRACTOR": "Prestataire"
   },
   "timeOff": {
     "title": "Congés",

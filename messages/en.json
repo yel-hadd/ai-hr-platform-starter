@@ -85,7 +85,23 @@
     "department": "Department",
     "location": "Location",
     "manager": "Manager",
-    "salary": "Salary"
+    "salary": "Salary",
+    "status": "Status",
+    "employmentType": "Type",
+    "filters": "Filters",
+    "searchPlaceholder": "Search team members…",
+    "optionPlaceholder": "Filter…",
+    "noResults": "No employees match the selected filters."
+  },
+  "employmentStatus": {
+    "ACTIVE": "Active",
+    "ON_LEAVE": "On leave",
+    "TERMINATED": "Terminated"
+  },
+  "employmentTypeLabel": {
+    "FULL_TIME": "Full-time",
+    "PART_TIME": "Part-time",
+    "CONTRACTOR": "Contractor"
   },
   "timeOff": {
     "title": "Time Off",
