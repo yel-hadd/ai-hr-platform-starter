@@ -54,8 +54,11 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title={t.settings_title} description={t.settings_desc} />
-      <div className="space-y-6 p-8">
+      <PageHeader
+        title="Settings"
+        description="The single RBAC matrix that gates the UI, server actions, and AI tools."
+      />
+      <div className="space-y-6 p-4 md:p-8">
         <Card>
           <CardHeader>
             <CardTitle>{t.settings_perm_matrix}</CardTitle>
@@ -83,9 +86,9 @@ export default async function SettingsPage() {
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
                           {can(r, p) ? (
-                            <Check className="mx-auto size-4 text-green-600" />
+                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">Allowed</span></>
                           ) : (
-                            <X className="mx-auto size-4 text-muted-foreground/40" />
+                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">Not allowed</span></>
                           )}
                         </TableCell>
                       ))}
@@ -127,10 +130,10 @@ export default async function SettingsPage() {
                       </TableCell>
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
-                          {toolsForRole(r).includes(tool.name) ? (
-                            <Check className="mx-auto size-4 text-green-600" />
+                          {toolsForRole(r).includes(t.name) ? (
+                            <><Check aria-hidden className="mx-auto size-4 text-green-600" /><span className="sr-only">Allowed</span></>
                           ) : (
-                            <X className="mx-auto size-4 text-muted-foreground/40" />
+                            <><X aria-hidden className="mx-auto size-4 text-muted-foreground/40" /><span className="sr-only">Not allowed</span></>
                           )}
                         </TableCell>
                       ))}

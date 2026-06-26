@@ -36,7 +36,7 @@ export default async function OverviewPage() {
         title={`${t.dash_welcome}, ${user.name.split(" ")[0]}`}
         description={`${t.dash_signed_as} ${t[ROLE_LABEL_KEYS[user.role]]}. ${t.dash_permissions}`}
       />
-      <div className="space-y-6 p-8">
+      <div className="space-y-6 p-4 md:p-8">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
             icon={<Users className="size-5" />}

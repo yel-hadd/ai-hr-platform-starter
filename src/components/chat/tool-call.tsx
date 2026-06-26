@@ -43,19 +43,26 @@ export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boole
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex items-center gap-2 text-xs text-muted-foreground"
+      >
         {running ? (
           <Loader2 className="size-3.5 animate-spin" />
         ) : (
           <Wrench className="size-3.5" />
         )}
         <span>{label}</span>
-        <code className="rounded bg-muted px-1 py-0.5 text-[10px]">{name}</code>
+        <code className="rounded bg-muted px-1 py-0.5 text-[10px] text-foreground">{name}</code>
       </div>
 
       {part.state === "output-error" && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
-          <AlertTriangle className="size-3.5" /> {part.errorText ?? t.tool_error}
+        <div
+          role="alert"
+          className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive"
+        >
+          <AlertTriangle className="size-3.5" /> {part.errorText ?? "Tool error"}
         </div>
       )}
 

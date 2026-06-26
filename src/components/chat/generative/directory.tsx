@@ -3,16 +3,8 @@
 import { Mail, MapPin, Briefcase } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { Role } from "@/lib/rbac";
-import { useT, useLang } from "@/lib/lang-context";
-import { translateField, TITLE_MAP, DEPT_MAP, LOCATION_MAP } from "@/lib/i18n";
-
-const ROLE_LABEL_KEYS = {
-  EMPLOYEE: "role_employee",
-  MANAGER: "role_manager",
-  HR_ADMIN: "role_hr_admin",
-  SUPER_ADMIN: "role_super_admin",
-} as const;
+import { ROLE_LABELS, type Role } from "@/lib/rbac";
+import { formatMAD } from "@/lib/utils";
 
 type Person = {
   id: string;
@@ -76,7 +68,7 @@ export function DirectoryCards({ people }: { people: Person[] }) {
               </p>
               {p.salary != null && (
                 <p className="font-medium text-foreground">
-                  ${p.salary.toLocaleString()} / yr
+                  {formatMAD(p.salary)} / yr
                 </p>
               )}
             </div>

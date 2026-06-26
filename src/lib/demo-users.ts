@@ -1,7 +1,7 @@
 import type { Role } from "@/lib/rbac";
 
-// The four demo accounts. Shared by the seed script and the login page so the
-// "login as" buttons always match what's in the database.
+// Les quatre comptes de démonstration. Partagés par le script de seed et la page de connexion
+// pour que les boutons "Se connecter en tant que" correspondent toujours à la base de données.
 export const DEMO_PASSWORD = "password123";
 
 export type DemoUser = {
@@ -11,44 +11,44 @@ export type DemoUser = {
   title: string;
   department: string;
   location: string;
-  blurb: string; // shown on the login card
+  blurb: string; // affiché sur la carte de connexion
 };
 
 export const DEMO_USERS: DemoUser[] = [
   {
-    email: "employee@acme.test",
-    name: "Erin Employee",
+    email: "collaborateur@hari.ma",
+    name: "Imane Chraibi",
     role: "EMPLOYEE",
-    title: "Software Engineer",
-    department: "Engineering",
-    location: "Austin, TX",
-    blurb: "Sees only their own data. The assistant is given only self-service tools — approvals and others' records aren't offered.",
-  },
-  {
-    email: "manager@acme.test",
-    name: "Marcus Manager",
-    role: "MANAGER",
-    title: "Engineering Manager",
-    department: "Engineering",
-    location: "Austin, TX",
-    blurb: "Adds visibility into direct reports and can approve their leave.",
-  },
-  {
-    email: "hr@acme.test",
-    name: "Hana HR",
-    role: "HR_ADMIN",
-    title: "HR Business Partner",
-    department: "People",
-    location: "Remote",
-    blurb: "Company-wide directory, compensation, and payslip access.",
-  },
-  {
-    email: "admin@acme.test",
-    name: "Sam Super",
-    role: "SUPER_ADMIN",
-    title: "Platform Administrator",
+    title: "Ingénieure Logiciel Full Stack",
     department: "IT",
-    location: "Remote",
-    blurb: "Everything HR can do, plus platform settings.",
+    location: "Tétouan",
+    blurb: "Ne voit que ses propres données. L'assistant IA n'a accès qu'à des outils en libre-service (pas de vue sur les autres employés ni de droits de validation).",
+  },
+  {
+    email: "manager@hari.ma",
+    name: "Karim El Idrissi",
+    role: "MANAGER",
+    title: "Manager Technique",
+    department: "IT",
+    location: "Tétouan",
+    blurb: "A une visibilité sur son équipe directe et peut approuver leurs demandes de congés.",
+  },
+  {
+    email: "rh@hari.ma",
+    name: "Nadia Benali",
+    role: "HR_ADMIN",
+    title: "Responsable Ressources Humaines",
+    department: "Ressources Humaines",
+    location: "Casablanca",
+    blurb: "Accès global à l'annuaire de toute l'entreprise, aux rémunérations et aux fiches de paie.",
+  },
+  {
+    email: "admin@hari.ma",
+    name: "Youssef Tazi",
+    role: "SUPER_ADMIN",
+    title: "Directeur des Systèmes d'Information",
+    department: "DSI",
+    location: "Distanciel",
+    blurb: "Possède tous les droits RH, plus l'accès aux paramètres techniques de la plateforme.",
   },
 ];

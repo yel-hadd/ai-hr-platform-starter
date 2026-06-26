@@ -50,8 +50,11 @@ export default async function TimeOffPage() {
 
   return (
     <>
-      <PageHeader title={t.timeoff_title} description={t.timeoff_tip} />
-      <div className="space-y-6 p-8">
+      <PageHeader
+        title="Time Off"
+        description="Tip: request time off or approve requests by asking the AI Assistant."
+      />
+      <div className="space-y-6 p-4 md:p-8">
         <div className="grid gap-4 sm:grid-cols-3">
           {balances.map((b) => (
             <Card key={b.type}>

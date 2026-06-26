@@ -32,7 +32,14 @@ export function LeaveBalances({ balances }: { balances: Balance[] }) {
                 /{b.totalDays}
               </span>
             </p>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div
+              role="progressbar"
+              aria-valuenow={b.remainingDays}
+              aria-valuemin={0}
+              aria-valuemax={b.totalDays}
+              aria-label={`${b.type.toLowerCase()} days remaining`}
+              className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
+            >
               <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
             </div>
           </div>

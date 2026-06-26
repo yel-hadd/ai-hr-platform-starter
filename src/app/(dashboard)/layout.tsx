@@ -1,21 +1,34 @@
 import { requireUser } from "@/lib/session";
-import { getLang } from "@/lib/lang";
-import { LangProvider } from "@/lib/lang-context";
-import { Sidebar } from "@/components/layout/sidebar";
+import { Sidebar, MobileNav } from "@/components/layout/sidebar";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [user, lang] = await Promise.all([requireUser(), getLang()]);
+  const user = await requireUser(); // redirects to /login if signed out
+  const nav = { name: user.name, email: user.email, role: user.role };
 
   return (
-    <LangProvider lang={lang}>
-      <div className="flex h-dvh overflow-hidden">
-        <Sidebar user={{ name: user.name, email: user.email, role: user.role }} />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+    <div className="flex h-dvh overflow-hidden">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
+      >
+        Skip to content
+      </a>
+      <Sidebar user={nav} />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <MobileNav user={nav} />
+        <main
+          id="main"
+          tabIndex={0}
+          aria-label="Main content"
+          className="flex-1 overflow-y-auto"
+        >
+          {children}
+        </main>
       </div>
-    </LangProvider>
+    </div>
   );
 }

@@ -24,6 +24,7 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
   const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { messages, sendMessage, status, stop, error } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
@@ -40,20 +41,22 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
     if (!value || busy) return;
     sendMessage({ text: value }, { body: { modelId } });
     setInput("");
+    inputRef.current?.focus(); // keep keyboard focus in the composer
   }
 
   const suggestions = [t.chat_s1, t.chat_s2, t.chat_s3, t.chat_s4];
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-2 border-b px-8 py-3">
-        <div className="flex items-center gap-2 text-sm">
-          <Bot className="size-4 text-primary" />
-          <span className="font-medium">{t.chat_title}</span>
-          <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
+      {/* Model selector */}
+      <div className="flex items-center justify-between gap-2 border-b px-4 py-3 md:px-8">
+        <div className="flex min-w-0 items-center gap-2 text-sm">
+          <Bot className="size-4 shrink-0 text-primary" />
+          <span className="truncate font-medium">AI Assistant</span>
+          <Badge variant="secondary" className="shrink-0">{ROLE_LABELS[user.role]}</Badge>
         </div>
         <Select value={modelId} onValueChange={(v) => v && setModelId(v)}>
-          <SelectTrigger className="w-[220px]" size="sm">
+          <SelectTrigger className="w-[150px] shrink-0 sm:w-[220px]" size="sm" aria-label="AI model">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -67,7 +70,12 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl space-y-6 px-6 py-6">
+        <div
+          role="log"
+          aria-live="polite"
+          aria-label="Conversation"
+          className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6"
+        >
           {messages.length === 0 && (
             <div className="space-y-4 pt-10 text-center">
               <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10">
@@ -102,8 +110,12 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
           ))}
 
           {error && (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-              {t.chat_error}
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+            >
+              Something went wrong. Check that the provider API key is set in your
+              environment.
             </p>
           )}
         </div>
@@ -112,24 +124,39 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
       <div className="border-t p-4">
         <div className="mx-auto flex max-w-3xl items-end gap-2">
           <Textarea
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              // Enter sends; Shift+Enter newlines. Skip while an IME is composing.
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 submit(input);
               }
             }}
-            placeholder={t.chat_placeholder}
+            aria-label="Message"
+            placeholder="Ask anything… (Shift+Enter for newline)"
             rows={1}
             className="max-h-40 min-h-[44px] resize-none"
           />
           {busy ? (
-            <Button size="icon" variant="secondary" onClick={() => stop()}>
+            <Button
+              size="icon"
+              variant="secondary"
+              onClick={() => stop()}
+              aria-label="Stop generating"
+              className="size-11 shrink-0"
+            >
               <Square className="size-4" />
             </Button>
           ) : (
-            <Button size="icon" onClick={() => submit(input)} disabled={!input.trim()}>
+            <Button
+              size="icon"
+              onClick={() => submit(input)}
+              disabled={!input.trim()}
+              aria-label="Send message"
+              className="size-11 shrink-0"
+            >
               <ArrowUp className="size-4" />
             </Button>
           )}

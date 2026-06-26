@@ -11,16 +11,22 @@ function call(t: any, input: unknown) {
 
 const callers: Record<string, ToolCaller> = {};
 
+// Demo emails → the stable fixture keys used throughout this file. Keeping the
+// map explicit (rather than deriving keys from the email local-part) means a
+// future email rename is a one-line change here, not a silent miss.
+const CALLER_KEY_BY_EMAIL: Record<string, "employee" | "manager" | "hr"> = {
+  "collaborateur@hari.ma": "employee",
+  "manager@hari.ma": "manager",
+  "rh@hari.ma": "hr",
+};
+
 beforeAll(async () => {
   const users = await prisma.user.findMany({
-    where: {
-      email: { in: ["employee@acme.test", "manager@acme.test", "hr@acme.test"] },
-    },
+    where: { email: { in: Object.keys(CALLER_KEY_BY_EMAIL) } },
     include: { employee: { select: { id: true } } },
   });
   for (const u of users) {
-    const key = u.email.split("@")[0];
-    callers[key] = {
+    callers[CALLER_KEY_BY_EMAIL[u.email]] = {
       role: u.role,
       employeeId: u.employee!.id,
       name: u.name,
@@ -42,7 +48,7 @@ describe("getEmployeeDirectory — role scoping", () => {
   it("manager sees self + direct reports, salary still hidden", async () => {
     const tools = buildHrTools(callers.manager);
     const out = await call(tools.getEmployeeDirectory, {});
-    expect(out.count).toBe(4); // Marcus + Erin + Nina + Omar
+    expect(out.count).toBe(4); // Karim + Imane + Amina + Mehdi
     expect(out.people.every((p: { salary: number | null }) => p.salary === null)).toBe(true);
   });
 
@@ -67,14 +73,14 @@ describe("getPayslip — self vs anyone", () => {
     // ignores any id, so the agent can't even express a cross-person query.
     const tools = buildHrTools(callers.employee);
     const out = await call(tools.getPayslip, { employeeId: callers.manager.employeeId });
-    expect(out.payslip?.employeeName).toContain("Erin"); // own, not Marcus
-    expect(out.payslip?.employeeName).not.toContain("Marcus");
+    expect(out.payslip?.employeeName).toContain("Imane"); // own, not Karim
+    expect(out.payslip?.employeeName).not.toContain("Karim");
   });
 
   it("HR can view anyone's payslip by id", async () => {
     const tools = buildHrTools(callers.hr);
     const out = await call(tools.getPayslip, { employeeId: callers.employee.employeeId });
-    expect(out.payslip?.employeeName).toContain("Erin");
+    expect(out.payslip?.employeeName).toContain("Imane");
   });
 
   it("a guessed / non-existent id yields a clean not-found, never a payslip", async () => {
@@ -98,13 +104,13 @@ describe("approvals — per-role exposure", () => {
   it("manager sees pending approvals for their reports", async () => {
     const tools = buildHrTools(callers.manager);
     const out = await call(tools.listPendingApprovals, {});
-    expect(out.count).toBeGreaterThanOrEqual(2); // Erin + Nina seeded
+    expect(out.count).toBeGreaterThanOrEqual(2); // Imane + Amina seeded
     const names = out.pending.map((p: { employeeName: string }) => p.employeeName);
-    expect(names).toContain("Erin Employee");
+    expect(names).toContain("Imane Chraibi");
   });
 
   it("manager approving a request from outside their team gets a clean error, no data change", async () => {
-    // Hana (HR) does not report to Marcus. Even though Marcus IS offered approveLeave,
+    // Nadia (HR) does not report to Karim. Even though Karim IS offered approveLeave,
     // a requestId pointing outside his reports is refused server-side and returns a
     // plain { error } — not a denied card — and changes nothing.
     const foreign = await prisma.leaveRequest.create({

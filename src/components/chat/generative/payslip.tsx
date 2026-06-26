@@ -1,5 +1,5 @@
 import { Receipt } from "lucide-react";
-import { useT } from "@/lib/lang-context";
+import { formatMAD } from "@/lib/utils";
 
 export function Payslip({
   payslip,
@@ -18,7 +18,7 @@ export function Payslip({
     <div className="flex justify-between">
       <span className="text-muted-foreground">{label}</span>
       <span className={strong ? "font-semibold" : "tabular-nums"}>
-        ${value.toLocaleString()}
+        {formatMAD(value)}
       </span>
     </div>
   );

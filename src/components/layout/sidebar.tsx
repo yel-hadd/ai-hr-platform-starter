@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,15 +10,25 @@ import {
   CalendarDays,
   Settings,
   LogOut,
+  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can, type Permission, type Role } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { logout } from "@/lib/auth-actions";
 import { useT } from "@/lib/lang-context";
 import { LangToggle } from "@/components/lang-toggle";
+
+type User = { name: string; email: string; role: Role };
 
 type NavItem = {
   href: string;
@@ -34,30 +45,23 @@ const NAV: NavItem[] = [
   { href: "/settings", labelKey: "nav_settings", icon: Settings, permission: "admin:settings" },
 ];
 
-const ROLE_LABEL_KEYS = {
-  EMPLOYEE: "role_employee",
-  MANAGER: "role_manager",
-  HR_ADMIN: "role_hr_admin",
-  SUPER_ADMIN: "role_super_admin",
-} as const;
-
-export function Sidebar({
-  user,
-}: {
-  user: { name: string; email: string; role: Role };
-}) {
-  const t = useT();
-  const pathname = usePathname();
-  const items = NAV.filter((i) => !i.permission || can(user.role, i.permission));
-  const initials = user.name
+function initialsOf(name: string) {
+  return name
     .split(" ")
     .map((s) => s[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+// The nav body, shared by the desktop sidebar and the mobile sheet. `onNavigate`
+// lets the mobile sheet close itself when a link is tapped.
+function NavBody({ user, onNavigate }: { user: User; onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const items = NAV.filter((i) => !i.permission || can(user.role, i.permission));
 
   return (
-    <aside className="flex h-dvh w-64 shrink-0 flex-col border-r bg-card">
+    <>
       <div className="flex items-center gap-2 px-5 py-4 font-semibold">
         <Bot className="size-5 text-primary" />
         HARI
@@ -66,16 +70,16 @@ export function Sidebar({
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3">
+      <nav className="flex-1 space-y-1 px-3" aria-label="Primary">
         {items.map((item) => {
           const active =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 active
@@ -93,7 +97,7 @@ export function Sidebar({
       <div className="border-t p-3">
         <div className="flex items-center gap-3 rounded-md px-2 py-2">
           <Avatar className="size-8">
-            <AvatarFallback>{initials}</AvatarFallback>
+            <AvatarFallback>{initialsOf(user.name)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{user.name}</p>
@@ -101,6 +105,7 @@ export function Sidebar({
               {t[ROLE_LABEL_KEYS[user.role]]}
             </Badge>
           </div>
+          <ThemeToggle />
         </div>
         <form action={logout}>
           <Button
@@ -113,6 +118,43 @@ export function Sidebar({
           </Button>
         </form>
       </div>
+    </>
+  );
+}
+
+/** Desktop sidebar — fixed rail, hidden below `md`. */
+export function Sidebar({ user }: { user: User }) {
+  return (
+    <aside className="hidden h-dvh w-64 shrink-0 flex-col border-r bg-card md:flex">
+      <NavBody user={user} />
     </aside>
+  );
+}
+
+/** Mobile top bar — the hamburger opens the same nav in a left sheet. Hidden at `md+`. */
+export function MobileNav({ user }: { user: User }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <header className="flex h-14 items-center gap-2 border-b bg-card px-3 md:hidden">
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger
+          render={<Button variant="ghost" size="icon" aria-label="Open navigation" />}
+        >
+          <Menu className="size-5" />
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 p-0">
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <div className="flex h-full flex-col">
+            <NavBody user={user} onNavigate={() => setOpen(false)} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <span className="flex items-center gap-2 font-semibold">
+        <Bot className="size-5 text-primary" />
+        HARI
+      </span>
+    </header>
   );
 }
