@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/session";
+import { getLang } from "@/lib/lang";
+import { T, type Translations } from "@/lib/i18n";
 import {
   can,
   PERMISSIONS,
-  PERMISSION_LABELS,
   ROLES,
-  ROLE_LABELS,
+  type Role,
+  type Permission,
 } from "@/lib/rbac";
 import { CHAT_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
 import { TOOL_CATALOGUE, toolsForRole } from "@/lib/ai/tools";
@@ -22,30 +24,51 @@ import {
 } from "@/components/ui/table";
 import { Check, X } from "lucide-react";
 
+const ROLE_LABEL_KEYS: Record<Role, keyof Translations> = {
+  EMPLOYEE: "role_employee",
+  MANAGER: "role_manager",
+  HR_ADMIN: "role_hr_admin",
+  SUPER_ADMIN: "role_super_admin",
+};
+
+const PERM_LABEL_KEYS: Record<Permission, keyof Translations> = {
+  "directory:read:self": "perm_dir_self",
+  "directory:read:team": "perm_dir_team",
+  "directory:read:all": "perm_dir_all",
+  "salary:read:all": "perm_salary",
+  "leave:request": "perm_leave_request",
+  "leave:read:self": "perm_leave_self",
+  "leave:read:team": "perm_leave_team",
+  "leave:approve": "perm_leave_approve",
+  "payslip:read:self": "perm_payslip_self",
+  "payslip:read:any": "perm_payslip_any",
+  "handbook:read": "perm_handbook",
+  "employee:manage": "perm_employee_manage",
+  "admin:settings": "perm_admin_settings",
+};
+
 export default async function SettingsPage() {
-  const user = await requireUser();
-  if (!can(user.role, "admin:settings")) redirect("/"); // belt-and-suspenders
+  const [user, lang] = await Promise.all([requireUser(), getLang()]);
+  const t = T[lang] as Translations;
+  if (!can(user.role, "admin:settings")) redirect("/");
 
   return (
     <>
-      <PageHeader
-        title="Settings"
-        description="The single RBAC matrix that gates the UI, server actions, and AI tools."
-      />
+      <PageHeader title={t.settings_title} description={t.settings_desc} />
       <div className="space-y-6 p-8">
         <Card>
           <CardHeader>
-            <CardTitle>Permission matrix</CardTitle>
+            <CardTitle>{t.settings_perm_matrix}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[14rem]">Permission</TableHead>
+                    <TableHead className="min-w-[14rem]">{t.settings_perm_col}</TableHead>
                     {ROLES.map((r) => (
                       <TableHead key={r} className="text-center">
-                        {ROLE_LABELS[r]}
+                        {t[ROLE_LABEL_KEYS[r]]}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -54,7 +77,7 @@ export default async function SettingsPage() {
                   {PERMISSIONS.map((p) => (
                     <TableRow key={p}>
                       <TableCell>
-                        <span className="font-medium">{PERMISSION_LABELS[p]}</span>
+                        <span className="font-medium">{t[PERM_LABEL_KEYS[p]]}</span>
                         <code className="ml-2 text-xs text-muted-foreground">{p}</code>
                       </TableCell>
                       {ROLES.map((r) => (
@@ -90,21 +113,21 @@ export default async function SettingsPage() {
                     <TableHead className="min-w-[16rem]">Tool</TableHead>
                     {ROLES.map((r) => (
                       <TableHead key={r} className="text-center">
-                        {ROLE_LABELS[r]}
+                        {t[ROLE_LABEL_KEYS[r]]}
                       </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {TOOL_CATALOGUE.map((t) => (
-                    <TableRow key={t.name}>
+                  {TOOL_CATALOGUE.map((tool) => (
+                    <TableRow key={tool.name}>
                       <TableCell>
-                        <code className="text-xs font-medium">{t.name}</code>
-                        <p className="text-xs text-muted-foreground">{t.summary}</p>
+                        <code className="text-xs font-medium">{tool.name}</code>
+                        <p className="text-xs text-muted-foreground">{tool.summary}</p>
                       </TableCell>
                       {ROLES.map((r) => (
                         <TableCell key={r} className="text-center">
-                          {toolsForRole(r).includes(t.name) ? (
+                          {toolsForRole(r).includes(tool.name) ? (
                             <Check className="mx-auto size-4 text-green-600" />
                           ) : (
                             <X className="mx-auto size-4 text-muted-foreground/40" />
@@ -121,13 +144,10 @@ export default async function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>AI model registry</CardTitle>
+            <CardTitle>{t.settings_model_registry}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Chat defaults to OpenRouter free models; the Vercel AI Gateway is
-              selectable per request. Configure keys via environment variables.
-            </p>
+            <p className="text-sm text-muted-foreground">{t.settings_model_desc}</p>
             <div className="grid gap-2">
               {CHAT_MODELS.map((m) => (
                 <div
@@ -140,8 +160,8 @@ export default async function SettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{m.provider}</Badge>
-                    {m.reasoning && <Badge variant="secondary">reasoning</Badge>}
-                    {m.id === DEFAULT_MODEL_ID && <Badge>default</Badge>}
+                    {m.reasoning && <Badge variant="secondary">{t.settings_reasoning}</Badge>}
+                    {m.id === DEFAULT_MODEL_ID && <Badge>{t.settings_default}</Badge>}
                   </div>
                 </div>
               ))}

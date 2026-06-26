@@ -11,35 +11,42 @@ import {
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { can, ROLE_LABELS, type Permission, type Role } from "@/lib/rbac";
+import { can, type Permission, type Role } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { logout } from "@/lib/auth-actions";
+import { useT } from "@/lib/lang-context";
+import { LangToggle } from "@/components/lang-toggle";
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: "nav_dashboard" | "nav_assistant" | "nav_directory" | "nav_time_off" | "nav_settings";
   icon: React.ComponentType<{ className?: string }>;
-  permission?: Permission; // hidden unless the role holds it
+  permission?: Permission;
 };
 
 const NAV: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/chat", label: "AI Assistant", icon: Bot },
-  { href: "/directory", label: "Directory", icon: Users },
-  { href: "/time-off", label: "Time Off", icon: CalendarDays },
-  { href: "/settings", label: "Settings", icon: Settings, permission: "admin:settings" },
+  { href: "/", labelKey: "nav_dashboard", icon: LayoutDashboard },
+  { href: "/chat", labelKey: "nav_assistant", icon: Bot },
+  { href: "/directory", labelKey: "nav_directory", icon: Users },
+  { href: "/time-off", labelKey: "nav_time_off", icon: CalendarDays },
+  { href: "/settings", labelKey: "nav_settings", icon: Settings, permission: "admin:settings" },
 ];
+
+const ROLE_LABEL_KEYS = {
+  EMPLOYEE: "role_employee",
+  MANAGER: "role_manager",
+  HR_ADMIN: "role_hr_admin",
+  SUPER_ADMIN: "role_super_admin",
+} as const;
 
 export function Sidebar({
   user,
 }: {
   user: { name: string; email: string; role: Role };
 }) {
+  const t = useT();
   const pathname = usePathname();
   const items = NAV.filter((i) => !i.permission || can(user.role, i.permission));
   const initials = user.name
@@ -54,6 +61,9 @@ export function Sidebar({
       <div className="flex items-center gap-2 px-5 py-4 font-semibold">
         <Bot className="size-5 text-primary" />
         HARI
+        <div className="ml-auto">
+          <LangToggle />
+        </div>
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
@@ -74,7 +84,7 @@ export function Sidebar({
               )}
             >
               <item.icon className="size-4" />
-              {item.label}
+              {t[item.labelKey]}
             </Link>
           );
         })}
@@ -88,7 +98,7 @@ export function Sidebar({
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{user.name}</p>
             <Badge variant="secondary" className="mt-0.5 text-[10px]">
-              {ROLE_LABELS[user.role]}
+              {t[ROLE_LABEL_KEYS[user.role]]}
             </Badge>
           </div>
         </div>
@@ -99,7 +109,7 @@ export function Sidebar({
             size="sm"
             className="mt-1 w-full justify-start text-muted-foreground"
           >
-            <LogOut className="size-4" /> Sign out
+            <LogOut className="size-4" /> {t.nav_sign_out}
           </Button>
         </form>
       </div>

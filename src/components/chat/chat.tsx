@@ -6,6 +6,7 @@ import { DefaultChatTransport } from "ai";
 import { ArrowUp, Square, Bot } from "lucide-react";
 import { CHAT_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
 import { ROLE_LABELS, type Role } from "@/lib/rbac";
+import { useT } from "@/lib/lang-context";
 import { ChatMessage } from "./message";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,14 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const SUGGESTIONS = [
-  "What is our parental leave policy?",
-  "How many vacation days do I have left?",
-  "Show me the team directory",
-  "Show me my latest payslip",
-];
-
 export function Chat({ user }: { user: { name: string; role: Role } }) {
+  const t = useT();
   const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -47,13 +42,14 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
     setInput("");
   }
 
+  const suggestions = [t.chat_s1, t.chat_s2, t.chat_s3, t.chat_s4];
+
   return (
     <div className="flex h-full flex-col">
-      {/* Model selector */}
       <div className="flex items-center justify-between gap-2 border-b px-8 py-3">
         <div className="flex items-center gap-2 text-sm">
           <Bot className="size-4 text-primary" />
-          <span className="font-medium">AI Assistant</span>
+          <span className="font-medium">{t.chat_title}</span>
           <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
         </div>
         <Select value={modelId} onValueChange={(v) => v && setModelId(v)}>
@@ -63,14 +59,13 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
           <SelectContent>
             {CHAT_MODELS.map((m) => (
               <SelectItem key={m.id} value={m.id}>
-                {m.label} · {m.provider}
+                {m.label} &middot; {m.provider}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl space-y-6 px-6 py-6">
           {messages.length === 0 && (
@@ -79,13 +74,13 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
                 <Bot className="size-6 text-primary" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">How can I help, {user.name.split(" ")[0]}?</h2>
-                <p className="text-sm text-muted-foreground">
-                  Ask about policies, your time off, the directory, or payslips.
-                </p>
+                <h2 className="text-lg font-semibold">
+                  {t.chat_greeting}, {user.name.split(" ")[0]}?
+                </h2>
+                <p className="text-sm text-muted-foreground">{t.chat_subtitle}</p>
               </div>
               <div className="mx-auto grid max-w-md gap-2 sm:grid-cols-2">
-                {SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => submit(s)}
@@ -108,14 +103,12 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
 
           {error && (
             <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-              Something went wrong. Check that the provider API key is set in your
-              environment.
+              {t.chat_error}
             </p>
           )}
         </div>
       </div>
 
-      {/* Composer */}
       <div className="border-t p-4">
         <div className="mx-auto flex max-w-3xl items-end gap-2">
           <Textarea
@@ -127,7 +120,7 @@ export function Chat({ user }: { user: { name: string; role: Role } }) {
                 submit(input);
               }
             }}
-            placeholder="Ask anything… (Shift+Enter for newline)"
+            placeholder={t.chat_placeholder}
             rows={1}
             className="max-h-40 min-h-[44px] resize-none"
           />

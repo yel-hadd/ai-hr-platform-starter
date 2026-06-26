@@ -3,17 +3,10 @@
 import { useState } from "react";
 import { Brain, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/lang-context";
 
-// Collapsible "thinking" panel. Auto-expands while streaming, collapses when done.
-export function Reasoning({
-  text,
-  streaming,
-}: {
-  text: string;
-  streaming: boolean;
-}) {
-  // Default collapsed: auto-expands while streaming (to show live thinking), then
-  // collapses to a one-line summary when done. Click to re-open.
+export function Reasoning({ text, streaming }: { text: string; streaming: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const expanded = streaming || open;
 
@@ -25,7 +18,7 @@ export function Reasoning({
         className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground"
       >
         <Brain className={cn("size-3.5", streaming && "animate-pulse")} />
-        {streaming ? "Thinking…" : "Thought process"}
+        {streaming ? t.reasoning_thinking : t.reasoning_done}
         <ChevronDown
           className={cn(
             "ml-auto size-3.5 transition-transform",

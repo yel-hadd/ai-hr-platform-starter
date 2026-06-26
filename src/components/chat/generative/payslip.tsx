@@ -1,4 +1,5 @@
 import { Receipt } from "lucide-react";
+import { useT } from "@/lib/lang-context";
 
 export function Payslip({
   payslip,
@@ -11,6 +12,8 @@ export function Payslip({
     netMonthly: number;
   };
 }) {
+  const t = useT();
+
   const row = (label: string, value: number, strong = false) => (
     <div className="flex justify-between">
       <span className="text-muted-foreground">{label}</span>
@@ -19,6 +22,7 @@ export function Payslip({
       </span>
     </div>
   );
+
   return (
     <div className="max-w-xs rounded-lg border bg-card p-3 text-sm">
       <div className="mb-2 flex items-center gap-2">
@@ -27,10 +31,10 @@ export function Payslip({
       </div>
       <p className="mb-2 text-xs text-muted-foreground">{payslip.period}</p>
       <div className="space-y-1">
-        {row("Gross", payslip.grossMonthly)}
-        {row("Tax (22%)", -payslip.tax)}
+        {row(t.payslip_gross, payslip.grossMonthly)}
+        {row(t.payslip_tax, -payslip.tax)}
         <div className="my-1 border-t" />
-        {row("Net", payslip.netMonthly, true)}
+        {row(t.payslip_net, payslip.netMonthly, true)}
       </div>
     </div>
   );

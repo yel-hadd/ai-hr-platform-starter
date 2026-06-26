@@ -4,11 +4,10 @@ import { useState } from "react";
 import { BookOpen, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/lang-context";
 
 type Hit = { id: string; section: string; content: string; similarity: number };
 
-// Collapsible like the reasoning panel: expanded while the answer streams (so you
-// see what was retrieved), collapsed to a one-line header once the model is done.
 export function Citations({
   query,
   results,
@@ -18,6 +17,7 @@ export function Citations({
   results: Hit[];
   streaming: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const expanded = streaming || open;
 
@@ -30,7 +30,7 @@ export function Citations({
       >
         <BookOpen className="size-4 shrink-0" />
         <span className="truncate">
-          Handbook results for “{query}”
+          {t.citations_results} &quot;{query}&quot;
           {results.length > 0 && ` (${results.length})`}
         </span>
         <ChevronDown
@@ -41,7 +41,7 @@ export function Citations({
       {expanded && (
         <div className="space-y-2 px-3 pb-3">
           {results.length === 0 && (
-            <p className="text-muted-foreground">No matching sections.</p>
+            <p className="text-muted-foreground">{t.citations_none}</p>
           )}
           <ul className="space-y-2">
             {results.map((r) => (
@@ -49,7 +49,7 @@ export function Citations({
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="font-medium">{r.section}</span>
                   <Badge variant="secondary" className="text-[10px] tabular-nums">
-                    {(r.similarity * 100).toFixed(0)}% match
+                    {(r.similarity * 100).toFixed(0)}% {t.citations_match}
                   </Badge>
                 </div>
                 <p className="line-clamp-3 text-xs text-muted-foreground">{r.content}</p>

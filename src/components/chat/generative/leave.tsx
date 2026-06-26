@@ -1,5 +1,6 @@
 import { CalendarDays, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useT, useLang } from "@/lib/lang-context";
 
 type Balance = {
   type: string;
@@ -8,15 +9,22 @@ type Balance = {
   remainingDays: number;
 };
 
+const LEAVE_TYPE_KEYS: Record<string, "leave_vacation" | "leave_sick" | "leave_personal"> = {
+  VACATION: "leave_vacation",
+  SICK: "leave_sick",
+  PERSONAL: "leave_personal",
+};
+
 export function LeaveBalances({ balances }: { balances: Balance[] }) {
+  const t = useT();
   return (
     <div className="grid grid-cols-3 gap-2">
       {balances.map((b) => {
         const pct = b.totalDays ? (b.remainingDays / b.totalDays) * 100 : 0;
         return (
           <div key={b.type} className="rounded-lg border bg-card p-3 text-sm">
-            <p className="text-xs capitalize text-muted-foreground">
-              {b.type.toLowerCase()}
+            <p className="text-xs text-muted-foreground">
+              {t[LEAVE_TYPE_KEYS[b.type] ?? "leave_vacation"]}
             </p>
             <p className="mt-1 text-lg font-semibold">
               {b.remainingDays}
@@ -40,6 +48,12 @@ const STATUS = {
   REJECTED: { icon: XCircle, cls: "text-destructive", variant: "destructive" as const },
 };
 
+const STATUS_LABEL_KEYS: Record<string, "status_approved" | "status_pending" | "status_rejected"> = {
+  APPROVED: "status_approved",
+  PENDING: "status_pending",
+  REJECTED: "status_rejected",
+};
+
 export function LeaveRequestCard({
   request,
 }: {
@@ -52,22 +66,24 @@ export function LeaveRequestCard({
     status: keyof typeof STATUS;
   };
 }) {
+  const t = useT();
   const s = STATUS[request.status] ?? STATUS.PENDING;
   const Icon = s.icon;
+  const dayWord = request.days === 1 ? t.leave_day : t.leave_days;
   return (
     <div className="rounded-lg border bg-card p-3 text-sm">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-2 font-medium capitalize">
+        <span className="flex items-center gap-2 font-medium">
           <CalendarDays className="size-4 text-muted-foreground" />
-          {request.type.toLowerCase()} · {request.days} day{request.days > 1 ? "s" : ""}
+          {t[LEAVE_TYPE_KEYS[request.type] ?? "leave_vacation"]} &middot; {request.days} {dayWord}
         </span>
-        <Badge variant={s.variant} className="capitalize">
+        <Badge variant={s.variant}>
           <Icon className={`mr-1 size-3 ${s.cls}`} />
-          {request.status.toLowerCase()}
+          {t[STATUS_LABEL_KEYS[request.status] ?? "status_pending"]}
         </Badge>
       </div>
       <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-        {request.startDate} → {request.endDate}
+        {request.startDate} &rarr; {request.endDate}
       </p>
       {request.reason && <p className="mt-1 text-xs">{request.reason}</p>}
     </div>
@@ -84,16 +100,28 @@ export function ApprovalResultCard({
     status: keyof typeof STATUS;
   };
 }) {
+  const t = useT();
+  const lang = useLang();
   const s = STATUS[result.status] ?? STATUS.PENDING;
   const Icon = s.icon;
+  const dayWord = result.days === 1 ? t.leave_day : t.leave_days;
+  const typeLabel = t[LEAVE_TYPE_KEYS[result.type] ?? "leave_vacation"];
+  const statusLabel = t[STATUS_LABEL_KEYS[result.status] ?? "status_pending"];
+
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-card p-3 text-sm">
       <Icon className={`size-5 ${s.cls}`} />
-      <span>
-        <span className="font-medium">{result.employeeName}</span>’s {result.days}-day{" "}
-        {result.type.toLowerCase()} request was{" "}
-        <span className="font-medium lowercase">{result.status}</span>.
-      </span>
+      {lang === "fr" ? (
+        <span>
+          La demande de <strong>{result.employeeName}</strong> de {result.days} {dayWord} ({typeLabel}){" "}
+          {t.leave_approval_result} <strong>{statusLabel}</strong>.
+        </span>
+      ) : (
+        <span>
+          <strong>{result.employeeName}</strong>&apos;s {result.days}-{dayWord} {typeLabel} request{" "}
+          {t.leave_approval_result} <strong>{statusLabel}</strong>.
+        </span>
+      )}
     </div>
   );
 }
@@ -111,10 +139,12 @@ export function PendingApprovals({
     reason: string | null;
   }[];
 }) {
+  const t = useT();
+
   if (pending.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-        No requests awaiting approval.
+        {t.leave_no_pending}
       </p>
     );
   }
@@ -124,12 +154,12 @@ export function PendingApprovals({
         <div key={r.id} className="rounded-lg border bg-card p-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="font-medium">{r.employeeName}</span>
-            <span className="text-xs capitalize text-muted-foreground">
-              {r.type.toLowerCase()} · {r.days}d
+            <span className="text-xs text-muted-foreground">
+              {t[LEAVE_TYPE_KEYS[r.type] ?? "leave_vacation"]} &middot; {r.days}d
             </span>
           </div>
           <p className="text-xs text-muted-foreground tabular-nums">
-            {r.startDate} → {r.endDate}
+            {r.startDate} &rarr; {r.endDate}
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">id: {r.id}</p>
         </div>
