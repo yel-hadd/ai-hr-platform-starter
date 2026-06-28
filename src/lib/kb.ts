@@ -599,39 +599,103 @@ export type AssistantAccessDocument = {
   effective: boolean; // resolved availability to the assistant
 };
 
-export type AssistantAccessCollection = {
+export type AssistantCollectionRow = {
   id: string;
   name: string;
   assistantEnabled: boolean;
-  documents: AssistantAccessDocument[];
+  documentCount: number;
+  overrideCount: number; // docs with an explicit override (≠ inherit)
 };
 
-/** Every collection + its documents with assistant-access flags, for the Settings panel. */
-export async function listAssistantAccess(
+/**
+ * Collections with their assistant-access flag + counts, for the Settings list.
+ * Deliberately does NOT load documents (there can be thousands) — the per-doc
+ * overrides are managed on the per-collection page via `listAssistantDocuments`.
+ */
+export async function listAssistantCollections(
   caller: KbCaller,
-): Promise<AssistantAccessCollection[]> {
+  q?: string,
+): Promise<AssistantCollectionRow[]> {
   assertConfigureAssistant(caller);
   const rows = await prisma.kbCollection.findMany({
+    where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
     orderBy: [{ order: "asc" }, { name: "asc" }],
-    include: {
-      documents: {
-        orderBy: { title: "asc" },
-        select: { id: true, title: true, status: true, assistantEnabled: true },
-      },
+    select: {
+      id: true,
+      name: true,
+      assistantEnabled: true,
+      _count: { select: { documents: true } },
+      // Only the overridden docs (bounded by the # of overrides, not total docs).
+      documents: { where: { assistantEnabled: { not: null } }, select: { id: true } },
     },
   });
   return rows.map((c) => ({
     id: c.id,
     name: c.name,
     assistantEnabled: c.assistantEnabled,
-    documents: c.documents.map((d) => ({
+    documentCount: c._count.documents,
+    overrideCount: c.documents.length,
+  }));
+}
+
+/** A single collection's assistant flag + name, for the per-collection page header. */
+export async function getAssistantCollection(caller: KbCaller, collectionId: string) {
+  assertConfigureAssistant(caller);
+  return prisma.kbCollection.findUnique({
+    where: { id: collectionId },
+    select: { id: true, name: true, assistantEnabled: true },
+  });
+}
+
+export type AssistantDocumentPage = {
+  documents: AssistantAccessDocument[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+/**
+ * One page of a collection's documents with their resolved assistant access.
+ * Server-side search + pagination so the page stays fast at thousands of docs.
+ */
+export async function listAssistantDocuments(
+  caller: KbCaller,
+  collectionId: string,
+  opts: { q?: string; page?: number; pageSize?: number } = {},
+): Promise<AssistantDocumentPage> {
+  assertConfigureAssistant(caller);
+  const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+  const page = Math.max(opts.page ?? 1, 1);
+  const col = await prisma.kbCollection.findUniqueOrThrow({
+    where: { id: collectionId },
+    select: { assistantEnabled: true },
+  });
+  const where = {
+    collectionId,
+    ...(opts.q ? { title: { contains: opts.q, mode: "insensitive" as const } } : {}),
+  };
+  const [rows, total] = await Promise.all([
+    prisma.hrDocument.findMany({
+      where,
+      orderBy: { title: "asc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: { id: true, title: true, status: true, assistantEnabled: true },
+    }),
+    prisma.hrDocument.count({ where }),
+  ]);
+  return {
+    documents: rows.map((d) => ({
       id: d.id,
       title: d.title,
       status: d.status,
       override: d.assistantEnabled,
-      effective: d.assistantEnabled ?? c.assistantEnabled, // override wins, else inherit
+      effective: d.assistantEnabled ?? col.assistantEnabled,
     })),
-  }));
+    total,
+    page,
+    pageSize,
+  };
 }
 
 /** Toggle whether the assistant may use a whole collection (super-admin). */
