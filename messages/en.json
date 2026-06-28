@@ -332,7 +332,9 @@
     "imageRemove": "Remove image",
     "imageTooLarge": "Image is too large (1 MB max).",
     "imageInvalid": "Please choose an image file.",
-    "articleCount": "{count, plural, =0 {No articles} one {# article} other {# articles}}"
+    "articleCount": "{count, plural, =0 {No articles} one {# article} other {# articles}}",
+    "browse": "Browse",
+    "rowActions": "Actions"
   },
   "kbStatus": {
     "DRAFT": "Draft",

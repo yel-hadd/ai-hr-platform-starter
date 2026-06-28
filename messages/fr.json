@@ -332,7 +332,9 @@
     "imageRemove": "Supprimer l’image",
     "imageTooLarge": "Image trop volumineuse (1 Mo max).",
     "imageInvalid": "Veuillez choisir un fichier image.",
-    "articleCount": "{count, plural, =0 {Aucun article} one {# article} other {# articles}}"
+    "articleCount": "{count, plural, =0 {Aucun article} one {# article} other {# articles}}",
+    "browse": "Parcourir",
+    "rowActions": "Actions"
   },
   "kbStatus": {
     "DRAFT": "Brouillon",
