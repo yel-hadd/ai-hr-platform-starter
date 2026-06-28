@@ -233,8 +233,20 @@ export default async function KbAdminPage({
                   {collections.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">
-                        {c.name}
-                        <code className="ml-2 text-xs text-muted-foreground">/{c.slug}</code>
+                        <span className="flex items-center gap-2">
+                          {c.image && (
+                            // eslint-disable-next-line @next/next/no-img-element -- decorative cover thumbnail, often a data URL
+                            <img
+                              src={c.image}
+                              alt=""
+                              className="size-8 shrink-0 rounded border object-cover"
+                            />
+                          )}
+                          <span>
+                            {c.name}
+                            <code className="ml-2 text-xs text-muted-foreground">/{c.slug}</code>
+                          </span>
+                        </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {t("documentCount", { count: c.documentCount })}

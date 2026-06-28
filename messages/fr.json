@@ -326,7 +326,13 @@
     "fieldTagsHint": "Mots-clés séparés par des virgules.",
     "viewsCol": "Vues",
     "breadcrumb": "Fil d’Ariane",
-    "feedbackFailed": "Impossible d’enregistrer votre retour."
+    "feedbackFailed": "Impossible d’enregistrer votre retour.",
+    "fieldImage": "Image de couverture",
+    "fieldImageHint": "Image décorative facultative affichée sur la collection. PNG, JPG, GIF ou WebP, jusqu’à 1 Mo.",
+    "imageRemove": "Supprimer l’image",
+    "imageTooLarge": "Image trop volumineuse (1 Mo max).",
+    "imageInvalid": "Veuillez choisir un fichier image.",
+    "articleCount": "{count, plural, =0 {Aucun article} one {# article} other {# articles}}"
   },
   "kbStatus": {
     "DRAFT": "Brouillon",

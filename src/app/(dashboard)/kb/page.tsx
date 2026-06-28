@@ -37,6 +37,12 @@ export default async function KnowledgeBasePage() {
 
         {collections.map((c) => (
           <Card key={c.id}>
+            {/* Decorative cover — full-bleed as the card's first child (the Card
+                primitive drops top padding + rounds it). alt="" to skip in SR. */}
+            {c.image && (
+              // eslint-disable-next-line @next/next/no-img-element -- decorative cover, often a data URL the Next optimizer can't process
+              <img src={c.image} alt="" className="h-28 w-full object-cover" />
+            )}
             <CardHeader>
               <CardTitle>
                 <Link href={`/kb/${c.slug}`} className="hover:underline">

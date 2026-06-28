@@ -55,6 +55,7 @@ export async function createCollectionAction(fd: FormData) {
     name,
     slug: str(fd, "slug"),
     description: str(fd, "description") || null,
+    image: str(fd, "image") || null,
     order: Number(str(fd, "order")) || 0,
   });
   refresh();
@@ -70,6 +71,7 @@ export async function updateCollectionAction(fd: FormData) {
     name,
     slug: str(fd, "slug"),
     description: str(fd, "description") || null,
+    image: str(fd, "image") || null,
     order: Number(str(fd, "order")) || 0,
   });
   refresh();

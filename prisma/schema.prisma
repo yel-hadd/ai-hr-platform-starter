@@ -124,6 +124,7 @@ id String @id @default(cuid())
 slug String @unique
 name String
 description String?
+image String? // optional decorative cover (data URL or external URL)
 order Int @default(0)
 documents HrDocument[]
 createdAt DateTime @default(now())

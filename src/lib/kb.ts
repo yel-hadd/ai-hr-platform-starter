@@ -39,8 +39,22 @@ export type CollectionWithArticles = {
   slug: string;
   name: string;
   description: string | null;
+  image: string | null;
   articles: ArticleSummary[];
 };
+
+// Accept only safe cover sources — an uploaded image (data:image/... URL) or an
+// external http(s) URL. Anything else (javascript:, oversized blobs, junk) → null,
+// so a hand-crafted POST can't smuggle an unsafe value into the rendered <img>.
+const MAX_IMAGE_LEN = 1_500_000; // ~1 MB once base64-encoded
+export function sanitizeImage(value: string | null | undefined): string | null {
+  const v = (value ?? "").trim();
+  if (!v) return null;
+  if (v.length > MAX_IMAGE_LEN) return null;
+  if (/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);/i.test(v)) return v;
+  if (/^https:\/\//i.test(v)) return v;
+  return null;
+}
 
 /** Collections (with their visible, published articles) the caller may read. */
 export async function listCollectionsWithArticles(
@@ -65,6 +79,7 @@ export async function listCollectionsWithArticles(
       slug: c.slug,
       name: c.name,
       description: c.description,
+      image: c.image,
       articles: c.documents,
     }));
 }
@@ -154,7 +169,14 @@ export async function getCollection(
     },
   });
   if (!c || c.documents.length === 0) return null;
-  return { id: c.id, slug: c.slug, name: c.name, description: c.description, articles: c.documents };
+  return {
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    description: c.description,
+    image: c.image,
+    articles: c.documents,
+  };
 }
 
 export type KbSearchResult = {
@@ -306,6 +328,7 @@ export type AdminCollection = {
   slug: string;
   name: string;
   description: string | null;
+  image: string | null;
   order: number;
   documentCount: number;
 };
@@ -322,6 +345,7 @@ export async function listCollectionsForAdmin(caller: KbCaller): Promise<AdminCo
     slug: c.slug,
     name: c.name,
     description: c.description,
+    image: c.image,
     order: c.order,
     documentCount: c._count.documents,
   }));
@@ -384,7 +408,13 @@ export async function getCollectionForAdmin(caller: KbCaller, id: string) {
 
 export async function createCollection(
   caller: KbCaller,
-  input: { slug: string; name: string; description?: string | null; order?: number },
+  input: {
+    slug: string;
+    name: string;
+    description?: string | null;
+    image?: string | null;
+    order?: number;
+  },
 ) {
   assertManage(caller);
   return prisma.kbCollection.create({
@@ -392,6 +422,7 @@ export async function createCollection(
       slug: await uniqueSlug("kbCollection", input.slug || input.name),
       name: input.name,
       description: input.description || null,
+      image: sanitizeImage(input.image),
       order: input.order ?? 0,
     },
   });
@@ -400,7 +431,13 @@ export async function createCollection(
 export async function updateCollection(
   caller: KbCaller,
   id: string,
-  input: { slug: string; name: string; description?: string | null; order?: number },
+  input: {
+    slug: string;
+    name: string;
+    description?: string | null;
+    image?: string | null;
+    order?: number;
+  },
 ) {
   assertManage(caller);
   return prisma.kbCollection.update({
@@ -409,6 +446,7 @@ export async function updateCollection(
       slug: await uniqueSlug("kbCollection", input.slug || input.name, id),
       name: input.name,
       description: input.description || null,
+      image: sanitizeImage(input.image),
       order: input.order ?? 0,
     },
   });

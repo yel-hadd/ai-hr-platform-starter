@@ -37,7 +37,10 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla's
+          `cz-shortcut-listen`, password managers) inject attributes on <body>
+          before React hydrates, which would otherwise log a hydration mismatch. */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <NextIntlClientProvider>
           <ThemeProvider
             attribute="class"

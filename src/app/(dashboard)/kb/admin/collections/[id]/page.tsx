@@ -32,6 +32,7 @@ export default async function EditCollectionPage({
             name: collection.name,
             slug: collection.slug,
             description: collection.description,
+            image: collection.image,
             order: collection.order,
           }}
         />
