@@ -380,7 +380,8 @@
     "tagAdd": "Ajouter une étiquette…",
     "tagRemove": "Supprimer {tag}",
     "articleSettings": "Paramètres de l’article",
-    "slugPlaceholder": "Auto depuis le titre"
+    "slugPlaceholder": "Auto depuis le titre",
+    "resizePanels": "Redimensionner les panneaux"
   },
   "kbStatus": {
     "DRAFT": "Brouillon",

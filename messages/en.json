@@ -380,7 +380,8 @@
     "tagAdd": "Add a tag…",
     "tagRemove": "Remove {tag}",
     "articleSettings": "Article settings",
-    "slugPlaceholder": "Auto from the title"
+    "slugPlaceholder": "Auto from the title",
+    "resizePanels": "Resize panels"
   },
   "kbStatus": {
     "DRAFT": "Draft",

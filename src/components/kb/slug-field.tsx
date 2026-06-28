@@ -57,9 +57,10 @@ export function SlugField({
       />
       <span className="block text-xs text-muted-foreground">{t("fieldSlugHint")}</span>
       {effective && (
-        <div className="flex items-center gap-1.5 overflow-hidden rounded-md bg-muted/50 px-2 py-1.5">
-          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="truncate font-mono text-xs text-muted-foreground">
+        <div className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2 py-1.5">
+          <Link2 className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+          {/* Wrap (don't truncate) so the slug — the part that matters — is never hidden. */}
+          <span className="min-w-0 break-all font-mono text-xs text-muted-foreground">
             {prefix}
             <span className="text-foreground">{effective}</span>
           </span>
