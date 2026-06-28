@@ -3,11 +3,10 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/session";
 import { can } from "@/lib/rbac";
 import { PageHeader } from "@/components/layout/page-header";
-import { SettingsNav } from "@/components/settings/settings-nav";
 
 // One guard for every settings sub-page (defense in depth: data-layer fns + server
-// actions re-check too). The persistent side-nav lives here so it's shared across
-// all categories.
+// actions re-check too). Navigation between categories lives in the main sidebar
+// (Settings → nested sub-items), so there's no secondary nav here.
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   if (!can(user.role, "admin:settings")) redirect("/");
@@ -17,10 +16,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   return (
     <>
       <PageHeader title={t("title")} description={t("overviewDescription")} />
-      <div className="flex flex-col gap-6 p-4 md:flex-row md:gap-8 md:p-8">
-        <SettingsNav />
-        <div className="min-w-0 flex-1 space-y-6">{children}</div>
-      </div>
+      <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">{children}</div>
     </>
   );
 }
