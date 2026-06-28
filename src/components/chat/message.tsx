@@ -1,12 +1,13 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import type { UIMessage } from "ai";
 import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
 import { Reasoning } from "./reasoning";
 import { ToolCall } from "./tool-call";
 import { Markdown } from "./markdown";
+import type { CitationTarget } from "./citations-rehype";
 
 // Memoized so streaming a token into the last message doesn't re-render (and
 // re-parse the markdown of) every prior message in the conversation.
@@ -22,6 +23,28 @@ export const ChatMessage = memo(function ChatMessage({
   const hasAnswerText = message.parts.some(
     (p) => p.type === "text" && p.text.length > 0,
   );
+
+  // Map citation numbers → exact-section URLs from this message's searchHandbook
+  // results, so inline [n] markers in the answer become deep links. Built from the
+  // tool output (DB-derived URLs), never from model-authored text.
+  const citations = useMemo(() => {
+    const m = new Map<number, CitationTarget>();
+    for (const part of message.parts) {
+      if (
+        part.type === "tool-searchHandbook" &&
+        "output" in part &&
+        part.output &&
+        Array.isArray((part.output as { results?: unknown }).results)
+      ) {
+        for (const r of (part.output as { results: { ref: number; url: string }[] }).results) {
+          if (typeof r?.ref === "number" && typeof r?.url === "string") {
+            m.set(r.ref, { url: r.url });
+          }
+        }
+      }
+    }
+    return m;
+  }, [message.parts]);
 
   return (
     <div
@@ -60,7 +83,7 @@ export const ChatMessage = memo(function ChatMessage({
                     : "w-fit max-w-full bg-muted",
                 )}
               >
-                {isUser ? part.text : <Markdown>{part.text}</Markdown>}
+                {isUser ? part.text : <Markdown citations={citations}>{part.text}</Markdown>}
               </div>
             );
           }

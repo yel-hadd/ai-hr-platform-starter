@@ -9,6 +9,7 @@ import {
   Bot,
   Users,
   CalendarDays,
+  BookOpen,
   Settings,
   LogOut,
   Menu,
@@ -32,7 +33,7 @@ type User = { name: string; email: string; role: Role };
 
 type NavItem = {
   href: string;
-  label: "dashboard" | "assistant" | "directory" | "timeOff" | "settings";
+  label: "dashboard" | "assistant" | "directory" | "timeOff" | "knowledgeBase" | "settings";
   icon: React.ComponentType<{ className?: string }>;
   permission?: Permission; // hidden unless the role holds it
 };
@@ -42,6 +43,9 @@ const NAV: NavItem[] = [
   { href: "/chat", label: "assistant", icon: Bot },
   { href: "/directory", label: "directory", icon: Users },
   { href: "/time-off", label: "timeOff", icon: CalendarDays },
+  // Read access (handbook:read) is held by every role; documents are still
+  // visibility-filtered server-side, so the link is shown to everyone.
+  { href: "/kb", label: "knowledgeBase", icon: BookOpen },
   { href: "/settings", label: "settings", icon: Settings, permission: "admin:settings" },
 ];
 

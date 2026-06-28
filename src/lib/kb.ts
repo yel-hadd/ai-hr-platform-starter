@@ -1,0 +1,536 @@
+// Role-aware KB data layer — the single layer behind reader pages, admin pages,
+// and (via lib/rag.ts) the AI tool, so the chatbot can never surface what the
+// reader wouldn't show that role. Reader fns: PUBLISHED + caller's visibleDocTiers
+// (else null → notFound). Admin fns: require kb:manage, see every status.
+import { DocStatus, DocVisibility } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { can, visibleDocTiers, type Role } from "@/lib/rbac";
+import { slugify } from "@/lib/kb/markdown";
+import { ingestDocument, removeDocumentChunks } from "@/lib/kb/ingest";
+import { searchHandbook } from "@/lib/rag";
+
+// `id` is the signed-in user's id — used to stamp authorship on admin mutations.
+// Reader functions only need `role`.
+export type KbCaller = { role: Role; id?: string };
+
+const VISIBILITIES = Object.values(DocVisibility);
+const STATUSES = Object.values(DocStatus);
+
+export function isVisibility(v: string): v is DocVisibility {
+  return (VISIBILITIES as string[]).includes(v);
+}
+
+export function isStatus(v: string): v is DocStatus {
+  return (STATUSES as string[]).includes(v);
+}
+
+// ── Reader (PUBLISHED + caller's visible tiers) ─────────────────────────────
+
+export type ArticleSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  visibility: DocVisibility;
+  updatedAt: Date;
+};
+
+export type CollectionWithArticles = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  articles: ArticleSummary[];
+};
+
+/** Collections (with their visible, published articles) the caller may read. */
+export async function listCollectionsWithArticles(
+  caller: KbCaller,
+): Promise<CollectionWithArticles[]> {
+  const tiers = visibleDocTiers(caller.role);
+  const collections = await prisma.kbCollection.findMany({
+    orderBy: [{ order: "asc" }, { name: "asc" }],
+    include: {
+      documents: {
+        where: { status: "PUBLISHED", visibility: { in: tiers } },
+        orderBy: { title: "asc" },
+        select: { id: true, slug: true, title: true, visibility: true, updatedAt: true },
+      },
+    },
+  });
+  // Drop collections with nothing the caller can see, so the reader stays clean.
+  return collections
+    .filter((c) => c.documents.length > 0)
+    .map((c) => ({
+      id: c.id,
+      slug: c.slug,
+      name: c.name,
+      description: c.description,
+      articles: c.documents,
+    }));
+}
+
+export type ArticleDetail = {
+  id: string;
+  slug: string;
+  title: string;
+  content: string;
+  visibility: DocVisibility;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  collection: { slug: string; name: string };
+  authorName: string | null; // who last updated it (falls back to creator)
+  tags: string[];
+};
+
+/**
+ * A single published article the caller may read, or null (not found / not
+ * published / above the caller's tier — all indistinguishable on purpose, so a
+ * guessed URL can't probe for restricted content).
+ */
+export async function getArticle(
+  caller: KbCaller,
+  collectionSlug: string,
+  articleSlug: string,
+): Promise<ArticleDetail | null> {
+  const tiers = visibleDocTiers(caller.role);
+  const doc = await prisma.hrDocument.findFirst({
+    where: {
+      slug: articleSlug,
+      status: "PUBLISHED",
+      visibility: { in: tiers },
+      collection: { slug: collectionSlug },
+    },
+    include: {
+      collection: { select: { slug: true, name: true } },
+      updatedBy: { select: { name: true } },
+      createdBy: { select: { name: true } },
+    },
+  });
+  if (!doc) return null;
+  return {
+    id: doc.id,
+    slug: doc.slug,
+    title: doc.title,
+    content: doc.content,
+    visibility: doc.visibility,
+    updatedAt: doc.updatedAt,
+    publishedAt: doc.publishedAt,
+    collection: doc.collection,
+    authorName: doc.updatedBy?.name ?? doc.createdBy?.name ?? null,
+    tags: doc.tags,
+  };
+}
+
+/** Increment an article's view counter (best-effort; called on reader load). */
+export async function incrementViewCount(documentId: string): Promise<void> {
+  try {
+    await prisma.hrDocument.update({
+      where: { id: documentId },
+      data: { viewCount: { increment: 1 } },
+    });
+  } catch {
+    // non-critical — never break a page render over a view count
+  }
+}
+
+/**
+ * A collection and its visible, published articles for the `/kb/[collection]`
+ * landing page. Returns null if the collection is missing OR has nothing the
+ * caller may see (so a restricted collection can't be probed by URL).
+ */
+export async function getCollection(
+  caller: KbCaller,
+  slug: string,
+): Promise<CollectionWithArticles | null> {
+  const tiers = visibleDocTiers(caller.role);
+  const c = await prisma.kbCollection.findUnique({
+    where: { slug },
+    include: {
+      documents: {
+        where: { status: "PUBLISHED", visibility: { in: tiers } },
+        orderBy: { title: "asc" },
+        select: { id: true, slug: true, title: true, visibility: true, updatedAt: true },
+      },
+    },
+  });
+  if (!c || c.documents.length === 0) return null;
+  return { id: c.id, slug: c.slug, name: c.name, description: c.description, articles: c.documents };
+}
+
+export type KbSearchResult = {
+  id: string;
+  articleTitle: string;
+  collectionSlug: string;
+  articleSlug: string;
+  section: string;
+  anchor: string;
+  url: string;
+  similarity: number;
+};
+
+/**
+ * Semantic KB search for the reader (search box + ⌘K palette). Reuses the same
+ * tier+status-filtered pgvector path as the chatbot (lib/rag.ts), so results are
+ * scoped exactly like the reader/chat — a user only ever finds what they may read.
+ * Returns section-level hits that deep-link to the exact anchor.
+ */
+export async function searchKb(
+  caller: KbCaller,
+  query: string,
+  limit = 8,
+): Promise<KbSearchResult[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  try {
+    const hits = await searchHandbook(q, limit, caller);
+    return hits.map((h) => ({
+      id: h.id,
+      articleTitle: h.articleTitle,
+      collectionSlug: h.collectionSlug,
+      articleSlug: h.articleSlug,
+      section: h.section,
+      anchor: h.anchor,
+      url: `/kb/${h.collectionSlug}/${h.articleSlug}${h.anchor ? `#${h.anchor}` : ""}`,
+      similarity: h.similarity,
+    }));
+  } catch {
+    return []; // no embedding key / transient failure → empty, not an error
+  }
+}
+
+/** Other visible, published articles in the same collection (for "Related"). */
+export async function getRelatedArticles(
+  caller: KbCaller,
+  collectionSlug: string,
+  excludeId: string,
+  limit = 5,
+): Promise<ArticleSummary[]> {
+  const tiers = visibleDocTiers(caller.role);
+  return prisma.hrDocument.findMany({
+    where: {
+      status: "PUBLISHED",
+      visibility: { in: tiers },
+      collection: { slug: collectionSlug },
+      id: { not: excludeId },
+    },
+    orderBy: { title: "asc" },
+    take: limit,
+    select: { id: true, slug: true, title: true, visibility: true, updatedAt: true },
+  });
+}
+
+/**
+ * Record a "was this helpful?" vote (one per user per doc; re-voting updates it).
+ * Only accepts votes on a PUBLISHED article the caller may actually see, so a vote
+ * can't be forged for a hidden/draft doc. Returns false if not allowed.
+ */
+export async function submitArticleFeedback(
+  caller: KbCaller,
+  documentId: string,
+  helpful: boolean,
+): Promise<boolean> {
+  if (!caller.id) return false;
+  const tiers = visibleDocTiers(caller.role);
+  const doc = await prisma.hrDocument.findFirst({
+    where: { id: documentId, status: "PUBLISHED", visibility: { in: tiers } },
+    select: { id: true },
+  });
+  if (!doc) return false;
+  await prisma.kbFeedback.upsert({
+    where: { documentId_voterId: { documentId, voterId: caller.id } },
+    create: { documentId, voterId: caller.id, helpful },
+    update: { helpful },
+  });
+  return true;
+}
+
+/** The caller's existing vote for an article (to pre-select the buttons), or null. */
+export async function getUserFeedback(
+  caller: KbCaller,
+  documentId: string,
+): Promise<boolean | null> {
+  if (!caller.id) return null;
+  const f = await prisma.kbFeedback.findUnique({
+    where: { documentId_voterId: { documentId, voterId: caller.id } },
+    select: { helpful: true },
+  });
+  return f?.helpful ?? null;
+}
+
+// ── Admin (require kb:manage) ───────────────────────────────────────────────
+
+/** Throws if the caller may not manage the KB. Every admin fn calls this first. */
+function assertManage(caller: KbCaller): void {
+  if (!can(caller.role, "kb:manage")) {
+    throw new Error("Forbidden: kb:manage required");
+  }
+}
+
+/**
+ * Free slug derived from `base`, de-duped with a numeric suffix (`overview-2`, …);
+ * "untitled" if `base` slugifies empty. Pass `excludeId` when editing. Avoids the
+ * uncaught P2002 a raw slug would risk; a rare concurrent-create race can still
+ * collide (surfaces as a caller error).
+ */
+async function uniqueSlug(
+  model: "hrDocument" | "kbCollection",
+  base: string,
+  excludeId?: string,
+): Promise<string> {
+  const root = slugify(base) || "untitled";
+  for (let n = 1; ; n++) {
+    const slug = n === 1 ? root : `${root}-${n}`;
+    const existing =
+      model === "hrDocument"
+        ? await prisma.hrDocument.findUnique({ where: { slug }, select: { id: true } })
+        : await prisma.kbCollection.findUnique({ where: { slug }, select: { id: true } });
+    if (!existing || existing.id === excludeId) return slug;
+  }
+}
+
+export type AdminDocument = {
+  id: string;
+  slug: string;
+  title: string;
+  status: DocStatus;
+  visibility: DocVisibility;
+  version: number;
+  updatedAt: Date;
+  updatedByName: string | null;
+  viewCount: number;
+  collection: { id: string; name: string; slug: string };
+};
+
+export type AdminCollection = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  order: number;
+  documentCount: number;
+};
+
+/** All collections (with doc counts) for the admin list. */
+export async function listCollectionsForAdmin(caller: KbCaller): Promise<AdminCollection[]> {
+  assertManage(caller);
+  const rows = await prisma.kbCollection.findMany({
+    orderBy: [{ order: "asc" }, { name: "asc" }],
+    include: { _count: { select: { documents: true } } },
+  });
+  return rows.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    description: c.description,
+    order: c.order,
+    documentCount: c._count.documents,
+  }));
+}
+
+export type AdminDocFilters = {
+  q?: string;
+  status?: DocStatus;
+  collectionId?: string;
+  sort?: "recent" | "title";
+};
+
+/** Every document, any status (drafts included), for the admin list — filterable/sortable. */
+export async function listDocumentsForAdmin(
+  caller: KbCaller,
+  filters: AdminDocFilters = {},
+): Promise<AdminDocument[]> {
+  assertManage(caller);
+  const rows = await prisma.hrDocument.findMany({
+    where: {
+      ...(filters.q ? { title: { contains: filters.q, mode: "insensitive" } } : {}),
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.collectionId ? { collectionId: filters.collectionId } : {}),
+    },
+    orderBy: filters.sort === "title" ? { title: "asc" } : { updatedAt: "desc" },
+    include: {
+      collection: { select: { id: true, name: true, slug: true } },
+      updatedBy: { select: { name: true } },
+    },
+  });
+  return rows.map((d) => ({
+    id: d.id,
+    slug: d.slug,
+    title: d.title,
+    status: d.status,
+    visibility: d.visibility,
+    version: d.version,
+    updatedAt: d.updatedAt,
+    updatedByName: d.updatedBy?.name ?? null,
+    viewCount: d.viewCount,
+    collection: d.collection,
+  }));
+}
+
+/** A document by id at any status — used to edit/preview a draft. */
+export async function getDocumentForAdmin(caller: KbCaller, id: string) {
+  assertManage(caller);
+  return prisma.hrDocument.findUnique({
+    where: { id },
+    include: { collection: { select: { id: true, name: true, slug: true } } },
+  });
+}
+
+export async function getCollectionForAdmin(caller: KbCaller, id: string) {
+  assertManage(caller);
+  return prisma.kbCollection.findUnique({ where: { id } });
+}
+
+// ── Collection mutations ────────────────────────────────────────────────────
+
+export async function createCollection(
+  caller: KbCaller,
+  input: { slug: string; name: string; description?: string | null; order?: number },
+) {
+  assertManage(caller);
+  return prisma.kbCollection.create({
+    data: {
+      slug: await uniqueSlug("kbCollection", input.slug || input.name),
+      name: input.name,
+      description: input.description || null,
+      order: input.order ?? 0,
+    },
+  });
+}
+
+export async function updateCollection(
+  caller: KbCaller,
+  id: string,
+  input: { slug: string; name: string; description?: string | null; order?: number },
+) {
+  assertManage(caller);
+  return prisma.kbCollection.update({
+    where: { id },
+    data: {
+      slug: await uniqueSlug("kbCollection", input.slug || input.name, id),
+      name: input.name,
+      description: input.description || null,
+      order: input.order ?? 0,
+    },
+  });
+}
+
+/** Cascades to its documents and their chunks (FK onDelete: Cascade). */
+export async function deleteCollection(caller: KbCaller, id: string) {
+  assertManage(caller);
+  return prisma.kbCollection.delete({ where: { id } });
+}
+
+// ── Document mutations ──────────────────────────────────────────────────────
+
+/** Create a DRAFT document. Drafts are never ingested → invisible to the chatbot. */
+export async function createDocument(
+  caller: KbCaller,
+  input: {
+    slug: string;
+    title: string;
+    content: string;
+    collectionId: string;
+    visibility: DocVisibility;
+    tags?: string[];
+  },
+) {
+  assertManage(caller);
+  return prisma.hrDocument.create({
+    data: {
+      slug: await uniqueSlug("hrDocument", input.slug || input.title),
+      title: input.title,
+      content: input.content,
+      collectionId: input.collectionId,
+      visibility: input.visibility,
+      tags: input.tags ?? [],
+      status: "DRAFT",
+      createdById: caller.id ?? null,
+      updatedById: caller.id ?? null,
+    },
+  });
+}
+
+/**
+ * Save edits. If the doc is PUBLISHED, the change is live, so bump the version
+ * and re-index; a DRAFT just stores the new content (no embedding cost, stays
+ * invisible to the chatbot until published).
+ */
+export async function updateDocument(
+  caller: KbCaller,
+  id: string,
+  input: {
+    slug: string;
+    title: string;
+    content: string;
+    collectionId: string;
+    visibility: DocVisibility;
+    tags?: string[];
+  },
+) {
+  assertManage(caller);
+  const existing = await prisma.hrDocument.findUnique({
+    where: { id },
+    select: { status: true },
+  });
+  if (!existing) throw new Error("Document not found");
+
+  const isPublished = existing.status === "PUBLISHED";
+  const updated = await prisma.hrDocument.update({
+    where: { id },
+    data: {
+      slug: await uniqueSlug("hrDocument", input.slug || input.title, id),
+      title: input.title,
+      content: input.content,
+      collectionId: input.collectionId,
+      visibility: input.visibility,
+      tags: input.tags ?? [],
+      updatedById: caller.id ?? null,
+      ...(isPublished ? { version: { increment: 1 } } : {}),
+    },
+  });
+  if (isPublished) await ingestDocument(id); // re-embed live content
+  return updated;
+}
+
+/**
+ * DRAFT/ARCHIVED → PUBLISHED. Bump version, then index BEFORE flipping status so a
+ * failed embed never leaves a PUBLISHED doc with no citable chunks. (Keyless:
+ * ingest is a no-op; the doc publishes without RAG until a key is set.)
+ */
+export async function publishDocument(caller: KbCaller, id: string) {
+  assertManage(caller);
+  const existing = await prisma.hrDocument.update({
+    where: { id },
+    data: { version: { increment: 1 } },
+    select: { publishedAt: true },
+  });
+  await ingestDocument(id);
+  await prisma.hrDocument.update({
+    where: { id },
+    data: {
+      status: "PUBLISHED",
+      // Keep the first-published date if re-publishing (don't overwrite it).
+      publishedAt: existing.publishedAt ?? new Date(),
+      updatedById: caller.id ?? null,
+    },
+  });
+}
+
+/** PUBLISHED → ARCHIVED: drop its chunks so it leaves the RAG immediately. */
+export async function archiveDocument(caller: KbCaller, id: string) {
+  assertManage(caller);
+  await prisma.hrDocument.update({ where: { id }, data: { status: "ARCHIVED" } });
+  await removeDocumentChunks(id);
+}
+
+/** PUBLISHED → DRAFT: drop its chunks so it leaves the RAG immediately. */
+export async function unpublishToDraft(caller: KbCaller, id: string) {
+  assertManage(caller);
+  await prisma.hrDocument.update({ where: { id }, data: { status: "DRAFT" } });
+  await removeDocumentChunks(id);
+}
+
+export async function deleteDocument(caller: KbCaller, id: string) {
+  assertManage(caller);
+  return prisma.hrDocument.delete({ where: { id } });
+}

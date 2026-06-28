@@ -1,22 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { BookOpen, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type Hit = { id: string; section: string; content: string; similarity: number };
+export type CitationHit = {
+  id: string;
+  ref: number;
+  section: string;
+  anchor: string;
+  content: string;
+  similarity: number;
+  articleTitle: string;
+  articleSlug: string;
+  collectionSlug: string;
+  url: string;
+};
 
 // Collapsible like the reasoning panel: expanded while the answer streams (so you
 // see what was retrieved), collapsed to a one-line header once the model is done.
+// Each source is a deep link to the exact article section (`/kb/…#anchor`) so the
+// reader can open and highlight it — the URLs come from the tool output, not the
+// model.
 export function Citations({
   query,
   results,
   streaming,
 }: {
   query: string;
-  results: Hit[];
+  results: CitationHit[];
   streaming: boolean;
 }) {
   const t = useTranslations("citations");
@@ -48,14 +63,32 @@ export function Citations({
           )}
           <ul className="space-y-2">
             {results.map((r) => (
-              <li key={r.id} className="rounded-md border bg-background p-2">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="font-medium">{r.section}</span>
-                  <Badge variant="secondary" className="text-[10px] tabular-nums">
-                    {t("match", { pct: (r.similarity * 100).toFixed(0) })}
-                  </Badge>
-                </div>
-                <p className="line-clamp-3 text-xs text-muted-foreground">{r.content}</p>
+              <li key={r.id} className="rounded-md border bg-background">
+                <Link
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t("sourceLabel", {
+                    ref: r.ref,
+                    article: r.articleTitle,
+                    section: r.section,
+                  })}
+                  className="block rounded-md p-2 transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+                >
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-baseline gap-1.5">
+                      <span className="font-mono text-xs text-muted-foreground">[{r.ref}]</span>
+                      <span className="truncate font-medium">{r.section}</span>
+                    </span>
+                    <Badge variant="secondary" className="text-[10px] tabular-nums">
+                      {t("match", { pct: (r.similarity * 100).toFixed(0) })}
+                    </Badge>
+                  </div>
+                  <p className="mb-1 truncate text-xs font-medium text-muted-foreground">
+                    {r.articleTitle}
+                  </p>
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{r.content}</p>
+                </Link>
               </li>
             ))}
           </ul>

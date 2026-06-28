@@ -37,7 +37,7 @@ end-to-end, yet every piece is independently swappable and production-grade.
 - **Thinking UI** — the model's reasoning streams into a collapsible panel.
 - **Tool-call UI** — every tool call is shown live (running → result), with rich result cards.
 - **Generative UI** — tool results render as React components (employee cards, leave widgets, payslips), not walls of text.
-- **RAG with citations** — vector search over an employee handbook; answers cite their sources.
+- **Knowledge base with anchor-cited RAG** — a governed KB (collections, draft/publish lifecycle, 3-tier access) authored in a Notion-style editor; **hybrid search** (vector + full-text, RRF-fused) and answers that cite the exact article section.
 - **Multi-step** — the assistant chains tools (e.g. *check balance → submit request*).
 - **Four demo roles** — one click to sign in and watch the whole experience change.
 
@@ -280,8 +280,10 @@ and index are all created in the Prisma migration (`prisma/migrations/0_init`). 
 is env-selectable (`EMBEDDING_MODEL`); any other 384-dim model is a drop-in, while a different
 dimension needs a migration to ALTER the column. See `lib/rag.ts` and `lib/ai/embeddings.ts`.
 
-> **Deep dive:** [HR handbook RAG — architecture](docs/architecture/hr-rag-architecture.md)
-> (indexing vs. retrieval pipelines, `halfvec`/HNSW choices, changing the embedding model).
+> **Deep dives:** [Knowledge Base — architecture](docs/architecture/knowledge-base.md)
+> (collections/documents/lifecycle, 3-tier access, hybrid vector+FTS retrieval, anchor
+> citations, authoring) · [HR handbook RAG — architecture](docs/architecture/hr-rag-architecture.md)
+> (indexing/retrieval pipelines, `halfvec`/HNSW choices, changing the embedding model).
 
 ---
 
