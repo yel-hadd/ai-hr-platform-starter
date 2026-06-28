@@ -247,6 +247,7 @@ async function seedKnowledgeBase() {
         name: col.name,
         description: col.description,
         image: col.image ?? null,
+        assistantEnabled: col.assistantEnabled ?? true,
         order: col.order,
       },
     });

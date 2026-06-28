@@ -320,6 +320,7 @@ export type AdminDocument = {
   updatedAt: Date;
   updatedByName: string | null;
   viewCount: number;
+  assistantOverride: boolean | null; // AI override: null = inherit collection
   collection: { id: string; name: string; slug: string };
 };
 
@@ -331,6 +332,7 @@ export type AdminCollection = {
   image: string | null;
   order: number;
   documentCount: number;
+  assistantEnabled: boolean; // may the AI assistant use this collection?
 };
 
 /** All collections (with doc counts) for the admin list. */
@@ -348,6 +350,7 @@ export async function listCollectionsForAdmin(caller: KbCaller): Promise<AdminCo
     image: c.image,
     order: c.order,
     documentCount: c._count.documents,
+    assistantEnabled: c.assistantEnabled,
   }));
 }
 
@@ -386,6 +389,7 @@ export async function listDocumentsForAdmin(
     updatedAt: d.updatedAt,
     updatedByName: d.updatedBy?.name ?? null,
     viewCount: d.viewCount,
+    assistantOverride: d.assistantEnabled,
     collection: d.collection,
   }));
 }
@@ -571,4 +575,91 @@ export async function unpublishToDraft(caller: KbCaller, id: string) {
 export async function deleteDocument(caller: KbCaller, id: string) {
   assertManage(caller);
   return prisma.hrDocument.delete({ where: { id } });
+}
+
+// ── Assistant access (super-admin policy: which KB content the AI may use) ─────
+// Separate from kb:manage on purpose: deciding what the assistant can draw on is
+// an org-policy call held by `admin:settings` (Super Admin), and it lives in its
+// own surface (Settings) so editing a collection/document can never change it by
+// accident. The control is additive-only — enforced in lib/rag.ts, it can hide
+// content from the assistant but never widen access past status + visibility tier.
+
+/** Throws unless the caller may configure assistant access. */
+function assertConfigureAssistant(caller: KbCaller): void {
+  if (!can(caller.role, "admin:settings")) {
+    throw new Error("Forbidden: admin:settings required");
+  }
+}
+
+export type AssistantAccessDocument = {
+  id: string;
+  title: string;
+  status: DocStatus;
+  override: boolean | null; // null = inherit collection
+  effective: boolean; // resolved availability to the assistant
+};
+
+export type AssistantAccessCollection = {
+  id: string;
+  name: string;
+  assistantEnabled: boolean;
+  documents: AssistantAccessDocument[];
+};
+
+/** Every collection + its documents with assistant-access flags, for the Settings panel. */
+export async function listAssistantAccess(
+  caller: KbCaller,
+): Promise<AssistantAccessCollection[]> {
+  assertConfigureAssistant(caller);
+  const rows = await prisma.kbCollection.findMany({
+    orderBy: [{ order: "asc" }, { name: "asc" }],
+    include: {
+      documents: {
+        orderBy: { title: "asc" },
+        select: { id: true, title: true, status: true, assistantEnabled: true },
+      },
+    },
+  });
+  return rows.map((c) => ({
+    id: c.id,
+    name: c.name,
+    assistantEnabled: c.assistantEnabled,
+    documents: c.documents.map((d) => ({
+      id: d.id,
+      title: d.title,
+      status: d.status,
+      override: d.assistantEnabled,
+      effective: d.assistantEnabled ?? c.assistantEnabled, // override wins, else inherit
+    })),
+  }));
+}
+
+/** Toggle whether the assistant may use a whole collection (super-admin). */
+export async function setCollectionAssistantAccess(
+  caller: KbCaller,
+  collectionId: string,
+  enabled: boolean,
+) {
+  assertConfigureAssistant(caller);
+  return prisma.kbCollection.update({
+    where: { id: collectionId },
+    data: { assistantEnabled: enabled },
+  });
+}
+
+/**
+ * Set a document's assistant override (super-admin): `true` force-on, `false`
+ * force-off, `null` inherit the collection. No re-ingest — lib/rag.ts resolves
+ * the effective value live at query time.
+ */
+export async function setDocumentAssistantAccess(
+  caller: KbCaller,
+  documentId: string,
+  override: boolean | null,
+) {
+  assertConfigureAssistant(caller);
+  return prisma.hrDocument.update({
+    where: { id: documentId },
+    data: { assistantEnabled: override },
+  });
 }

@@ -142,7 +142,21 @@ export default async function KbAdminPage({
                 <TableBody>
                   {documents.map((d) => (
                     <TableRow key={d.id}>
-                      <TableCell className="font-medium">{d.title}</TableCell>
+                      <TableCell className="font-medium">
+                        <span className="flex items-center gap-2">
+                          {d.title}
+                          {d.assistantOverride === false && (
+                            <Badge variant="outline" className="text-[10px] font-normal">
+                              {t("assistantDocHidden")}
+                            </Badge>
+                          )}
+                          {d.assistantOverride === true && (
+                            <Badge variant="secondary" className="text-[10px] font-normal">
+                              {t("assistantDocForced")}
+                            </Badge>
+                          )}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{d.collection.name}</TableCell>
                       <TableCell>
                         <Badge variant={STATUS_VARIANT[d.status]}>{tStatus(d.status)}</Badge>
@@ -211,6 +225,11 @@ export default async function KbAdminPage({
                             {c.name}
                             <code className="ml-2 text-xs text-muted-foreground">/{c.slug}</code>
                           </span>
+                          {!c.assistantEnabled && (
+                            <Badge variant="outline" className="text-[10px] font-normal">
+                              {t("assistantBadgeOff")}
+                            </Badge>
+                          )}
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">

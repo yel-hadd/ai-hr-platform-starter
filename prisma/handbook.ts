@@ -17,6 +17,7 @@ export type SeedCollection = {
   name: string;
   description: string;
   image?: string; // decorative cover (stored on KbCollection.image)
+  assistantEnabled?: boolean; // may the AI assistant use this collection? (default true)
   order: number;
   documents: SeedDocument[];
 };
@@ -132,6 +133,10 @@ Run review conversations twice a year. Prepare with concrete examples, align on 
     name: "HR Internal",
     description: "Restricted documents for HR administrators only.",
     image: cover("#10b981", "#14b8a6", "#0ea5e9"),
+    // Sensitive internal data: readable by HR in /kb, but kept out of the AI
+    // assistant by default. A super admin can re-enable it in Settings → Assistant
+    // access. Demonstrates the assistant-access policy out of the box.
+    assistantEnabled: false,
     order: 2,
     documents: [
       {

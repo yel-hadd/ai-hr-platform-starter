@@ -69,8 +69,11 @@ corpus). Only **PUBLISHED** documents are chunked & embedded
 (`src/lib/kb/ingest.ts`), so DRAFT/ARCHIVED docs have **zero** chunks and are
 invisible to the chatbot. Each chunk denormalizes the document's `visibility` tier
 and the `anchor` of its heading. Retrieval (`src/lib/rag.ts`) filters
-`status='PUBLISHED' AND visibility = ANY(visibleDocTiers(caller.role))`, so a tool
-can never surface a draft, an archived doc, or one above the caller's tier — and
+`status='PUBLISHED' AND visibility = ANY(visibleDocTiers(caller.role)) AND
+COALESCE(doc, collection).assistantEnabled` — the last clause is the super-admin
+*assistant-access* policy (additive-only; see `knowledge-base.md`). So a tool
+can never surface a draft, an archived doc, one above the caller's tier, or content
+a super admin has withheld from the assistant — and
 returns the article/collection slug + anchor so a citation can deep-link to the
 exact section (`/kb/{collection}/{article}#{anchor}`). Prisma can't model the
 pgvector type or an index on it, so `embedding` is declared

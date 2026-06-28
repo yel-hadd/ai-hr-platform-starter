@@ -15,6 +15,8 @@ import {
   listCollectionsWithArticles,
   createDocument,
   searchKb,
+  setCollectionAssistantAccess,
+  setDocumentAssistantAccess,
 } from "@/lib/kb";
 import type { Role } from "@/lib/rbac";
 
@@ -94,11 +96,14 @@ describe("RAG retrieval respects status + visibility (HARI-59/62)", () => {
     expect(slugs).not.toContain("compensation-bands");
   });
 
-  it("HR retrieves HR_ONLY content", async () => {
-    const slugs = (await searchHandbook("salary bands", 100, as("HR_ADMIN"))).map(
+  it("HR retrieves assistant-enabled content across tiers", async () => {
+    // HR sees every tier; the only HR_ONLY collection is assistant-disabled by
+    // seed (see the assistant-access suite below), so assert on an assistant-on
+    // higher-tier doc to prove HR retrieval + tier reach.
+    const slugs = (await searchHandbook("calibrate ratings", 100, as("HR_ADMIN"))).map(
       (h) => h.articleSlug,
     );
-    expect(slugs).toContain("compensation-bands");
+    expect(slugs).toContain("manager-playbook");
   });
 });
 
@@ -130,13 +135,68 @@ describe("searchKb respects tier scoping", () => {
     expect((await searchKb(as("EMPLOYEE"), "vacation", 100)).every((r) => r.url.startsWith("/kb/"))).toBe(true);
   });
 
-  it("HR search reaches HR_ONLY content", async () => {
-    const slugs = (await searchKb(as("HR_ADMIN"), "salary bands", 100)).map((r) => r.articleSlug);
-    expect(slugs).toContain("compensation-bands");
+  it("HR search reaches assistant-enabled higher-tier content", async () => {
+    const slugs = (await searchKb(as("HR_ADMIN"), "calibrate ratings", 100)).map(
+      (r) => r.articleSlug,
+    );
+    expect(slugs).toContain("manager-playbook");
   });
 
   it("a too-short query returns nothing", async () => {
     expect(await searchKb(as("HR_ADMIN"), "a")).toEqual([]);
+  });
+});
+
+describe("assistant access (super-admin policy)", () => {
+  const SA = as("SUPER_ADMIN");
+  const idBySlug = async (slug: string) =>
+    (await prisma.hrDocument.findUniqueOrThrow({ where: { slug }, select: { id: true } })).id;
+
+  it("an assistant-disabled collection is excluded from the assistant but stays readable", async () => {
+    // hr-internal is seeded assistant-off (sensitive). Even HR — whose tier allows
+    // it — never retrieves its docs via the assistant…
+    const hits = (await searchHandbook("salary bands midpoint", 50, as("HR_ADMIN"))).map(
+      (h) => h.articleSlug,
+    );
+    expect(hits).not.toContain("compensation-bands");
+    // …but the reader still shows it to HR (assistant-exclusion ≠ reader-exclusion).
+    expect(await getArticle(as("HR_ADMIN"), "hr-internal", "compensation-bands")).not.toBeNull();
+  });
+
+  it("a per-document override hides one doc in an enabled collection", async () => {
+    const id = await idBySlug("manager-playbook");
+    await setDocumentAssistantAccess(SA, id, false);
+    try {
+      const off = (await searchHandbook("calibrate ratings", 50, as("MANAGER"))).map(
+        (h) => h.articleSlug,
+      );
+      expect(off).not.toContain("manager-playbook");
+    } finally {
+      await setDocumentAssistantAccess(SA, id, null); // restore to inherit
+    }
+    const on = (await searchHandbook("calibrate ratings", 50, as("MANAGER"))).map(
+      (h) => h.articleSlug,
+    );
+    expect(on).toContain("manager-playbook");
+  });
+
+  it("a per-document override can force a doc on inside a disabled collection", async () => {
+    const id = await idBySlug("compensation-bands");
+    await setDocumentAssistantAccess(SA, id, true); // override wins over collection-off
+    try {
+      const hits = (await searchHandbook("salary bands midpoint", 50, as("HR_ADMIN"))).map(
+        (h) => h.articleSlug,
+      );
+      expect(hits).toContain("compensation-bands");
+    } finally {
+      await setDocumentAssistantAccess(SA, id, null); // back to inherit (off)
+    }
+  });
+
+  it("refuses assistant-access changes without admin:settings", async () => {
+    await expect(
+      setCollectionAssistantAccess(as("HR_ADMIN"), "any-id", false),
+    ).rejects.toThrow(/admin:settings/);
   });
 });
 

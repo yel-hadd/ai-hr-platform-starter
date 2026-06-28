@@ -26,7 +26,10 @@ to its document and carrying a denormalized access tier for fast filtered retrie
 enum DocStatus     { DRAFT PUBLISHED ARCHIVED }
 enum DocVisibility { ALL_EMPLOYEES MANAGERS HR_ONLY }
 
-model KbCollection { id  slug @unique  name  description?  order  documents HrDocument[] }
+model KbCollection {
+  id  slug @unique  name  description?  image?  order  documents HrDocument[]
+  assistantEnabled Boolean @default(true)  // may the AI assistant use this collection?
+}
 
 model HrDocument {                         // HARI-58
   id  slug @unique  title
@@ -36,6 +39,7 @@ model HrDocument {                         // HARI-58
   version     Int           @default(1)    // bumped each publish (HARI-59)
   tags        String[]
   viewCount   Int           @default(0)
+  assistantEnabled Boolean?                 // AI-assistant override: null = inherit collection
   collection  KbCollection  @relation(...)
   chunks      HandbookChunk[]
   createdBy / updatedBy  User?             // authorship, shown on reader + admin
@@ -85,12 +89,77 @@ every entry point**:
 | Surface | Gate |
 |---|---|
 | Reader list / article / collection page | `status='PUBLISHED' AND visibility ∈ visibleDocTiers(role)`; a hidden/draft URL → `null` → `notFound()` (IDOR-safe) |
-| Retrieval (chat + search) | same filter, in the SQL (`src/lib/rag.ts`) |
+| Retrieval (chat + search) | same filter, in the SQL (`src/lib/rag.ts`), **plus** the assistant-access policy (see below) |
 | Reader access | `handbook:read` (every role) |
 | Authoring (CRUD + lifecycle) | `kb:manage` (HR Admin + Super Admin), re-checked in every server action **and** every `lib/kb` admin fn |
 
 Invariant: **the chatbot can never read more than the reader would show that
 role** — both go through `visibleDocTiers` + `PUBLISHED`.
+
+## Assistant access — which KB content the chatbot can use
+
+Access tiers answer *“who may see this?”*. Assistant access answers a separate,
+org-policy question: *“of the content a person is already allowed to see, what may
+the AI assistant draw on when it answers?”* These are independent on purpose — some
+content is fine for a person to read in the Knowledge Base but shouldn’t be
+surfaced through a chatbot (e.g. sensitive internal HR material, or a collection
+still being reviewed before it’s trusted for automated answers).
+
+**It is additive-only.** The toggle can *remove* content from what the assistant
+retrieves; it can never widen access. The status + visibility-tier filters above
+always still apply, and **the reader is never affected** — a collection hidden from
+the assistant stays fully browsable in `/kb` for anyone whose tier allows it.
+
+### The model
+
+Two columns, resolved at query time:
+
+- `KbCollection.assistantEnabled` (`Boolean`, default `true`) — the collection default.
+- `HrDocument.assistantEnabled` (`Boolean?`) — a per-document override:
+  `null` = inherit the collection, `true` = force available, `false` = force hidden.
+  **The override wins over the collection.**
+
+A published chunk is eligible for the assistant iff:
+
+```
+COALESCE(document.assistantEnabled, collection.assistantEnabled) = true
+  AND status = 'PUBLISHED'
+  AND visibility ∈ visibleDocTiers(caller.role)
+```
+
+This is enforced in one place — the candidate CTEs of `searchHandbook`
+(`src/lib/rag.ts`) — as a live join on `KbCollection`, so **toggling takes effect
+immediately with no re-embedding** (it’s a query-time filter, not a property of the
+stored chunk). It covers both the chat tool and the `/kb` ⌘K search, since both go
+through `searchHandbook`.
+
+### Who controls it, and where
+
+| Role | What they see / can do |
+|---|---|
+| **Super Admin** (`admin:settings`) | The **Settings → Assistant access** panel: a switch per collection and an *Inherit / Available / Hidden* control per document, with the resolved (“effective”) state shown. This is the only place the policy can be changed. |
+| **HR Admin** (`kb:manage`) | Authors content as usual. In **Manage Knowledge Base** they *see* the policy read-only — an “Assistant: off” badge on a disabled collection, and “Hidden from assistant” / “Forced on” on any overridden document — but cannot change it. |
+| **Manager / Employee** | No visibility into the control. They simply get assistant answers drawn only from eligible content (and, as always, only their tier). |
+
+Keeping the control in Settings (not the authoring form) is deliberate: deciding
+what the assistant may use is an org-policy call, and separating it means an HR
+admin editing a collection’s name or cover can never flip its assistant policy by
+accident. Every setter (`setCollectionAssistantAccess`, `setDocumentAssistantAccess`
+in `lib/kb.ts`) re-checks `admin:settings` server-side (defense in depth).
+
+### Day-to-day examples
+
+- **Out of the box**, the seeded *HR Internal* collection ships `assistantEnabled =
+  false`: HR can read “Compensation Bands” in `/kb`, but the assistant won’t cite it
+  for anyone. Everything else is assistant-on.
+- **Expose one document from an otherwise-excluded collection**: set that document’s
+  override to *Available*. It becomes citable immediately while the rest of the
+  collection stays hidden.
+- **Quarantine a single document in an open collection** (e.g. an outdated policy
+  pending revision): set its override to *Hidden* — the assistant stops citing it
+  at once; the rest of the collection is unaffected; the document remains readable
+  in `/kb`.
+- **No re-publish needed**: changes are live on the next question.
 
 ## Ingestion & embedding
 
@@ -115,7 +184,9 @@ the heading slug. Keyless-safe: with no `OPENROUTER_API_KEY` it skips embedding.
   **Reciprocal Rank Fusion** (`Σ 1/(k + rankᵢ)`, k=60). RRF fuses by *rank*, so
   cosine and `ts_rank` need no score normalization.
 
-Both halves apply the same tier + status filter, so hybrid never widens access. The
+Both halves apply the same tier + status filter **and the assistant-access policy**
+(`COALESCE(doc, collection).assistantEnabled`; see *Assistant access* above), so
+hybrid never widens access. The
 query is one CTE (`vec` / `lex` / `fused`) returning the top-k with the cosine
 `similarity` (for the match-% display) and the article/collection slugs + anchor.
 

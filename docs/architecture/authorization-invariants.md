@@ -107,7 +107,7 @@ When you add a tool, verify each line:
 
 ## Knowledge base (HARI-58/59/62)
 
-The KB extends the same model, with two governance axes on each `HrDocument`:
+The KB extends the same model, with three governance axes:
 
 - **`status`** (DRAFT / PUBLISHED / ARCHIVED) — only PUBLISHED docs are chunked &
   embedded (`src/lib/kb/ingest.ts`), so a draft has *zero* RAG chunks and is
@@ -115,14 +115,25 @@ The KB extends the same model, with two governance axes on each `HrDocument`:
 - **`visibility`** (ALL_EMPLOYEES / MANAGERS / HR_ONLY) — mapped to roles by
   `visibleDocTiers(role)` in `lib/rbac.ts`, derived from the directory permissions
   so KB access tracks the rest of the app.
+- **Assistant access** (`KbCollection.assistantEnabled` + `HrDocument.assistantEnabled`
+  override) — a super-admin (`admin:settings`) policy for which content the AI
+  assistant may use, resolved as `COALESCE(doc, collection)`. It is **additive-only**:
+  it can withhold content from the assistant but never widens access beyond status +
+  tier, and it does **not** affect the reader. See `knowledge-base.md` →
+  *Assistant access*.
 
 Enforcement points (all server-side):
 
 - **Reading** is gated by `handbook:read` (every role). Both retrieval
   (`searchHandbook` → `lib/rag.ts`) and the reader/data layer (`lib/kb.ts`) filter
   by `visibleDocTiers(role)` + PUBLISHED, so the chatbot can never surface a
-  document the reader wouldn't show that role. Direct-URL access to a hidden/draft
-  article (`getArticle`) resolves to `null` → `notFound()` (IDOR-safe).
+  document the reader wouldn't show that role. Retrieval additionally filters by the
+  assistant-access policy (`COALESCE(doc, collection).assistantEnabled`), which can
+  only narrow it further. Direct-URL access to a hidden/draft article (`getArticle`)
+  resolves to `null` → `notFound()` (IDOR-safe).
+- **Configuring assistant access** is gated by `admin:settings` (SUPER_ADMIN). The
+  Settings panel and every setter in `lib/kb.ts` re-check it; the `kb:manage`
+  authoring forms cannot change it (separation of duties).
 - **Managing** is gated by `kb:manage` (HR_ADMIN/SUPER_ADMIN). Admin pages redirect
   non-holders; every server action **and** every `lib/kb.ts` admin function
   re-checks `can(role,"kb:manage")` (defense in depth), and form inputs (slug,
