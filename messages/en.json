@@ -378,7 +378,9 @@
     "assistantFieldHintOn": "This article can be used by the AI assistant.",
     "assistantFieldHintOff": "This article is hidden from the AI assistant.",
     "tagAdd": "Add a tag…",
-    "tagRemove": "Remove {tag}"
+    "tagRemove": "Remove {tag}",
+    "articleSettings": "Article settings",
+    "slugPlaceholder": "Auto from the title"
   },
   "kbStatus": {
     "DRAFT": "Draft",

@@ -378,7 +378,9 @@
     "assistantFieldHintOn": "Cet article peut être utilisé par l’assistant IA.",
     "assistantFieldHintOff": "Cet article est masqué pour l’assistant IA.",
     "tagAdd": "Ajouter une étiquette…",
-    "tagRemove": "Supprimer {tag}"
+    "tagRemove": "Supprimer {tag}",
+    "articleSettings": "Paramètres de l’article",
+    "slugPlaceholder": "Auto depuis le titre"
   },
   "kbStatus": {
     "DRAFT": "Brouillon",

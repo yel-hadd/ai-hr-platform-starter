@@ -31,12 +31,11 @@ export default async function EditDocumentPage({
   const t = await getTranslations("kb");
 
   return (
-    <>
+    <div className="flex flex-col lg:h-full">
       <PageHeader title={t("editDocument")} />
 
-      <div className="p-4 md:p-8">
-        <DocumentForm
-          action={updateDocumentAction}
+      <DocumentForm
+        action={updateDocumentAction}
           submitLabel={t("save")}
           published={doc.status === "PUBLISHED"}
           canSetAssistant={can(user.role, "admin:settings")}
@@ -50,6 +49,7 @@ export default async function EditDocumentPage({
           collections={collections.map((c) => ({
             id: c.id,
             name: c.name,
+            slug: c.slug,
             assistantEnabled: c.assistantEnabled,
           }))}
           defaults={{
@@ -63,7 +63,6 @@ export default async function EditDocumentPage({
             assistantOverride: doc.assistantEnabled,
           }}
         />
-      </div>
-    </>
+    </div>
   );
 }

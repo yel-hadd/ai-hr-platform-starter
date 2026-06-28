@@ -14,20 +14,19 @@ export default async function NewDocumentPage() {
   const collections = await listCollectionsForAdmin({ role: user.role });
 
   return (
-    <>
+    <div className="flex flex-col lg:h-full">
       <PageHeader title={t("newDocument")} description={t("draftNotice")} />
-      <div className="p-4 md:p-8">
-        <DocumentForm
-          action={createDocumentAction}
-          submitLabel={t("createDocument")}
-          canSetAssistant={can(user.role, "admin:settings")}
-          collections={collections.map((c) => ({
-            id: c.id,
-            name: c.name,
-            assistantEnabled: c.assistantEnabled,
-          }))}
-        />
-      </div>
-    </>
+      <DocumentForm
+        action={createDocumentAction}
+        submitLabel={t("createDocument")}
+        canSetAssistant={can(user.role, "admin:settings")}
+        collections={collections.map((c) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          assistantEnabled: c.assistantEnabled,
+        }))}
+      />
+    </div>
   );
 }

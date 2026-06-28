@@ -35,10 +35,11 @@ type Defaults = {
 
 const selectClass = "block w-full rounded-md border bg-background px-3 py-2 text-sm";
 
-// Authoring surface: the title + editor are the canvas (left, readable width);
-// Save, lifecycle, and document settings live in one sticky sidebar panel so the
-// primary actions stay reachable while editing. On mobile the panel moves above
-// the editor (flex-col-reverse) so Save and settings are seen first.
+// Authoring surface modelled on a help-center editor (e.g. Zendesk Guide): the
+// title + content are the canvas (left, scrolls independently); a full-height
+// "Article settings" rail on the right holds the document settings (scrollable)
+// with Cancel/Save pinned to the bottom. On mobile the rail stacks above the
+// canvas and the page scrolls normally.
 export async function DocumentForm({
   action,
   submitLabel,
@@ -52,7 +53,7 @@ export async function DocumentForm({
 }: {
   action: ServerAction;
   submitLabel: string;
-  collections: { id: string; name: string; assistantEnabled: boolean }[];
+  collections: { id: string; name: string; slug: string; assistantEnabled: boolean }[];
   defaults?: Defaults;
   published?: boolean;
   canSetAssistant?: boolean;
@@ -68,108 +69,105 @@ export async function DocumentForm({
     status === "DRAFT" ? t("draftNotice") : status === "ARCHIVED" ? t("archivedNotice") : null;
 
   return (
-    <form action={action}>
+    <form action={action} className="flex flex-col-reverse lg:min-h-0 lg:flex-1 lg:flex-row">
       {defaults.id && <input type="hidden" name="id" value={defaults.id} />}
 
-      <div className="flex flex-col-reverse gap-6 lg:flex-row lg:gap-8">
-        {/* Canvas: title + editor */}
-        <div className="min-w-0 flex-1">
-          <div className="mx-auto max-w-3xl space-y-3">
-            <input
-              name="title"
-              defaultValue={defaults.title ?? ""}
-              required
-              aria-label={t("fieldTitle")}
-              placeholder={t("fieldTitle")}
-              className="w-full border-0 bg-transparent px-0 text-2xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/40 focus:ring-0"
-            />
-            <ArticleEditor name="content" defaultValue={defaults.content ?? ""} />
-            <p className="text-xs text-muted-foreground">{t("fieldContentHint")}</p>
-          </div>
+      {/* Canvas — title + editor, scrolls on its own at lg */}
+      <div className="min-w-0 lg:flex-1 lg:overflow-y-auto">
+        <div className="mx-auto max-w-3xl space-y-3 p-4 md:p-8">
+          {status && (
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  {t("status")}
+                  <Badge variant={STATUS_VARIANT[status]}>{tStatus(status)}</Badge>
+                </span>
+                {lifecycle && defaults.id && (
+                  <DocumentLifecycle
+                    id={defaults.id}
+                    status={status}
+                    publish={lifecycle.publish}
+                    unpublish={lifecycle.unpublish}
+                    archive={lifecycle.archive}
+                  />
+                )}
+                {viewHref && (
+                  <Link
+                    href={viewHref}
+                    className="inline-flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {t("view")}
+                    <ExternalLink className="size-3.5" />
+                  </Link>
+                )}
+              </div>
+              {statusNote && <p className="text-xs text-muted-foreground">{statusNote}</p>}
+            </div>
+          )}
+          <input
+            name="title"
+            defaultValue={defaults.title ?? ""}
+            required
+            aria-label={t("fieldTitle")}
+            placeholder={t("fieldTitle")}
+            // pl matches BlockNote's 54px content gutter so the title aligns with the body text.
+            className="w-full border-0 bg-transparent pl-[54px] pr-0 text-3xl font-bold tracking-tight outline-none placeholder:text-muted-foreground/40 focus:ring-0"
+          />
+          <ArticleEditor name="content" defaultValue={defaults.content ?? ""} />
+          <p className="pl-[54px] text-xs text-muted-foreground">{t("fieldContentHint")}</p>
+        </div>
+      </div>
+
+      {/* Article settings rail — full height at lg, settings scroll, actions pinned */}
+      <aside className="flex shrink-0 flex-col border-b bg-card lg:w-80 lg:overflow-hidden lg:border-b-0 lg:border-l">
+        <div className="shrink-0 border-b px-4 py-3">
+          <h2 className="text-sm font-semibold">{t("articleSettings")}</h2>
         </div>
 
-        {/* Sticky settings panel */}
-        <aside className="lg:w-80 lg:shrink-0">
-          <div className="overflow-hidden rounded-xl border bg-card lg:sticky lg:top-6">
-            {/* Actions */}
-            <div className="space-y-3 p-4">
-              <div className="flex items-center gap-2">
-                <Button type="submit" size="sm" className="flex-1">{submitLabel}</Button>
-                <ButtonLink href="/kb/admin" size="sm" variant="ghost">{t("cancel")}</ButtonLink>
-              </div>
+        <div className="space-y-4 p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+          <SlugField
+            defaultValue={defaults.slug ?? ""}
+            basePath="/kb/"
+            collections={collections.map((c) => ({ id: c.id, slug: c.slug }))}
+            originalSlug={defaults.slug}
+            warnOnChange={published}
+          />
 
-              {status && (
-                <>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-muted-foreground">
-                      {t("status")}
-                      <Badge variant={STATUS_VARIANT[status]}>{tStatus(status)}</Badge>
-                    </span>
-                    {viewHref && (
-                      <Link
-                        href={viewHref}
-                        className="inline-flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        {t("view")}
-                        <ExternalLink className="size-3.5" />
-                      </Link>
-                    )}
-                  </div>
-                  {lifecycle && defaults.id && (
-                    <DocumentLifecycle
-                      id={defaults.id}
-                      status={status}
-                      publish={lifecycle.publish}
-                      unpublish={lifecycle.unpublish}
-                      archive={lifecycle.archive}
-                    />
-                  )}
-                  {statusNote && <p className="text-xs text-muted-foreground">{statusNote}</p>}
-                </>
-              )}
-            </div>
+          <label className="block space-y-1 text-sm">
+            <span className="font-medium">{t("fieldCollection")}</span>
+            <select name="collectionId" defaultValue={defaults.collectionId ?? ""} required className={selectClass}>
+              {collections.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </label>
 
-            {/* Settings */}
-            <div className="space-y-4 border-t p-4">
-              <SlugField
-                defaultValue={defaults.slug ?? ""}
-                basePath="…/"
-                originalSlug={defaults.slug}
-                warnOnChange={published}
-              />
-
-              <label className="block space-y-1 text-sm">
-                <span className="font-medium">{t("fieldCollection")}</span>
-                <select name="collectionId" defaultValue={defaults.collectionId ?? ""} required className={selectClass}>
-                  {collections.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="space-y-1.5 text-sm">
-                <span className="block font-medium">{t("fieldVisibility")}</span>
-                <PillRadioGroup
-                  name="visibility"
-                  ariaLabel={t("fieldVisibility")}
-                  defaultValue={defaults.visibility ?? "ALL_EMPLOYEES"}
-                  options={VISIBILITIES.map((v) => ({ value: v, label: tVis(v) }))}
-                />
-              </div>
-
-              {canSetAssistant && (
-                <AssistantOverrideField
-                  collections={collections}
-                  defaultCollectionId={defaults.collectionId ?? collections[0]?.id ?? ""}
-                  defaultOverride={defaults.assistantOverride ?? null}
-                />
-              )}
-
-              <TagInput name="tags" defaultValue={defaults.tags ?? []} />
-            </div>
+          <div className="space-y-1.5 text-sm">
+            <span className="block font-medium">{t("fieldVisibility")}</span>
+            <PillRadioGroup
+              name="visibility"
+              ariaLabel={t("fieldVisibility")}
+              defaultValue={defaults.visibility ?? "ALL_EMPLOYEES"}
+              options={VISIBILITIES.map((v) => ({ value: v, label: tVis(v) }))}
+            />
           </div>
-        </aside>
-      </div>
+
+          {canSetAssistant && (
+            <AssistantOverrideField
+              collections={collections}
+              defaultCollectionId={defaults.collectionId ?? collections[0]?.id ?? ""}
+              defaultOverride={defaults.assistantOverride ?? null}
+            />
+          )}
+
+          <TagInput name="tags" defaultValue={defaults.tags ?? []} />
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t p-4">
+          <ButtonLink href="/kb/admin" size="sm" variant="ghost">{t("cancel")}</ButtonLink>
+          <Button type="submit" size="sm">{submitLabel}</Button>
+        </div>
+      </aside>
     </form>
   );
 }

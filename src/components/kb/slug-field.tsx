@@ -1,41 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Link2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { slugify } from "@/lib/kb/markdown";
 
-// Slug input with a live URL preview (slugified as you type, matching the
-// server's uniqueSlug) and a warning when editing a slug that already has live
-// links (published doc / existing collection) — changing it 404s old links.
+// Slug input with a clean URL preview. The slug is slugified live (matching the
+// server's uniqueSlug); the preview shows the full reader path. For documents,
+// pass `collections` so the preview reflects the actually-selected collection
+// (mirrors the form's collection <select>) instead of a placeholder segment. A
+// warning shows when changing a slug that already has live links.
 export function SlugField({
   defaultValue = "",
   basePath,
   originalSlug,
   warnOnChange = false,
+  collections,
 }: {
   defaultValue?: string;
-  basePath: string; // e.g. "/kb/" (collection) or "…/" (document)
+  basePath: string; // reader root, e.g. "/kb/"
   originalSlug?: string;
   warnOnChange?: boolean;
+  collections?: { id: string; slug: string }[]; // document: resolves the collection segment
 }) {
   const t = useTranslations("kb");
+  const id = useId();
   const [value, setValue] = useState(defaultValue);
+  const [collectionId, setCollectionId] = useState("");
+
+  // Mirror the collection <select> so the preview path stays accurate.
+  useEffect(() => {
+    if (!collections) return;
+    const sel = document.querySelector<HTMLSelectElement>('select[name="collectionId"]');
+    if (!sel) return;
+    setCollectionId(sel.value);
+    const onChange = () => setCollectionId(sel.value);
+    sel.addEventListener("change", onChange);
+    return () => sel.removeEventListener("change", onChange);
+  }, [collections]);
+
   const effective = slugify(value);
   const changed = warnOnChange && !!originalSlug && !!effective && effective !== originalSlug;
+  const collectionSlug = collections?.find((c) => c.id === collectionId)?.slug;
+  const prefix = collections ? `${basePath}${collectionSlug ? `${collectionSlug}/` : ""}` : basePath;
 
   return (
-    <label className="block space-y-1 text-sm">
-      <span className="font-medium">{t("fieldSlug")}</span>
-      <Input name="slug" value={value} onChange={(e) => setValue(e.target.value)} />
+    <div className="space-y-1.5 text-sm">
+      <label htmlFor={id} className="block font-medium">{t("fieldSlug")}</label>
+      <Input
+        id={id}
+        name="slug"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={t("slugPlaceholder")}
+      />
       <span className="block text-xs text-muted-foreground">{t("fieldSlugHint")}</span>
       {effective && (
-        <span className="block text-xs text-muted-foreground">
-          {basePath}
-          <span className="font-mono text-foreground">{effective}</span>
-        </span>
+        <div className="flex items-center gap-1.5 overflow-hidden rounded-md bg-muted/50 px-2 py-1.5">
+          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="truncate font-mono text-xs text-muted-foreground">
+            {prefix}
+            <span className="text-foreground">{effective}</span>
+          </span>
+        </div>
       )}
       {changed && <span className="block text-xs text-destructive">{t("slugChangeWarning")}</span>}
-    </label>
+    </div>
   );
 }
