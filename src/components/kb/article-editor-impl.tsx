@@ -4,6 +4,8 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { useEffect } from "react";
 import { useTheme } from "next-themes";
+import { useLocale } from "next-intl";
+import { en, fr } from "@blocknote/core/locales";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 
@@ -19,7 +21,10 @@ export function ArticleEditorImpl({
   initialHTML: string;
   onChange: (html: string) => void;
 }) {
-  const editor = useCreateBlockNote();
+  const locale = useLocale();
+  // Localize the editor chrome (slash menu, placeholders, tooltips) to the app
+  // locale; BlockNote ships the dictionaries.
+  const editor = useCreateBlockNote({ dictionary: locale === "fr" ? fr : en });
   const { resolvedTheme } = useTheme();
 
   // Load the stored HTML into the editor once, then emit the normalized HTML.

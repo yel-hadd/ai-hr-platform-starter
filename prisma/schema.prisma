@@ -182,6 +182,10 @@ anchor String @default("") // slug of the heading → citation deep-link
 content String
 chunkIndex Int @default(0) // order within the document
 embedding Unsupported("halfvec(384)")?
+// Generated tsvector for lexical (full-text) search — the lexical half of hybrid
+// retrieval. The GENERATED expression + GIN index live in the migration SQL
+// (Prisma can't model either), like the halfvec column + HNSW index.
+contentTsv Unsupported("tsvector")?
 document HrDocument? @relation(fields: [documentId], references: [id], onDelete: Cascade)
 documentId String?
 version Int @default(1)

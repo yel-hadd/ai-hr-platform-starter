@@ -140,8 +140,15 @@ Key properties (all in `seedHandbook`):
 
 ## Retrieval pipeline (query time)
 
-`searchHandbook(query, k = 4)` in `src/lib/rag.ts`, invoked by the `searchHandbook`
-tool (after the `handbook:read` permission check):
+> Retrieval is now **hybrid** — pgvector semantic search fused with Postgres
+> full-text (lexical) search via Reciprocal Rank Fusion, both filtered by the
+> caller's access tier + `PUBLISHED` status. See
+> [Knowledge Base — architecture › Hybrid retrieval](./knowledge-base.md#hybrid-retrieval-vector--lexical--rrf).
+> The diagram below shows the original semantic-only path; the lexical half and RRF
+> fusion are layered on in `src/lib/rag.ts`.
+
+`searchHandbook(query, k, caller)` in `src/lib/rag.ts`, invoked by the
+`searchHandbook` tool (after the `handbook:read` permission check):
 
 ```mermaid
 flowchart LR

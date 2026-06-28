@@ -95,6 +95,23 @@ describe("RAG retrieval respects status + visibility (HARI-59/62)", () => {
   });
 });
 
+describe("hybrid search — lexical recall (FTS half)", () => {
+  // The embedding is mocked to a constant, so the vector half can't rank by
+  // meaning. A correct hit for a distinctive exact term therefore proves the
+  // full-text (lexical) half + RRF fusion is doing the work.
+  it("surfaces a doc by a distinctive keyword the constant embedding can't rank", async () => {
+    const hits = await searchHandbook("ethics hotline", 3, as("HR_ADMIN"));
+    expect(hits[0]?.articleSlug).toBe("workplace-and-equipment");
+  });
+
+  it("still tier-filters lexical hits (employee can't lexically reach HR_ONLY terms)", async () => {
+    const slugs = (await searchHandbook("salary bands midpoint", 50, as("EMPLOYEE"))).map(
+      (h) => h.articleSlug,
+    );
+    expect(slugs).not.toContain("compensation-bands");
+  });
+});
+
 describe("searchKb respects tier scoping", () => {
   it("an employee's search never returns restricted or draft articles", async () => {
     const slugs = (await searchKb(as("EMPLOYEE"), "policy", 100)).map((r) => r.articleSlug);
