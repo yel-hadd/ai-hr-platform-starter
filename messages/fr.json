@@ -43,7 +43,6 @@
     "salary:read:all": "Voir la rémunération de chacun",
     "leave:request": "Demander des congés",
     "leave:read:self": "Voir ses propres congés",
-    "leave:read:team": "Voir les congés de l'équipe",
     "leave:approve": "Approuver / refuser les congés",
     "payslip:read:self": "Voir ses propres fiches de paie",
     "payslip:read:any": "Voir les fiches de paie de chacun",
@@ -133,6 +132,7 @@
     "modelRegistryDescription": "Le chat utilise par défaut les modèles gratuits d'OpenRouter ; la passerelle Vercel AI est sélectionnable par requête. Configurez les clés via les variables d'environnement.",
     "reasoning": "raisonnement",
     "default": "par défaut",
+    "requiresGatewayKey": "nécessite AI_GATEWAY_API_KEY",
     "localization": "Localisation",
     "localizationDescription": "Devise et fuseau horaire utilisés dans toute l'application et par l'assistant IA.",
     "currency": "Devise",
@@ -160,14 +160,23 @@
     "suggestion2": "Combien de jours de congés me reste-t-il ?",
     "suggestion3": "Montre-moi l'annuaire de l'équipe",
     "suggestion4": "Montre-moi ma dernière fiche de paie",
+    "suggestionMyProfile": "Montre-moi mon profil",
+    "suggestionApprovals": "Quelles demandes de congés attendent ma validation ?",
     "placeholder": "Posez votre question… (Maj+Entrée pour un saut de ligne)",
     "send": "Envoyer le message",
     "stop": "Arrêter la génération",
+    "newChat": "Nouvelle conversation",
+    "retry": "Réessayer",
+    "dismiss": "Fermer",
     "messageLabel": "Message",
     "conversation": "Conversation",
-    "you": "Vous",
     "assistantLabel": "Assistant",
-    "error": "Une erreur s'est produite. Vérifiez que la clé API du fournisseur est définie dans votre environnement."
+    "errors": {
+      "auth_missing": "L'assistant n'est pas encore configuré — la clé API du fournisseur est manquante.",
+      "rate_limited": "Le modèle est temporairement limité. Patientez un instant ou choisissez un autre modèle.",
+      "model_unavailable": "Ce modèle est indisponible pour le moment. Essayez-en un autre dans le sélecteur.",
+      "generic": "Une erreur s'est produite. Veuillez réessayer."
+    }
   },
   "reasoning": {
     "thinking": "Réflexion…",
@@ -183,7 +192,8 @@
     "daysRemainingLabel": "Jours de {type} restants",
     "duration": "{type} · {count, plural, one {# jour} other {# jours}}",
     "approvalResult": "La demande {type} de {days} jour(s) de {name} a été {status, select, APPROVED {approuvée} REJECTED {refusée} other {mise à jour}}.",
-    "noPendingApprovals": "Aucune demande en attente de validation."
+    "noPendingApprovals": "Aucune demande en attente de validation.",
+    "noBalances": "Aucun solde de congés à afficher."
   },
   "directoryCard": {
     "empty": "Aucune personne correspondante.",
@@ -192,30 +202,40 @@
   "payslip": {
     "gross": "Brut",
     "tax": "Impôt (22 %)",
-    "net": "Net"
+    "net": "Net",
+    "period": "Mois le plus récent"
   },
   "tools": {
     "status": {
       "searchHandbook": "Recherche dans le guide",
       "getEmployeeDirectory": "Consultation de l'annuaire",
-      "getLeaveBalance": "Vérification du solde de congés",
+      "getLeaveBalances": "Vérification du solde de congés",
       "requestTimeOff": "Envoi de la demande de congés",
       "listPendingApprovals": "Récupération des validations en attente",
       "approveLeave": "Traitement de la validation",
       "getPayslip": "Récupération de la fiche de paie"
     },
     "error": "Erreur de l'outil",
+    "errors": {
+      "handbook_unavailable": "La recherche dans le guide est indisponible pour le moment.",
+      "handbook_dim_mismatch": "La recherche dans le guide est mal configurée (incompatibilité du modèle d'embedding).",
+      "no_employee_profile": "Aucun profil employé n'est lié à votre compte.",
+      "date_invalid": "Veuillez utiliser une date valide (AAAA-MM-JJ).",
+      "date_range_reversed": "La date de fin doit être égale ou postérieure à la date de début.",
+      "request_not_found": "Cette demande est introuvable.",
+      "request_not_pending": "Cette demande a déjà été traitée et ne peut plus être modifiée."
+    },
     "summary": {
       "getCurrentDateTime": "La date, l'heure et le jour actuels (utilitaire).",
       "getDateInfo": "Jour de la semaine / week-end pour une date donnée (utilitaire).",
       "businessDaysBetween": "Nombre de jours ouvrés entre deux dates (utilitaire).",
       "searchHandbook": "Recherche dans le guide de l'employé (RAG) et cite les sections.",
-      "getEmployeeDirectory": "Liste les employés que l'utilisateur est autorisé à voir.",
-      "getLeaveBalance": "Les soldes de congés de l'utilisateur.",
-      "requestTimeOff": "Soumet une demande de congés pour l'utilisateur.",
-      "listPendingApprovals": "Liste les demandes en attente de validation par l'utilisateur.",
+      "getEmployeeDirectory": "Liste les employés que vous êtes autorisé à voir.",
+      "getLeaveBalances": "Vos propres soldes de congés.",
+      "requestTimeOff": "Soumet une demande de congés pour vous.",
+      "listPendingApprovals": "Liste les demandes en attente de votre validation.",
       "approveLeave": "Approuve ou refuse une demande en attente.",
-      "getPayslip": "Une fiche de paie — la sienne, ou celle de toute personne visible avec des droits élevés."
+      "getPayslip": "Une fiche de paie — la vôtre, ou celle de toute personne visible avec des droits élevés."
     }
   },
   "login": {

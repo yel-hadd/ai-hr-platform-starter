@@ -187,7 +187,7 @@ export type KbSearchResult = {
   section: string;
   anchor: string;
   url: string;
-  similarity: number;
+  similarity: number | null; // null for a lexical-only hit with no embedding
 };
 
 /**

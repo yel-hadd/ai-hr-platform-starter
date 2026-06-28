@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/session";
-import { getDirectory, getLeaveBalances, getPendingApprovals } from "@/lib/hr";
+import { getEmployeeDirectory, getLeaveBalances, getPendingApprovals } from "@/lib/hr";
 import { can } from "@/lib/rbac";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,7 @@ export default async function OverviewPage() {
   const tRoles = await getTranslations("roles");
 
   const [directory, balances, approvals] = await Promise.all([
-    getDirectory(caller),
+    getEmployeeDirectory(caller),
     user.employeeId ? getLeaveBalances(user.employeeId) : Promise.resolve([]),
     getPendingApprovals(caller),
   ]);

@@ -2,6 +2,7 @@
 
 import { memo, useMemo } from "react";
 import type { UIMessage } from "ai";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
 import { Reasoning } from "./reasoning";
@@ -18,6 +19,8 @@ export const ChatMessage = memo(function ChatMessage({
   message: UIMessage;
   streaming: boolean;
 }) {
+  const tChat = useTranslations("chat");
+  const tCommon = useTranslations("common");
   const isUser = message.role === "user";
   // Reasoning is "live" only until visible answer text starts arriving.
   const hasAnswerText = message.parts.some(
@@ -49,7 +52,7 @@ export const ChatMessage = memo(function ChatMessage({
   return (
     <div
       role="group"
-      aria-label={isUser ? "You" : "Assistant"}
+      aria-label={isUser ? tCommon("you") : tChat("assistantLabel")}
       className={cn("flex gap-3", isUser && "flex-row-reverse")}
     >
       <div

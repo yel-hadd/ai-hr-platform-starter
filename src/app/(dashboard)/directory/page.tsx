@@ -1,6 +1,6 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/session";
-import { getDirectory, getDirectoryFacets } from "@/lib/hr";
+import { getEmployeeDirectory, getEmployeeDirectoryFacets } from "@/lib/hr";
 import { can } from "@/lib/rbac";
 import { formatCurrency } from "@/lib/utils";
 import { getOrgSettings } from "@/lib/settings";
@@ -56,15 +56,15 @@ export default async function DirectoryPage({ searchParams }: Props) {
 
   // Filters + facet options both go through the role-scoped data layer (lib/hr.ts),
   // so a caller can never see — or filter by — anyone outside their scope. Invalid
-  // status values are dropped server-side (see getDirectory).
+  // status values are dropped server-side (see getEmployeeDirectory).
   const [directory, facets] = await Promise.all([
-    getDirectory(caller, {
+    getEmployeeDirectory(caller, {
       search: typeof params.search === "string" ? params.search : undefined,
       status: asArray(params.status),
       departments: asArray(params.dept),
       cities: asArray(params.city),
     }),
-    getDirectoryFacets(caller),
+    getEmployeeDirectoryFacets(caller),
   ]);
 
   const colCount = showSalary ? 8 : 7;

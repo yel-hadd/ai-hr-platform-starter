@@ -13,18 +13,19 @@ export function Reasoning({
   text: string;
   streaming: boolean;
 }) {
-  // Default collapsed: auto-expands while streaming (to show live thinking), then
-  // collapses to a one-line summary when done. Click to re-open.
+  // Auto-expands while streaming (to show live thinking) and collapses when done —
+  // UNLESS the user has expressed a preference, which always wins (so the toggle
+  // works mid-stream instead of looking broken). null = follow the auto behavior.
   const t = useTranslations("reasoning");
-  const [open, setOpen] = useState(false);
-  const expanded = streaming || open;
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const expanded = userOpen ?? streaming;
   const panelId = useId();
 
   return (
     <div className="rounded-lg border bg-muted/40 text-sm">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setUserOpen(!expanded)}
         aria-expanded={expanded}
         aria-controls={panelId}
         className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground"

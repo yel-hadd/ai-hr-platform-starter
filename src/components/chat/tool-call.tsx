@@ -54,11 +54,14 @@ export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boole
       </div>
 
       {part.state === "output-error" && (
+        // An unexpected tool throw. Show a generic localized message — never the
+        // raw errorText, which can carry server/DB internals. Expected, explained
+        // failures come back as an { error, errorCode } output instead (below).
         <div
           role="alert"
           className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive"
         >
-          <AlertTriangle className="size-3.5" /> {part.errorText ?? t("error")}
+          <AlertTriangle className="size-3.5" /> {t("error")}
         </div>
       )}
 
@@ -75,23 +78,29 @@ function ToolOutput({
   streaming,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: { name: string; output: any; streaming: boolean }) {
+  const t = useTranslations("tools");
   if (!output) return null;
   // Scope refusals are intentionally invisible — the agent works with the
   // authorized data and explains in prose; we don't surface an error.
   if (output.refused) return null;
-  if (output.error)
+  if (output.error) {
+    // Prefer a localized message keyed by the tool's stable errorCode; fall back
+    // to the raw (English) error string, then to the generic label.
+    const key = typeof output.errorCode === "string" ? `errors.${output.errorCode}` : null;
+    const text = key && t.has(key as Parameters<typeof t>[0]) ? t(key as Parameters<typeof t>[0]) : output.error;
     return (
       <p className="rounded-lg border border-dashed p-2 text-xs text-muted-foreground">
-        {output.error}
+        {text}
       </p>
     );
+  }
 
   switch (name) {
     case "searchHandbook":
       return <Citations query={output.query} results={output.results} streaming={streaming} />;
     case "getEmployeeDirectory":
       return <DirectoryCards people={output.people} />;
-    case "getLeaveBalance":
+    case "getLeaveBalances":
       return <LeaveBalances balances={output.balances} />;
     case "requestTimeOff":
       return <LeaveRequestCard request={output.request} />;

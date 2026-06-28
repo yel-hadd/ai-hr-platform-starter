@@ -16,7 +16,11 @@ type HastElement = {
 };
 type HastNode = HastText | HastElement | { type: string; children?: HastNode[] };
 
-const REF_RE = /\[(\d+)\]/g;
+// Match a citation marker around a number, tolerating the fullwidth/CJK brackets
+// some models (e.g. gpt-oss) emit — 【1】, ［1］, 〔1〕 — as well as ASCII [1], with
+// optional inner spaces. The rendered marker is always normalized back to ASCII
+// [n] (see splitText), so the visible citation is consistent regardless of input.
+const REF_RE = /[[【［〔]\s*(\d+)\s*[\]】］〕]/g;
 
 export type CitationTarget = { url: string };
 

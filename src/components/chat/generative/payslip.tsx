@@ -8,7 +8,6 @@ export function Payslip({
 }: {
   payslip: {
     employeeName: string;
-    period: string;
     grossMonthly: number;
     tax: number;
     netMonthly: number;
@@ -31,7 +30,7 @@ export function Payslip({
         <Receipt className="size-4 text-muted-foreground" />
         <span className="font-medium">{payslip.employeeName}</span>
       </div>
-      <p className="mb-2 text-xs text-muted-foreground">{payslip.period}</p>
+      <p className="mb-2 text-xs text-muted-foreground">{t("period")}</p>
       <div className="space-y-1">
         {row(t("gross"), payslip.grossMonthly)}
         {row(t("tax"), -payslip.tax)}
