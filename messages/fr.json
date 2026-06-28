@@ -137,7 +137,19 @@
     "localizationDescription": "Devise et fuseau horaire utilisés dans toute l'application et par l'assistant IA.",
     "currency": "Devise",
     "timezone": "Fuseau horaire",
-    "save": "Enregistrer"
+    "save": "Enregistrer",
+    "overview": "Aperçu",
+    "overviewDescription": "Gérez votre organisation, l’assistant IA et la politique d’accès.",
+    "navLocalization": "Localisation",
+    "navAssistant": "Accès de l’assistant",
+    "navPermissions": "Permissions",
+    "navAiTools": "Outils IA",
+    "navModels": "Modèles",
+    "cardLocalizationDesc": "Devise et fuseau horaire pour l’application et l’assistant.",
+    "cardAssistantDesc": "Choisissez le contenu de la base de connaissances que l’assistant peut utiliser.",
+    "cardPermissionsDesc": "La matrice de permissions par rôle qui régit chaque surface.",
+    "cardAiToolsDesc": "Les outils IA attribués à chaque rôle.",
+    "cardModelsDesc": "Les modèles de chat disponibles pour l’assistant."
   },
   "chat": {
     "assistant": "Assistant IA",
@@ -350,7 +362,16 @@
     "assistantSaveFailed": "Impossible de mettre à jour l’accès de l’assistant",
     "assistantToggleDocs": "Afficher les documents de {name}",
     "assistantCollectionAria": "Accès de l’assistant pour la collection {name}",
-    "assistantDocAria": "Accès de l’assistant pour {title}"
+    "assistantDocAria": "Accès de l’assistant pour {title}",
+    "assistantManageDocuments": "Gérer les documents",
+    "assistantOverridesCount": "{count, plural, =0 {Aucune exception} one {# exception} other {# exceptions}}",
+    "assistantBackToCollections": "Retour aux collections",
+    "assistantSearchCollections": "Rechercher des collections…",
+    "assistantSearchDocuments": "Rechercher des documents…",
+    "assistantNoResults": "Aucun résultat.",
+    "paginationPrev": "Précédent",
+    "paginationNext": "Suivant",
+    "paginationPageOf": "Page {page} sur {pages}"
   },
   "kbStatus": {
     "DRAFT": "Brouillon",

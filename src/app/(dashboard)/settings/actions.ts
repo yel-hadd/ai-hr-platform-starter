@@ -40,6 +40,7 @@ export async function setCollectionAssistantAction(formData: FormData) {
   const enabled = String(formData.get("enabled") ?? "") === "true";
   await setCollectionAssistantAccess({ role: user.role, id: user.id }, collectionId, enabled);
   revalidatePath("/kb", "layout"); // admin badges read this
+  revalidatePath("/settings/assistant", "layout");
 }
 
 export async function setDocumentAssistantAction(formData: FormData) {
@@ -50,4 +51,5 @@ export async function setDocumentAssistantAction(formData: FormData) {
   const override = raw === "inherit" ? null : raw === "on";
   await setDocumentAssistantAccess({ role: user.role, id: user.id }, documentId, override);
   revalidatePath("/kb", "layout");
+  revalidatePath("/settings/assistant", "layout");
 }
