@@ -12,8 +12,8 @@ import {
 } from "./actions";
 import { PageHeader } from "@/components/layout/page-header";
 import { ButtonLink } from "@/components/ui/button-link";
-import { ActionButton } from "@/components/kb/action-button";
-import { ConfirmButton } from "@/components/kb/confirm-button";
+import { DocumentRowActions } from "@/components/kb/document-row-actions";
+import { CollectionRowActions } from "@/components/kb/collection-row-actions";
 import { SavedToast } from "@/components/kb/saved-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -151,48 +151,13 @@ export default async function KbAdminPage({
                       <TableCell className="text-muted-foreground">{d.updatedByName ?? tc("none")}</TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">{d.viewCount}</TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap items-center justify-end gap-1.5">
-                          <ButtonLink
-                            href={`/kb/admin/documents/${d.id}`}
-                            size="xs"
-                            variant="outline"
-                          >
-                            {t("edit")}
-                          </ButtonLink>
-                          {d.status !== "PUBLISHED" && (
-                            <ActionButton
-                              action={publishDocumentAction}
-                              id={d.id}
-                              label={t("publish")}
-                              toastMessage={t("toastPublished")}
-                              variant="default"
-                            />
-                          )}
-                          {d.status === "PUBLISHED" && (
-                            <ActionButton
-                              action={unpublishDocumentAction}
-                              id={d.id}
-                              label={t("unpublish")}
-                              toastMessage={t("toastUnpublished")}
-                            />
-                          )}
-                          {d.status !== "ARCHIVED" && (
-                            <ActionButton
-                              action={archiveDocumentAction}
-                              id={d.id}
-                              label={t("archive")}
-                              toastMessage={t("toastArchived")}
-                            />
-                          )}
-                          <ConfirmButton
-                            action={deleteDocumentAction}
-                            id={d.id}
-                            triggerLabel={t("delete")}
-                            title={t("deleteDocTitle")}
-                            description={t("deleteDocDesc", { title: d.title })}
-                            confirmLabel={t("confirmDelete")}
-                            cancelLabel={t("cancel")}
-                            toastMessage={t("toastDeleted")}
+                        <div className="flex justify-end">
+                          <DocumentRowActions
+                            doc={{ id: d.id, title: d.title, status: d.status }}
+                            publish={publishDocumentAction}
+                            unpublish={unpublishDocumentAction}
+                            archive={archiveDocumentAction}
+                            remove={deleteDocumentAction}
                           />
                         </div>
                       </TableCell>
@@ -233,30 +198,29 @@ export default async function KbAdminPage({
                   {collections.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">
-                        {c.name}
-                        <code className="ml-2 text-xs text-muted-foreground">/{c.slug}</code>
+                        <span className="flex items-center gap-2">
+                          {c.image && (
+                            // eslint-disable-next-line @next/next/no-img-element -- decorative cover thumbnail, often a data URL
+                            <img
+                              src={c.image}
+                              alt=""
+                              className="size-8 shrink-0 rounded border object-cover"
+                            />
+                          )}
+                          <span>
+                            {c.name}
+                            <code className="ml-2 text-xs text-muted-foreground">/{c.slug}</code>
+                          </span>
+                        </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {t("documentCount", { count: c.documentCount })}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap items-center justify-end gap-1.5">
-                          <ButtonLink
-                            href={`/kb/admin/collections/${c.id}`}
-                            size="xs"
-                            variant="outline"
-                          >
-                            {t("edit")}
-                          </ButtonLink>
-                          <ConfirmButton
-                            action={deleteCollectionAction}
-                            id={c.id}
-                            triggerLabel={t("delete")}
-                            title={t("deleteCollectionTitle")}
-                            description={t("deleteCollectionDesc", { name: c.name })}
-                            confirmLabel={t("confirmDelete")}
-                            cancelLabel={t("cancel")}
-                            toastMessage={t("toastDeleted")}
+                        <div className="flex justify-end">
+                          <CollectionRowActions
+                            collection={{ id: c.id, name: c.name }}
+                            remove={deleteCollectionAction}
                           />
                         </div>
                       </TableCell>

@@ -55,6 +55,7 @@ export async function createCollectionAction(fd: FormData) {
     name,
     slug: str(fd, "slug"),
     description: str(fd, "description") || null,
+    image: str(fd, "image") || null,
     order: Number(str(fd, "order")) || 0,
   });
   refresh();
@@ -70,6 +71,7 @@ export async function updateCollectionAction(fd: FormData) {
     name,
     slug: str(fd, "slug"),
     description: str(fd, "description") || null,
+    image: str(fd, "image") || null,
     order: Number(str(fd, "order")) || 0,
   });
   refresh();
@@ -80,7 +82,7 @@ export async function deleteCollectionAction(fd: FormData) {
   const caller = await requireManager();
   const id = str(fd, "id");
   if (id) await deleteCollection(caller, id);
-  refresh(); // invoked in-place from the admin list (ConfirmButton) — no redirect
+  refresh(); // invoked in-place from the admin list (row-actions menu) — no redirect
 }
 
 // ── Documents ───────────────────────────────────────────────────────────────
@@ -145,5 +147,5 @@ export async function deleteDocumentAction(fd: FormData) {
   const caller = await requireManager();
   const id = str(fd, "id");
   if (id) await deleteDocument(caller, id);
-  refresh(); // invoked in-place from the admin list (ConfirmButton) — no redirect
+  refresh(); // invoked in-place from the admin list (row-actions menu) — no redirect
 }

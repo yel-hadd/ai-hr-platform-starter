@@ -4,12 +4,14 @@ import { ButtonLink } from "@/components/ui/button-link";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SlugField } from "@/components/kb/slug-field";
+import { ImageField } from "@/components/kb/image-field";
 
 type Defaults = {
   id?: string;
   name?: string;
   slug?: string;
   description?: string | null;
+  image?: string | null;
   order?: number;
 };
 
@@ -44,6 +46,8 @@ export async function CollectionForm({
         <span className="font-medium">{t("fieldDescription")}</span>
         <Textarea name="description" defaultValue={defaults.description ?? ""} rows={3} />
       </label>
+
+      <ImageField defaultValue={defaults.image} />
 
       <label className="block space-y-1 text-sm">
         <span className="font-medium">{t("fieldOrder")}</span>

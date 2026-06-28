@@ -242,7 +242,13 @@ async function seedKnowledgeBase() {
   }[] = [];
   for (const col of KB_COLLECTIONS) {
     const collection = await prisma.kbCollection.create({
-      data: { slug: col.slug, name: col.name, description: col.description, order: col.order },
+      data: {
+        slug: col.slug,
+        name: col.name,
+        description: col.description,
+        image: col.image ?? null,
+        order: col.order,
+      },
     });
     for (const doc of col.documents) {
       const status = doc.status ?? "PUBLISHED";

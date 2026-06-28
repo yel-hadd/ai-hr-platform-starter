@@ -5,15 +5,12 @@ import { can } from "@/lib/rbac";
 import { listCollectionsWithArticles } from "@/lib/kb";
 import { PageHeader } from "@/components/layout/page-header";
 import { ButtonLink } from "@/components/ui/button-link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { KbSearch } from "@/components/kb/kb-search";
-import { Settings2, FileText } from "lucide-react";
+import { Settings2, ArrowRight, BookOpen } from "lucide-react";
 
 export default async function KnowledgeBasePage() {
   const user = await requireUser();
   const t = await getTranslations("kb");
-  const tVis = await getTranslations("kbVisibility");
   const collections = await listCollectionsWithArticles({ role: user.role });
   const canManage = can(user.role, "kb:manage");
 
@@ -30,45 +27,49 @@ export default async function KnowledgeBasePage() {
         </div>
       </PageHeader>
 
-      <div className="space-y-6 p-4 md:p-8">
-        {collections.length === 0 && (
+      <div className="p-4 md:p-8">
+        {collections.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">{t("emptyReader")}</p>
-        )}
+        ) : (
+          // Pick a collection here → its page lists the articles. One clear step
+          // each, so the collection page is a first-class destination.
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {collections.map((c) => (
+              <li key={c.id}>
+                <Link
+                  href={`/kb/${c.slug}`}
+                  className="group flex h-full flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 transition-colors hover:ring-foreground/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {/* Decorative cover — alt="" so screen readers skip it. */}
+                  {c.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- decorative cover, often a data URL the Next optimizer can't process
+                    <img src={c.image} alt="" className="h-24 w-full object-cover" />
+                  ) : (
+                    <div className="flex h-24 w-full items-center justify-center bg-muted text-muted-foreground">
+                      <BookOpen className="size-6" />
+                    </div>
+                  )}
 
-        {collections.map((c) => (
-          <Card key={c.id}>
-            <CardHeader>
-              <CardTitle>
-                <Link href={`/kb/${c.slug}`} className="hover:underline">
-                  {c.name}
+                  <div className="flex flex-1 flex-col p-4">
+                    <h2 className="font-medium leading-snug">{c.name}</h2>
+                    {c.description && (
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                        {c.description}
+                      </p>
+                    )}
+                    <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{t("articleCount", { count: c.articles.length })}</span>
+                      <span className="inline-flex items-center gap-1 font-medium text-foreground/70 group-hover:text-foreground">
+                        {t("browse")}
+                        <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
+                  </div>
                 </Link>
-              </CardTitle>
-              {c.description && (
-                <p className="text-sm text-muted-foreground">{c.description}</p>
-              )}
-            </CardHeader>
-            <CardContent>
-              <ul className="divide-y">
-                {c.articles.map((a) => (
-                  <li key={a.id}>
-                    <Link
-                      href={`/kb/${c.slug}/${a.slug}`}
-                      className="flex items-center gap-3 rounded-md px-2 py-2.5 text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-                    >
-                      <FileText className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="min-w-0 flex-1 truncate font-medium">{a.title}</span>
-                      {a.visibility !== "ALL_EMPLOYEES" && (
-                        <Badge variant="secondary" className="text-[10px]">
-                          {tVis(a.visibility)}
-                        </Badge>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        ))}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </>
   );

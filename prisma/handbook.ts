@@ -16,15 +16,25 @@ export type SeedCollection = {
   slug: string;
   name: string;
   description: string;
+  image?: string; // decorative cover (stored on KbCollection.image)
   order: number;
   documents: SeedDocument[];
 };
+
+// A tiny gradient SVG as a data URL — a pleasant default cover so the collection
+// UI looks complete out of the box (admins can replace it with an uploaded image).
+// Rendered via <img>, so the SVG is inert (no script execution).
+const cover = (a: string, b: string, c: string): string =>
+  `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="0.55" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></linearGradient></defs><rect width="1200" height="300" fill="url(#g)"/></svg>`,
+  )}`;
 
 export const KB_COLLECTIONS: SeedCollection[] = [
   {
     slug: "employee-handbook",
     name: "Employee Handbook",
     description: "Company-wide policies every employee can read.",
+    image: cover("#6366f1", "#3b82f6", "#06b6d4"),
     order: 0,
     documents: [
       {
@@ -99,6 +109,7 @@ DRAFT — under review by HR. The company may offer relocation assistance for el
     slug: "management",
     name: "Management",
     description: "Guidance for managers and above.",
+    image: cover("#f59e0b", "#f97316", "#ef4444"),
     order: 1,
     documents: [
       {
@@ -120,6 +131,7 @@ Run review conversations twice a year. Prepare with concrete examples, align on 
     slug: "hr-internal",
     name: "HR Internal",
     description: "Restricted documents for HR administrators only.",
+    image: cover("#10b981", "#14b8a6", "#0ea5e9"),
     order: 2,
     documents: [
       {
