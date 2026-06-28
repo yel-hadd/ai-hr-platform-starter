@@ -155,13 +155,13 @@ Off-cycle increases require HR director approval and a written justification (re
     ],
   },
   {
-    // SCRUM-050 — Politiques RH fictives (Atlas Industries SARL). Publiées et
+    // SCRUM-050 — Politiques RH fictives (HARI SARL). Publiées et
     // visibles du reader et du chatbot. Les chiffres légaux (congés, maternité,
     // CNSS) suivent le Code du travail marocain (loi n° 65-99) ; les versions
     // anglaises du handbook ont été alignées sur ces mêmes chiffres.
     slug: "politiques-rh",
     name: "Politiques RH",
-    description: "Politiques et procédures RH internes d'Atlas Industries.",
+    description: "Politiques et procédures RH internes d'HARI.",
     image: cover("#8b5cf6", "#a855f7", "#ec4899"),
     order: 3,
     documents: [
@@ -174,7 +174,7 @@ Off-cycle increases require HR director approval and a written justification (re
 
 ## Article 1 — Objet et champ d'application
 
-La présente politique définit les règles applicables aux congés payés et aux différentes absences au sein d'Atlas Industries SARL, conformément aux dispositions du Code du travail marocain (loi n° 65-99). Elle s'applique à l'ensemble des salariés en CDI et CDD, dès la confirmation de leur période d'essai.
+La présente politique définit les règles applicables aux congés payés et aux différentes absences au sein d'HARI SARL, conformément aux dispositions du Code du travail marocain (loi n° 65-99). Elle s'applique à l'ensemble des salariés en CDI et CDD, dès la confirmation de leur période d'essai.
 
 ## Article 2 — Congé payé annuel
 
@@ -218,7 +218,7 @@ Toute absence non justifiée dans un délai de 48 heures est considérée comme 
 
 ## Article 1 — Objet et champ d'application
 
-Ce règlement encadre les modalités de mise en œuvre du télétravail au sein d'Atlas Industries SARL pour les postes éligibles, dans une démarche volontaire et réversible.
+Ce règlement encadre les modalités de mise en œuvre du télétravail au sein d'HARI SARL pour les postes éligibles, dans une démarche volontaire et réversible.
 
 ## Article 2 — Conditions d'éligibilité
 
@@ -257,11 +257,11 @@ Cette procédure décrit les étapes permettant à un salarié d'obtenir une att
 
 ## Article 2 — Qui peut faire une demande
 
-Tout salarié actif d'Atlas Industries SARL, en CDI ou CDD, peut formuler une demande d'attestation de travail, quelle que soit son ancienneté.
+Tout salarié actif d'HARI SARL, en CDI ou CDD, peut formuler une demande d'attestation de travail, quelle que soit son ancienneté.
 
 ## Article 3 — Canal et modalités de demande
 
-La demande s'effectue via le portail RH interne, rubrique « Demandes administratives », ou par e-mail à rh@atlas-industries.ma en précisant le motif de la demande (logement, visa, banque, etc.).
+La demande s'effectue via le portail RH interne, rubrique « Demandes administratives », ou par e-mail à rh@hari.ma en précisant le motif de la demande (logement, visa, banque, etc.).
 
 ## Article 4 — Délai de traitement
 
@@ -315,7 +315,7 @@ Le livret d'accueil, la charte informatique, le règlement intérieur et l'annua
 
 ## Article 1 — Objet
 
-Cette politique décrit les engagements d'Atlas Industries SARL en matière de protection des données personnelles des collaborateurs, conformément à la loi n° 09-08 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel, et aux exigences de la CNDP.
+Cette politique décrit les engagements d'HARI SARL en matière de protection des données personnelles des collaborateurs, conformément à la loi n° 09-08 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel, et aux exigences de la CNDP.
 
 ## Article 2 — Données personnelles collectées
 
@@ -343,7 +343,7 @@ Chaque collaborateur dispose d'un droit d'accès, de rectification et, dans les 
 
 ## Article 8 — Contact — référent données personnelles
 
-Toute question relative à la présente politique peut être adressée à dpo@atlas-industries.ma.`,
+Toute question relative à la présente politique peut être adressée à dpo@hari.ma.`,
       },
     ],
   },
