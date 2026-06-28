@@ -167,6 +167,7 @@
     "stop": "Arrêter la génération",
     "newChat": "Nouvelle conversation",
     "retry": "Réessayer",
+    "reload": "Recharger",
     "dismiss": "Fermer",
     "messageLabel": "Message",
     "conversation": "Conversation",
@@ -175,6 +176,8 @@
       "auth_missing": "L'assistant n'est pas encore configuré — la clé API du fournisseur est manquante.",
       "rate_limited": "Le modèle est temporairement limité. Patientez un instant ou choisissez un autre modèle.",
       "model_unavailable": "Ce modèle est indisponible pour le moment. Essayez-en un autre dans le sélecteur.",
+      "session_expired": "Votre session a expiré. Veuillez recharger la page et vous reconnecter.",
+      "network": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
       "generic": "Une erreur s'est produite. Veuillez réessayer."
     }
   },
@@ -223,7 +226,8 @@
       "date_invalid": "Veuillez utiliser une date valide (AAAA-MM-JJ).",
       "date_range_reversed": "La date de fin doit être égale ou postérieure à la date de début.",
       "request_not_found": "Cette demande est introuvable.",
-      "request_not_pending": "Cette demande a déjà été traitée et ne peut plus être modifiée."
+      "request_not_pending": "Cette demande a déjà été traitée et ne peut plus être modifiée.",
+      "internal_error": "Une erreur s'est produite lors du traitement de votre demande. Veuillez réessayer."
     },
     "summary": {
       "getCurrentDateTime": "La date, l'heure et le jour actuels (utilitaire).",

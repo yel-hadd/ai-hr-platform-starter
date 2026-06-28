@@ -167,6 +167,7 @@
     "stop": "Stop generating",
     "newChat": "New chat",
     "retry": "Retry",
+    "reload": "Reload",
     "dismiss": "Dismiss",
     "messageLabel": "Message",
     "conversation": "Conversation",
@@ -175,6 +176,8 @@
       "auth_missing": "The assistant isn't configured yet — the provider API key is missing.",
       "rate_limited": "The model is rate-limited right now. Wait a moment, or pick another model.",
       "model_unavailable": "That model is unavailable right now. Try another from the selector.",
+      "session_expired": "Your session has expired. Please reload and sign in again.",
+      "network": "Can't reach the server. Check your connection and try again.",
       "generic": "Something went wrong. Please try again."
     }
   },
@@ -223,7 +226,8 @@
       "date_invalid": "Please use a valid calendar date (YYYY-MM-DD).",
       "date_range_reversed": "The end date must be on or after the start date.",
       "request_not_found": "That request couldn't be found.",
-      "request_not_pending": "That request has already been decided and can't be changed."
+      "request_not_pending": "That request has already been decided and can't be changed.",
+      "internal_error": "Something went wrong handling that request. Please try again."
     },
     "summary": {
       "getCurrentDateTime": "The current date, time, and weekday (utility).",

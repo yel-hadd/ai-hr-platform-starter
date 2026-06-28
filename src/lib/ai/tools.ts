@@ -22,6 +22,7 @@ import {
   getPendingApprovals,
 } from "@/lib/hr";
 import { searchHandbook } from "@/lib/rag";
+import { isoDateInTimeZone } from "@/lib/datetime";
 
 export type ToolCaller = {
   role: Role;
@@ -53,12 +54,21 @@ function withPermission<I, O>(
   caller: ToolCaller,
   permission: Permission,
   fn: (input: I) => Promise<O>,
-): (input: I) => Promise<O | Refusal> {
+): (input: I) => Promise<O | Refusal | Failure> {
   return async (input: I) => {
     if (!can(caller.role, permission)) {
       return refused(`That action isn't available to your role (needs "${PERMISSION_LABELS[permission]}").`);
     }
-    return fn(input);
+    // Throw-guard (defense in depth): an unexpected throw (e.g. a DB error) must
+    // never propagate a raw message/stack to the client. Log it server-side and
+    // return a generic, localizable failure instead. Every data tool goes through
+    // here, so no app-executed tool can leak internals.
+    try {
+      return await fn(input);
+    } catch (e) {
+      console.error(`[tool] execute failed (permission: ${permission}):`, e);
+      return fail("internal_error", "Something went wrong handling that request. Please try again.");
+    }
   };
 }
 
@@ -85,10 +95,10 @@ function parseUtcDate(s: string): Date | null {
   return d.toISOString().slice(0, 10) === s ? d : null;
 }
 
-// Inclusive day count, or an error string if the range is malformed/reversed —
-// so a model passing a non-date or swapped dates fails loudly instead of
-// silently recording a 1-day request.
-function leaveDays(start: string, end: string): number | Failure {
+// Parse a start/end pair into UTC dates, or a Failure for a bad/reversed range.
+// Shared by leaveDays + businessDaysBetween so the validation can't drift between
+// the tools (a range rejected by one is rejected the same way by the other).
+function parseRange(start: string, end: string): { start: Date; end: Date } | Failure {
   const startD = parseUtcDate(start);
   const endD = parseUtcDate(end);
   if (!startD || !endD) {
@@ -97,7 +107,21 @@ function leaveDays(start: string, end: string): number | Failure {
   if (endD < startD) {
     return fail("date_range_reversed", "End date must be on or after the start date.");
   }
-  return Math.round((endD.getTime() - startD.getTime()) / 86_400_000) + 1;
+  return { start: startD, end: endD };
+}
+
+/** Inclusive count of calendar days between two UTC midnights. */
+function inclusiveCalendarDays(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+}
+
+// Inclusive day count, or a Failure if the range is malformed/reversed — so a
+// model passing a non-date or swapped dates fails loudly instead of silently
+// recording a 1-day request.
+function leaveDays(start: string, end: string): number | Failure {
+  const range = parseRange(start, end);
+  if ("error" in range) return range;
+  return inclusiveCalendarDays(range.start, range.end);
 }
 
 /**
@@ -129,7 +153,7 @@ function buildAllHrTools(caller: ToolCaller, timezone = "UTC") {
         // prompt declares as the source of truth for "today" — so the model never
         // sees a date/weekday/zone that contradicts the prompt. en-CA → YYYY-MM-DD.
         return {
-          date: new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now),
+          date: isoDateInTimeZone(now, timezone),
           weekday: now.toLocaleDateString("en-US", { weekday: "long", timeZone: timezone }),
           time: now.toLocaleTimeString("en-US", {
             hour: "2-digit",
@@ -149,7 +173,7 @@ function buildAllHrTools(caller: ToolCaller, timezone = "UTC") {
       }),
       execute: async ({ date }) => {
         const d = parseUtcDate(date);
-        if (!d) return { error: "Date must be a valid calendar date in YYYY-MM-DD." };
+        if (!d) return fail("date_invalid", "Date must be a valid calendar date in YYYY-MM-DD.");
         const dow = d.getUTCDay();
         return {
           date,
@@ -167,12 +191,9 @@ function buildAllHrTools(caller: ToolCaller, timezone = "UTC") {
         endDate: z.string().describe("End date, YYYY-MM-DD"),
       }),
       execute: async ({ startDate, endDate }) => {
-        const start = parseUtcDate(startDate);
-        const end = parseUtcDate(endDate);
-        if (!start || !end) {
-          return { error: "Dates must be a valid calendar date in YYYY-MM-DD." };
-        }
-        if (end < start) return { error: "End date must be on or after the start date." };
+        const range = parseRange(startDate, endDate);
+        if ("error" in range) return range;
+        const { start, end } = range;
 
         let businessDays = 0;
         const cur = new Date(start);
@@ -181,8 +202,7 @@ function buildAllHrTools(caller: ToolCaller, timezone = "UTC") {
           if (dow !== 0 && dow !== 6) businessDays++;
           cur.setUTCDate(cur.getUTCDate() + 1);
         }
-        const calendarDays = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
-        return { startDate, endDate, calendarDays, businessDays };
+        return { startDate, endDate, calendarDays: inclusiveCalendarDays(start, end), businessDays };
       },
     }),
 

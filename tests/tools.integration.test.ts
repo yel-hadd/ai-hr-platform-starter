@@ -291,6 +291,7 @@ describe("calendar utilities — deterministic date math", () => {
     for (const date of ["next monday", "2026-06-31", "2026-02-30", "2026-13-01"]) {
       const out = await call(tools.getDateInfo, { date });
       expect(out.error, `expected ${date} to be rejected`).toBeDefined();
+      expect(out.errorCode).toBe("date_invalid"); // localized by the UI even though silent
       expect(out.weekday).toBeUndefined();
     }
   });
@@ -313,6 +314,7 @@ describe("calendar utilities — deterministic date math", () => {
       endDate: "2026-06-23",
     });
     expect(out.error).toMatch(/on or after/i);
+    expect(out.errorCode).toBe("date_range_reversed");
   });
 
   it("getCurrentDateTime reports the org timezone it was built with (not the server's)", async () => {
