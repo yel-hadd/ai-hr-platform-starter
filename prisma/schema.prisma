@@ -56,7 +56,7 @@ location String
 startDate DateTime
 status EmploymentStatus @default(ACTIVE)
 employmentType EmploymentType @default(FULL_TIME)
-salary Int // annual, in USD — sensitive: only HR/Super can read via tools
+salary Int // annual, in the org's configured currency (see OrgSettings) — sensitive: only HR/Super can read via tools
 avatarUrl String?
 
 // Self-referential org chart.

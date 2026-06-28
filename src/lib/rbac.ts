@@ -23,7 +23,6 @@ export const PERMISSIONS = [
   "salary:read:all", // see compensation for anyone
   "leave:request", // submit time-off
   "leave:read:self",
-  "leave:read:team",
   "leave:approve", // approve/reject requests
   "payslip:read:self",
   "payslip:read:any",
@@ -41,7 +40,6 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "salary:read:all": "View anyone's compensation",
   "leave:request": "Request time off",
   "leave:read:self": "View own leave",
-  "leave:read:team": "View team leave",
   "leave:approve": "Approve / reject leave",
   "payslip:read:self": "View own payslips",
   "payslip:read:any": "View anyone's payslips",
@@ -62,7 +60,6 @@ const EMPLOYEE: Permission[] = [
 const MANAGER: Permission[] = [
   ...EMPLOYEE,
   "directory:read:team",
-  "leave:read:team",
   "leave:approve",
 ];
 

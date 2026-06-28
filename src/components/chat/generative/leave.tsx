@@ -1,7 +1,7 @@
 import { CalendarDays, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
-import { asLeaveType } from "@/lib/leave";
+import { asLeaveType, type LeaveStatus } from "@/lib/leave";
 
 type Balance = {
   type: string;
@@ -13,8 +13,15 @@ type Balance = {
 export function LeaveBalances({ balances }: { balances: Balance[] }) {
   const t = useTranslations("leave");
   const tType = useTranslations("leaveType");
+  if (balances.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+        {t("noBalances")}
+      </p>
+    );
+  }
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {balances.map((b) => {
         const pct = b.totalDays ? (b.remainingDays / b.totalDays) * 100 : 0;
         return (
@@ -58,7 +65,7 @@ export function LeaveRequestCard({
     endDate: string;
     days: number;
     reason: string | null;
-    status: keyof typeof STATUS;
+    status: LeaveStatus;
   };
 }) {
   const t = useTranslations("leave");
@@ -93,7 +100,7 @@ export function ApprovalResultCard({
     employeeName: string;
     type: string;
     days: number;
-    status: keyof typeof STATUS;
+    status: LeaveStatus;
   };
 }) {
   const t = useTranslations("leave");
@@ -150,7 +157,6 @@ export function PendingApprovals({
           <p className="text-xs text-muted-foreground tabular-nums">
             {r.startDate} → {r.endDate}
           </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">id: {r.id}</p>
         </div>
       ))}
     </div>

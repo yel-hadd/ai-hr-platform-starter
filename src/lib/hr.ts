@@ -27,8 +27,8 @@ export type DirectoryEntry = {
 
 /**
  * The set of employees the caller may see, as a Prisma WHERE. This is the single
- * source of "directory scope": reused by getDirectory, getDirectoryFacets AND
- * getPayslip so a tool can never reach an employee the dashboard wouldn't show
+ * source of "directory scope": reused by getEmployeeDirectory, getEmployeeDirectoryFacets
+ * AND getPayslip so a tool can never reach an employee the dashboard wouldn't show
  * for that role. A caller with no employeeId matches the sentinel "__none__" →
  * empty set. Scope only — it must NOT encode employment-status filtering (that
  * would also hide e.g. a TERMINATED employee's payslip from HR).
@@ -70,7 +70,7 @@ function statusClause(status: string[] | undefined): Prisma.EmployeeWhereInput {
 }
 
 /** Employees visible to the caller, scoped by role and narrowed by UI filters. */
-export async function getDirectory(
+export async function getEmployeeDirectory(
   caller: Caller,
   filters: DirectoryFilters = {},
 ): Promise<DirectoryEntry[]> {
@@ -117,7 +117,7 @@ export async function getDirectory(
 }
 
 /** Distinct departments/cities WITHIN the caller's scope — for filter options. */
-export async function getDirectoryFacets(
+export async function getEmployeeDirectoryFacets(
   caller: Caller,
 ): Promise<{ departments: string[]; cities: string[] }> {
   const rows = await prisma.employee.findMany({
@@ -211,7 +211,6 @@ export async function getPendingApprovals(caller: Caller): Promise<LeaveRequestV
 
 export type PayslipView = {
   employeeName: string;
-  period: string;
   grossMonthly: number;
   tax: number;
   netMonthly: number;
@@ -243,20 +242,21 @@ export async function getPayslip(
   if (!resolvedId) return { ok: false, reason: "not_found" };
 
   // One scoped query: the id AND the caller's visibility predicate must match,
-  // so we never read outside what getDirectory would return for this role.
+  // so we never read outside what getEmployeeDirectory would return for this role.
   const target = await prisma.employee.findFirst({
     where: { AND: [directoryWhere(caller), { id: resolvedId }] },
     include: { user: { select: { name: true } } },
   });
   if (!target) return { ok: false, reason: "not_found" };
 
+  // `salary` is denominated in the org's configured currency (see settings.ts /
+  // schema.prisma) — never converted; the cards format it with that currency.
   const grossMonthly = Math.round(target.salary / 12);
   const tax = Math.round(grossMonthly * 0.22);
   return {
     ok: true,
     payslip: {
       employeeName: target.user.name,
-      period: "Most recent month",
       grossMonthly,
       tax,
       netMonthly: grossMonthly - tax,

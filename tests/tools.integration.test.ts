@@ -196,6 +196,7 @@ describe("requestTimeOff — write path", () => {
       endDate: "2026-09-01",
     });
     expect(reversed.error).toMatch(/on or after/i);
+    expect(reversed.errorCode).toBe("date_range_reversed"); // localized by the UI
     expect(reversed.request).toBeUndefined();
 
     const malformed = await call(tools.requestTimeOff, {
@@ -204,6 +205,7 @@ describe("requestTimeOff — write path", () => {
       endDate: "2026-09-01",
     });
     expect(malformed.error).toMatch(/YYYY-MM-DD/);
+    expect(malformed.errorCode).toBe("date_invalid");
 
     // An impossible day (June has 30 days) must be rejected, not silently
     // rolled forward to July 1.
@@ -229,6 +231,7 @@ describe("approveLeave — only acts on PENDING", () => {
       decision: "APPROVE",
     });
     expect(out.error).toMatch(/already approved/i);
+    expect(out.errorCode).toBe("request_not_pending"); // localized by the UI
     expect(out.result).toBeUndefined();
   });
 });
@@ -242,7 +245,7 @@ describe("tool catalogue — irrelevant tools aren't injected per role", () => {
         "getDateInfo",
         "businessDaysBetween",
         "getEmployeeDirectory",
-        "getLeaveBalance",
+        "getLeaveBalances",
         "getPayslip",
         "requestTimeOff",
         "searchHandbook",
@@ -310,5 +313,14 @@ describe("calendar utilities — deterministic date math", () => {
       endDate: "2026-06-23",
     });
     expect(out.error).toMatch(/on or after/i);
+  });
+
+  it("getCurrentDateTime reports the org timezone it was built with (not the server's)", async () => {
+    // The org timezone is threaded into the tools so the calendar tool can never
+    // contradict the system prompt's declared "today".
+    const tools = buildHrTools(callers.employee, { timezone: "Australia/Sydney" });
+    const out = await call(tools.getCurrentDateTime, {});
+    expect(out.timeZone).toBe("Australia/Sydney");
+    expect(out.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });

@@ -43,7 +43,6 @@
     "salary:read:all": "View anyone's compensation",
     "leave:request": "Request time off",
     "leave:read:self": "View own leave",
-    "leave:read:team": "View team leave",
     "leave:approve": "Approve / reject leave",
     "payslip:read:self": "View own payslips",
     "payslip:read:any": "View anyone's payslips",
@@ -133,6 +132,7 @@
     "modelRegistryDescription": "Chat defaults to OpenRouter free models; the Vercel AI Gateway is selectable per request. Configure keys via environment variables.",
     "reasoning": "reasoning",
     "default": "default",
+    "requiresGatewayKey": "requires AI_GATEWAY_API_KEY",
     "localization": "Localization",
     "localizationDescription": "Currency and timezone used across the app and by the AI assistant.",
     "currency": "Currency",
@@ -160,14 +160,23 @@
     "suggestion2": "How many vacation days do I have left?",
     "suggestion3": "Show me the team directory",
     "suggestion4": "Show me my latest payslip",
+    "suggestionMyProfile": "Show me my profile",
+    "suggestionApprovals": "What time-off requests are awaiting my approval?",
     "placeholder": "Ask anything… (Shift+Enter for newline)",
     "send": "Send message",
     "stop": "Stop generating",
+    "newChat": "New chat",
+    "retry": "Retry",
+    "dismiss": "Dismiss",
     "messageLabel": "Message",
     "conversation": "Conversation",
-    "you": "You",
     "assistantLabel": "Assistant",
-    "error": "Something went wrong. Check that the provider API key is set in your environment."
+    "errors": {
+      "auth_missing": "The assistant isn't configured yet — the provider API key is missing.",
+      "rate_limited": "The model is rate-limited right now. Wait a moment, or pick another model.",
+      "model_unavailable": "That model is unavailable right now. Try another from the selector.",
+      "generic": "Something went wrong. Please try again."
+    }
   },
   "reasoning": {
     "thinking": "Thinking…",
@@ -183,7 +192,8 @@
     "daysRemainingLabel": "{type} days remaining",
     "duration": "{type} · {count, plural, one {# day} other {# days}}",
     "approvalResult": "{name}'s {days}-day {type} request was {status, select, APPROVED {approved} REJECTED {rejected} other {updated}}.",
-    "noPendingApprovals": "No requests awaiting approval."
+    "noPendingApprovals": "No requests awaiting approval.",
+    "noBalances": "No leave balances to show."
   },
   "directoryCard": {
     "empty": "No matching people.",
@@ -192,30 +202,40 @@
   "payslip": {
     "gross": "Gross",
     "tax": "Tax (22%)",
-    "net": "Net"
+    "net": "Net",
+    "period": "Most recent month"
   },
   "tools": {
     "status": {
       "searchHandbook": "Searching the handbook",
       "getEmployeeDirectory": "Looking up the directory",
-      "getLeaveBalance": "Checking leave balance",
+      "getLeaveBalances": "Checking leave balance",
       "requestTimeOff": "Submitting time-off request",
       "listPendingApprovals": "Fetching pending approvals",
       "approveLeave": "Processing approval",
       "getPayslip": "Retrieving payslip"
     },
     "error": "Tool error",
+    "errors": {
+      "handbook_unavailable": "Handbook search is unavailable right now.",
+      "handbook_dim_mismatch": "Handbook search is misconfigured (embedding model mismatch).",
+      "no_employee_profile": "No employee profile is linked to your account.",
+      "date_invalid": "Please use a valid calendar date (YYYY-MM-DD).",
+      "date_range_reversed": "The end date must be on or after the start date.",
+      "request_not_found": "That request couldn't be found.",
+      "request_not_pending": "That request has already been decided and can't be changed."
+    },
     "summary": {
       "getCurrentDateTime": "The current date, time, and weekday (utility).",
       "getDateInfo": "Weekday / weekend status for a given date (utility).",
       "businessDaysBetween": "Working-day count between two dates (utility).",
       "searchHandbook": "Search the employee handbook (RAG) and cite sections.",
-      "getEmployeeDirectory": "List employees the caller is allowed to see.",
-      "getLeaveBalance": "The caller's own time-off balances.",
-      "requestTimeOff": "Submit a time-off request for the caller.",
-      "listPendingApprovals": "List requests awaiting the caller's approval.",
+      "getEmployeeDirectory": "List employees you're allowed to see.",
+      "getLeaveBalances": "Your own time-off balances.",
+      "requestTimeOff": "Submit a time-off request for you.",
+      "listPendingApprovals": "List requests awaiting your approval.",
       "approveLeave": "Approve or reject a pending request.",
-      "getPayslip": "A payslip — own, or anyone visible with elevated rights."
+      "getPayslip": "A payslip — your own, or anyone visible with elevated rights."
     }
   },
   "login": {

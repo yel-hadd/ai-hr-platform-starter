@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { BookOpen, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -13,7 +13,7 @@ export type CitationHit = {
   section: string;
   anchor: string;
   content: string;
-  similarity: number;
+  similarity: number | null;
   articleTitle: string;
   articleSlug: string;
   collectionSlug: string;
@@ -37,6 +37,7 @@ export function Citations({
   const t = useTranslations("citations");
   const [open, setOpen] = useState(false);
   const expanded = streaming || open;
+  const panelId = useId();
 
   return (
     <div className="rounded-lg border bg-card text-sm">
@@ -44,6 +45,7 @@ export function Citations({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={expanded}
+        aria-controls={panelId}
         className="flex w-full items-center gap-2 px-3 py-2 text-muted-foreground"
       >
         <BookOpen className="size-4 shrink-0" />
@@ -57,7 +59,7 @@ export function Citations({
       </button>
 
       {expanded && (
-        <div className="space-y-2 px-3 pb-3">
+        <div id={panelId} className="space-y-2 px-3 pb-3">
           {results.length === 0 && (
             <p className="text-muted-foreground">{t("empty")}</p>
           )}
@@ -80,9 +82,11 @@ export function Citations({
                       <span className="font-mono text-xs text-muted-foreground">[{r.ref}]</span>
                       <span className="truncate font-medium">{r.section}</span>
                     </span>
-                    <Badge variant="secondary" className="text-[10px] tabular-nums">
-                      {t("match", { pct: (r.similarity * 100).toFixed(0) })}
-                    </Badge>
+                    {r.similarity != null && (
+                      <Badge variant="secondary" className="text-[10px] tabular-nums">
+                        {t("match", { pct: (r.similarity * 100).toFixed(0) })}
+                      </Badge>
+                    )}
                   </div>
                   <p className="mb-1 truncate text-xs font-medium text-muted-foreground">
                     {r.articleTitle}

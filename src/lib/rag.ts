@@ -20,7 +20,7 @@ export type HandbookHit = {
   section: string;
   anchor: string;
   content: string;
-  similarity: number; // cosine: 1 = identical, 0 = unrelated (for display)
+  similarity: number | null; // cosine (1 = identical); null for a lexical-only hit with no embedding
   articleTitle: string;
   articleSlug: string;
   collectionSlug: string;
@@ -79,7 +79,8 @@ export async function searchHandbook(
         FROM vec FULL OUTER JOIN lex ON vec.id = lex.id
       )
       SELECT hc.id, hc.section, hc.anchor, hc.content,
-             1 - (hc.embedding <=> ${vec}::halfvec) AS similarity,
+             CASE WHEN hc.embedding IS NULL THEN NULL
+                  ELSE 1 - (hc.embedding <=> ${vec}::halfvec) END AS similarity,
              d.title AS "articleTitle",
              d.slug AS "articleSlug",
              col.slug AS "collectionSlug"
