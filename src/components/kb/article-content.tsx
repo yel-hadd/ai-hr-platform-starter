@@ -35,11 +35,11 @@ const heading =
 
 const components = {
   h1: ({ children }: { children?: ReactNode }) => (
-    <h1 className="mb-2 mt-4 text-xl font-semibold first:mt-0">{children}</h1>
+    <h1 className="mb-2 mt-6 text-2xl font-semibold first:mt-0">{children}</h1>
   ),
-  h2: heading("h2", "mb-2 mt-6 text-lg font-semibold first:mt-0"),
-  h3: heading("h3", "mb-1.5 mt-5 text-base font-semibold"),
-  p: ({ children }: { children?: ReactNode }) => <p className="my-2 leading-relaxed">{children}</p>,
+  h2: heading("h2", "mb-2 mt-7 text-xl font-semibold first:mt-0"),
+  h3: heading("h3", "mb-1.5 mt-6 text-lg font-semibold"),
+  p: ({ children }: { children?: ReactNode }) => <p className="my-3 leading-relaxed">{children}</p>,
   ul: ({ children }: { children?: ReactNode }) => (
     <ul className="my-2 list-disc space-y-1 pl-6">{children}</ul>
   ),
@@ -101,7 +101,8 @@ const processor = unified()
 export function ArticleContent({ content }: { content: string }) {
   const rendered = processor.processSync(content).result as unknown as ReactNode;
   return (
-    <div className="text-sm">
+    // Comfortable long-form reading size (16px), a step up from the app's dense 14px.
+    <div className="text-base">
       <HighlightOnHash />
       {rendered}
     </div>

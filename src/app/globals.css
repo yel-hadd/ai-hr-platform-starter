@@ -156,3 +156,18 @@
   box-shadow: 0 0 0 0.5rem var(--accent);
   transition: background-color 1.2s ease-out, box-shadow 1.2s ease-out;
 }
+/* KB article editor (BlockNote): tune the in-content heading scale so the page's
+   document Title stays the largest element. Without this, BlockNote's default H2
+   (32px) is bigger than the title and the hierarchy reads inverted. */
+.bn-editor h1 {
+  font-size: 1.75rem !important;
+  line-height: 1.3 !important;
+}
+.bn-editor h2 {
+  font-size: 1.375rem !important;
+  line-height: 1.35 !important;
+}
+.bn-editor h3 {
+  font-size: 1.125rem !important;
+  line-height: 1.4 !important;
+}

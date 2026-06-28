@@ -41,8 +41,9 @@ export function ArticleEditor({
     };
   }, [html, defaultValue]);
 
+  // Borderless: the editor is the page's writing surface, not a form field.
   return (
-    <div ref={rootRef} className="rounded-md border bg-background">
+    <div ref={rootRef}>
       <input type="hidden" name={name} value={html} />
       <Editor initialHTML={defaultValue} onChange={setHtml} />
     </div>
