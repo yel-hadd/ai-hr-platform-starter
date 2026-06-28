@@ -14,6 +14,7 @@ import {
   getArticle,
   listCollectionsWithArticles,
   createDocument,
+  updateDocument,
   searchKb,
   setCollectionAssistantAccess,
   setDocumentAssistantAccess,
@@ -197,6 +198,84 @@ describe("assistant access (super-admin policy)", () => {
     await expect(
       setCollectionAssistantAccess(as("HR_ADMIN"), "any-id", false),
     ).rejects.toThrow(/admin:settings/);
+  });
+});
+
+describe("assistant override on the article form (admin:settings only)", () => {
+  const colId = async () =>
+    (await prisma.kbCollection.findUniqueOrThrow({
+      where: { slug: "employee-handbook" },
+      select: { id: true },
+    })).id;
+  const overrideOf = async (id: string) =>
+    (await prisma.hrDocument.findUniqueOrThrow({
+      where: { id },
+      select: { assistantEnabled: true },
+    })).assistantEnabled;
+
+  it("a super admin can set the override at create", async () => {
+    const doc = await createDocument(as("SUPER_ADMIN"), {
+      slug: "tmp-sa-create",
+      title: "Tmp",
+      content: "<p>x</p>",
+      collectionId: await colId(),
+      visibility: "ALL_EMPLOYEES",
+      assistantOverride: false,
+    });
+    try {
+      expect(await overrideOf(doc.id)).toBe(false);
+    } finally {
+      await prisma.hrDocument.delete({ where: { id: doc.id } });
+    }
+  });
+
+  it("an HR admin's edit cannot change the override (no clobber)", async () => {
+    const doc = await createDocument(as("SUPER_ADMIN"), {
+      slug: "tmp-hr-noclobber",
+      title: "Tmp",
+      content: "<p>x</p>",
+      collectionId: await colId(),
+      visibility: "ALL_EMPLOYEES",
+      assistantOverride: false,
+    });
+    try {
+      // Even if the field is submitted, lib re-checks admin:settings and ignores it.
+      await updateDocument(as("HR_ADMIN"), doc.id, {
+        slug: "tmp-hr-noclobber",
+        title: "Tmp edited",
+        content: "<p>y</p>",
+        collectionId: await colId(),
+        visibility: "ALL_EMPLOYEES",
+        assistantOverride: true,
+      });
+      expect(await overrideOf(doc.id)).toBe(false); // unchanged
+    } finally {
+      await prisma.hrDocument.delete({ where: { id: doc.id } });
+    }
+  });
+
+  it("a super admin's edit can change the override", async () => {
+    const doc = await createDocument(as("SUPER_ADMIN"), {
+      slug: "tmp-sa-update",
+      title: "Tmp",
+      content: "<p>x</p>",
+      collectionId: await colId(),
+      visibility: "ALL_EMPLOYEES",
+    });
+    try {
+      expect(await overrideOf(doc.id)).toBeNull(); // inherit by default
+      await updateDocument(as("SUPER_ADMIN"), doc.id, {
+        slug: "tmp-sa-update",
+        title: "Tmp",
+        content: "<p>x</p>",
+        collectionId: await colId(),
+        visibility: "ALL_EMPLOYEES",
+        assistantOverride: true,
+      });
+      expect(await overrideOf(doc.id)).toBe(true);
+    } finally {
+      await prisma.hrDocument.delete({ where: { id: doc.id } });
+    }
   });
 });
 

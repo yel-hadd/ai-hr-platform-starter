@@ -20,7 +20,12 @@ export default async function NewDocumentPage() {
         <DocumentForm
           action={createDocumentAction}
           submitLabel={t("createDocument")}
-          collections={collections.map((c) => ({ id: c.id, name: c.name }))}
+          canSetAssistant={can(user.role, "admin:settings")}
+          collections={collections.map((c) => ({
+            id: c.id,
+            name: c.name,
+            assistantEnabled: c.assistantEnabled,
+          }))}
         />
       </div>
     </>

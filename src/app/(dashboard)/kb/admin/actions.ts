@@ -41,6 +41,15 @@ function tagsOf(fd: FormData): string[] {
   return [...new Set(str(fd, "tags").split(",").map((t) => t.trim()).filter(Boolean))];
 }
 
+// Assistant-access override from the form: `inherit`/`on`/`off` → null/true/false.
+// Absent (the field isn't rendered for non-eligible roles) → undefined = leave it
+// unchanged. lib/kb re-checks `admin:settings` before honoring any value.
+function assistantOverrideOf(fd: FormData): boolean | null | undefined {
+  if (!fd.has("assistantOverride")) return undefined;
+  const v = str(fd, "assistantOverride");
+  return v === "on" ? true : v === "off" ? false : null;
+}
+
 function refresh() {
   revalidatePath("/kb", "layout"); // reader + admin both read this data
 }
@@ -99,6 +108,7 @@ export async function createDocumentAction(fd: FormData) {
     collectionId,
     visibility: visibilityOf(fd),
     tags: tagsOf(fd),
+    assistantOverride: assistantOverrideOf(fd),
   });
   refresh();
   redirect("/kb/admin?saved=1");
@@ -117,6 +127,7 @@ export async function updateDocumentAction(fd: FormData) {
     collectionId,
     visibility: visibilityOf(fd),
     tags: tagsOf(fd),
+    assistantOverride: assistantOverrideOf(fd),
   });
   refresh();
   redirect("/kb/admin?saved=1");

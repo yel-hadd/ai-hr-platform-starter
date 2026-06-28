@@ -371,7 +371,11 @@
     "assistantNoResults": "No matches.",
     "paginationPrev": "Previous",
     "paginationNext": "Next",
-    "paginationPageOf": "Page {page} of {pages}"
+    "paginationPageOf": "Page {page} of {pages}",
+    "assistantFieldLabel": "Chatbot access",
+    "assistantOverrideInheritState": "Inherit from collection ({state})",
+    "assistantFieldHintOn": "This article can be used by the AI assistant.",
+    "assistantFieldHintOff": "This article is hidden from the AI assistant."
   },
   "kbStatus": {
     "DRAFT": "Draft",
