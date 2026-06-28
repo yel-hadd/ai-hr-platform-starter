@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/ui/button-link";
 import { Input } from "@/components/ui/input";
 import { SlugField } from "@/components/kb/slug-field";
 import { ArticleEditor } from "@/components/kb/article-editor";
+import { AssistantOverrideField } from "@/components/kb/assistant-override-field";
 
 const VISIBILITIES = Object.values(DocVisibility);
 
@@ -16,6 +17,7 @@ type Defaults = {
   collectionId?: string;
   visibility?: DocVisibility;
   tags?: string[];
+  assistantOverride?: boolean | null;
 };
 
 const selectClass =
@@ -27,12 +29,14 @@ export async function DocumentForm({
   collections,
   defaults = {},
   published = false,
+  canSetAssistant = false,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   submitLabel: string;
-  collections: { id: string; name: string }[];
+  collections: { id: string; name: string; assistantEnabled: boolean }[];
   defaults?: Defaults;
   published?: boolean;
+  canSetAssistant?: boolean;
 }) {
   const t = await getTranslations("kb");
   const tVis = await getTranslations("kbVisibility");
@@ -54,8 +58,8 @@ export async function DocumentForm({
         <span className="text-xs text-muted-foreground">{t("fieldTagsHint")}</span>
       </label>
 
-      <div className="flex flex-wrap gap-4">
-        <div className="flex-1">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
           <SlugField
             defaultValue={defaults.slug ?? ""}
             basePath="…/"
@@ -64,7 +68,7 @@ export async function DocumentForm({
           />
         </div>
 
-        <label className="block flex-1 space-y-1 text-sm">
+        <label className="block space-y-1 text-sm">
           <span className="font-medium">{t("fieldCollection")}</span>
           <select name="collectionId" defaultValue={defaults.collectionId ?? ""} required className={selectClass}>
             {collections.map((c) => (
@@ -73,7 +77,7 @@ export async function DocumentForm({
           </select>
         </label>
 
-        <label className="block flex-1 space-y-1 text-sm">
+        <label className="block space-y-1 text-sm">
           <span className="font-medium">{t("fieldVisibility")}</span>
           <select
             name="visibility"
@@ -85,6 +89,14 @@ export async function DocumentForm({
             ))}
           </select>
         </label>
+
+        {canSetAssistant && (
+          <AssistantOverrideField
+            collections={collections}
+            defaultCollectionId={defaults.collectionId ?? collections[0]?.id ?? ""}
+            defaultOverride={defaults.assistantOverride ?? null}
+          />
+        )}
       </div>
       </div>
 

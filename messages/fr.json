@@ -371,7 +371,11 @@
     "assistantNoResults": "Aucun résultat.",
     "paginationPrev": "Précédent",
     "paginationNext": "Suivant",
-    "paginationPageOf": "Page {page} sur {pages}"
+    "paginationPageOf": "Page {page} sur {pages}",
+    "assistantFieldLabel": "Accès au chatbot",
+    "assistantOverrideInheritState": "Hériter de la collection ({state})",
+    "assistantFieldHintOn": "Cet article peut être utilisé par l’assistant IA.",
+    "assistantFieldHintOff": "Cet article est masqué pour l’assistant IA."
   },
   "kbStatus": {
     "DRAFT": "Brouillon",

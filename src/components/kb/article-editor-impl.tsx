@@ -4,7 +4,7 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { useEffect } from "react";
 import { useTheme } from "next-themes";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { en, fr } from "@blocknote/core/locales";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
@@ -22,9 +22,15 @@ export function ArticleEditorImpl({
   onChange: (html: string) => void;
 }) {
   const locale = useLocale();
+  const t = useTranslations("kb");
   // Localize the editor chrome (slash menu, placeholders, tooltips) to the app
-  // locale; BlockNote ships the dictionaries.
-  const editor = useCreateBlockNote({ dictionary: locale === "fr" ? fr : en });
+  // locale; BlockNote ships the dictionaries. `domAttributes.editor` gives the
+  // contenteditable an accessible name (it's a role=textbox with no <label> to
+  // associate), so it passes axe's aria-input-field-name check.
+  const editor = useCreateBlockNote({
+    dictionary: locale === "fr" ? fr : en,
+    domAttributes: { editor: { "aria-label": t("fieldContent") } },
+  });
   const { resolvedTheme } = useTheme();
 
   // Load the stored HTML into the editor once, then emit the normalized HTML.

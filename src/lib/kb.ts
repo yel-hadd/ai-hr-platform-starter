@@ -474,9 +474,14 @@ export async function createDocument(
     collectionId: string;
     visibility: DocVisibility;
     tags?: string[];
+    // Assistant-access override (null = inherit collection). Only applied for
+    // callers who hold `admin:settings`; ignored otherwise — so the field on the
+    // authoring form is a Super-Admin control even though kb:manage owns the form.
+    assistantOverride?: boolean | null;
   },
 ) {
   assertManage(caller);
+  const canSetAssistant = can(caller.role, "admin:settings");
   return prisma.hrDocument.create({
     data: {
       slug: await uniqueSlug("hrDocument", input.slug || input.title),
@@ -486,6 +491,7 @@ export async function createDocument(
       visibility: input.visibility,
       tags: input.tags ?? [],
       status: "DRAFT",
+      assistantEnabled: canSetAssistant ? (input.assistantOverride ?? null) : null,
       createdById: caller.id ?? null,
       updatedById: caller.id ?? null,
     },
@@ -507,6 +513,9 @@ export async function updateDocument(
     collectionId: string;
     visibility: DocVisibility;
     tags?: string[];
+    // `undefined` = leave the override untouched (the field wasn't editable for
+    // this caller). A value is only honored for `admin:settings` holders.
+    assistantOverride?: boolean | null;
   },
 ) {
   assertManage(caller);
@@ -517,6 +526,8 @@ export async function updateDocument(
   if (!existing) throw new Error("Document not found");
 
   const isPublished = existing.status === "PUBLISHED";
+  const setAssistant =
+    input.assistantOverride !== undefined && can(caller.role, "admin:settings");
   const updated = await prisma.hrDocument.update({
     where: { id },
     data: {
@@ -527,6 +538,7 @@ export async function updateDocument(
       visibility: input.visibility,
       tags: input.tags ?? [],
       updatedById: caller.id ?? null,
+      ...(setAssistant ? { assistantEnabled: input.assistantOverride } : {}),
       ...(isPublished ? { version: { increment: 1 } } : {}),
     },
   });

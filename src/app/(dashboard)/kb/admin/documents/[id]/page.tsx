@@ -89,7 +89,12 @@ export default async function EditDocumentPage({
           action={updateDocumentAction}
           submitLabel={t("save")}
           published={doc.status === "PUBLISHED"}
-          collections={collections.map((c) => ({ id: c.id, name: c.name }))}
+          canSetAssistant={can(user.role, "admin:settings")}
+          collections={collections.map((c) => ({
+            id: c.id,
+            name: c.name,
+            assistantEnabled: c.assistantEnabled,
+          }))}
           defaults={{
             id: doc.id,
             title: doc.title,
@@ -98,6 +103,7 @@ export default async function EditDocumentPage({
             collectionId: doc.collectionId,
             visibility: doc.visibility,
             tags: doc.tags,
+            assistantOverride: doc.assistantEnabled,
           }}
         />
       </div>
