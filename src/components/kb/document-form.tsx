@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { DocStatus, DocVisibility } from "@prisma/client";
+import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { SlugField } from "@/components/kb/slug-field";
 import { ArticleEditor } from "@/components/kb/article-editor";
 import { AssistantOverrideField } from "@/components/kb/assistant-override-field";
 import { DocumentLifecycle } from "@/components/kb/document-lifecycle";
+import { PillRadioGroup } from "@/components/kb/pill-radio-group";
+import { TagInput } from "@/components/kb/tag-input";
 
 const VISIBILITIES = Object.values(DocVisibility);
 
@@ -34,10 +36,9 @@ type Defaults = {
 const selectClass = "block w-full rounded-md border bg-background px-3 py-2 text-sm";
 
 // Authoring surface: the title + editor are the canvas (left, readable width);
-// everything else — Save, lifecycle, and the document settings — lives in a
-// sticky sidebar so the primary actions stay reachable while editing a long
-// article. On mobile the sidebar moves above the editor (flex-col-reverse) so
-// Save and settings are seen first.
+// Save, lifecycle, and document settings live in one sticky sidebar panel so the
+// primary actions stay reachable while editing. On mobile the panel moves above
+// the editor (flex-col-reverse) so Save and settings are seen first.
 export async function DocumentForm({
   action,
   submitLabel,
@@ -55,8 +56,8 @@ export async function DocumentForm({
   defaults?: Defaults;
   published?: boolean;
   canSetAssistant?: boolean;
-  status?: DocStatus; // present on edit → renders status + lifecycle in the sidebar
-  viewHref?: string; // link to the live article (published docs)
+  status?: DocStatus;
+  viewHref?: string;
   lifecycle?: { publish: ServerAction; unpublish: ServerAction; archive: ServerAction };
 }) {
   const t = await getTranslations("kb");
@@ -87,11 +88,11 @@ export async function DocumentForm({
           </div>
         </div>
 
-        {/* Settings sidebar (sticky on desktop) */}
+        {/* Sticky settings panel */}
         <aside className="lg:w-80 lg:shrink-0">
-          <div className="space-y-4 lg:sticky lg:top-6">
+          <div className="overflow-hidden rounded-xl border bg-card lg:sticky lg:top-6">
             {/* Actions */}
-            <div className="space-y-3 rounded-xl border bg-card p-4">
+            <div className="space-y-3 p-4">
               <div className="flex items-center gap-2">
                 <Button type="submit" size="sm" className="flex-1">{submitLabel}</Button>
                 <ButtonLink href="/kb/admin" size="sm" variant="ghost">{t("cancel")}</ButtonLink>
@@ -99,14 +100,18 @@ export async function DocumentForm({
 
               {status && (
                 <>
-                  <div className="flex items-center justify-between border-t pt-3 text-sm">
+                  <div className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2 text-muted-foreground">
                       {t("status")}
                       <Badge variant={STATUS_VARIANT[status]}>{tStatus(status)}</Badge>
                     </span>
                     {viewHref && (
-                      <Link href={viewHref} className="text-muted-foreground hover:text-foreground hover:underline">
+                      <Link
+                        href={viewHref}
+                        className="inline-flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+                      >
                         {t("view")}
+                        <ExternalLink className="size-3.5" />
                       </Link>
                     )}
                   </div>
@@ -125,7 +130,7 @@ export async function DocumentForm({
             </div>
 
             {/* Settings */}
-            <div className="space-y-4 rounded-xl border bg-card p-4">
+            <div className="space-y-4 border-t p-4">
               <SlugField
                 defaultValue={defaults.slug ?? ""}
                 basePath="…/"
@@ -142,18 +147,15 @@ export async function DocumentForm({
                 </select>
               </label>
 
-              <label className="block space-y-1 text-sm">
-                <span className="font-medium">{t("fieldVisibility")}</span>
-                <select
+              <div className="space-y-1.5 text-sm">
+                <span className="block font-medium">{t("fieldVisibility")}</span>
+                <PillRadioGroup
                   name="visibility"
+                  ariaLabel={t("fieldVisibility")}
                   defaultValue={defaults.visibility ?? "ALL_EMPLOYEES"}
-                  className={selectClass}
-                >
-                  {VISIBILITIES.map((v) => (
-                    <option key={v} value={v}>{tVis(v)}</option>
-                  ))}
-                </select>
-              </label>
+                  options={VISIBILITIES.map((v) => ({ value: v, label: tVis(v) }))}
+                />
+              </div>
 
               {canSetAssistant && (
                 <AssistantOverrideField
@@ -163,11 +165,7 @@ export async function DocumentForm({
                 />
               )}
 
-              <label className="block space-y-1 text-sm">
-                <span className="font-medium">{t("fieldTags")}</span>
-                <Input name="tags" defaultValue={(defaults.tags ?? []).join(", ")} />
-                <span className="text-xs text-muted-foreground">{t("fieldTagsHint")}</span>
-              </label>
+              <TagInput name="tags" defaultValue={defaults.tags ?? []} />
             </div>
           </div>
         </aside>

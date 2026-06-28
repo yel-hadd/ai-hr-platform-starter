@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { PILL_CLASS } from "@/components/kb/pill-radio-group";
 
 type Collection = { id: string; name: string; assistantEnabled: boolean };
+type Value = "inherit" | "on" | "off";
 
 // Per-document chatbot access on the article form. Inherits the selected
-// collection by default but can include/exclude this article. Rendered only for
+// collection by default; can include/exclude this article. Rendered only for
 // eligible roles (admin:settings); the server re-checks before honoring it.
-// Mirrors the form's collection <select> so "Inherit" shows what it resolves to.
+// Pills are native radios (keyboard + form submit for free); the hint resolves
+// what the choice means against the currently-selected collection.
 export function AssistantOverrideField({
   collections,
   defaultCollectionId,
@@ -19,14 +22,12 @@ export function AssistantOverrideField({
   defaultOverride: boolean | null;
 }) {
   const t = useTranslations("kb");
-  const id = useId();
   const [collectionId, setCollectionId] = useState(defaultCollectionId);
-  const [value, setValue] = useState<"inherit" | "on" | "off">(
+  const [value, setValue] = useState<Value>(
     defaultOverride === null ? "inherit" : defaultOverride ? "on" : "off",
   );
 
-  // Keep the inherit hint in sync with the collection chosen in the sibling
-  // <select name="collectionId"> (which everyone needs, so it stays server-rendered).
+  // Mirror the form's collection <select> so the hint reflects the chosen collection.
   useEffect(() => {
     const sel = document.querySelector<HTMLSelectElement>('select[name="collectionId"]');
     if (!sel) return;
@@ -39,30 +40,38 @@ export function AssistantOverrideField({
   const collectionEnabled =
     collections.find((c) => c.id === collectionId)?.assistantEnabled ?? true;
   const inheritState = collectionEnabled ? t("assistantEffectiveOn") : t("assistantEffectiveOff");
-  const effective = value === "inherit" ? collectionEnabled : value === "on";
+  const hint =
+    value === "inherit"
+      ? t("assistantHintInherit", { state: inheritState })
+      : value === "on"
+        ? t("assistantFieldHintOn")
+        : t("assistantFieldHintOff");
+
+  const options: { value: Value; label: string }[] = [
+    { value: "inherit", label: t("assistantOverrideInherit") },
+    { value: "on", label: t("assistantOverrideOn") },
+    { value: "off", label: t("assistantOverrideOff") },
+  ];
 
   return (
-    <div className="space-y-1 text-sm">
-      <label htmlFor={id} className="block font-medium">
-        {t("assistantFieldLabel")}
-      </label>
-      <select
-        id={id}
-        name="assistantOverride"
-        value={value}
-        onChange={(e) => setValue(e.target.value as "inherit" | "on" | "off")}
-        aria-describedby={`${id}-hint`}
-        className="block w-full rounded-md border bg-background px-3 py-2 text-sm"
-      >
-        <option value="inherit">
-          {t("assistantOverrideInheritState", { state: inheritState })}
-        </option>
-        <option value="on">{t("assistantOverrideOn")}</option>
-        <option value="off">{t("assistantOverrideOff")}</option>
-      </select>
-      <span id={`${id}-hint`} className="block text-xs text-muted-foreground">
-        {effective ? t("assistantFieldHintOn") : t("assistantFieldHintOff")}
-      </span>
+    <div className="space-y-1.5 text-sm">
+      <span className="block font-medium">{t("assistantFieldLabel")}</span>
+      <div role="radiogroup" aria-label={t("assistantFieldLabel")} className="flex flex-wrap gap-1.5">
+        {options.map((o) => (
+          <label key={o.value}>
+            <input
+              type="radio"
+              name="assistantOverride"
+              value={o.value}
+              checked={value === o.value}
+              onChange={() => setValue(o.value)}
+              className="peer sr-only"
+            />
+            <span className={PILL_CLASS}>{o.label}</span>
+          </label>
+        ))}
+      </div>
+      <span className="block text-xs text-muted-foreground">{hint}</span>
     </div>
   );
 }
