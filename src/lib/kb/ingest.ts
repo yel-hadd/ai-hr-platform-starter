@@ -19,27 +19,33 @@ export async function removeDocumentChunks(documentId: string): Promise<void> {
 
 /**
  * (Re)build a document's RAG chunks from its current HTML, replacing existing ones
- * atomically. Keyless-safe: with no API key we drop chunks and skip (doc still
- * reads in /kb; RAG surfaces it once a key is set and it's re-published).
+ * atomically. Chunks are always (re)inserted so the lexical (full-text) half of
+ * the hybrid query works even without an API key; embeddings — the semantic half —
+ * are added only when a key is present. Keyless installs therefore still get
+ * working KB search; semantic ranking activates once a key is set and the doc is
+ * re-published. (Drafts/archived docs never reach here — they call
+ * removeDocumentChunks — so they stay out of the index entirely.)
  */
 export async function ingestDocument(documentId: string): Promise<void> {
   const doc = await prisma.hrDocument.findUnique({ where: { id: documentId } });
   if (!doc) return;
 
   const chunks = chunkHtml(doc.content);
-
-  if (!process.env.OPENROUTER_API_KEY || chunks.length === 0) {
-    if (!process.env.OPENROUTER_API_KEY) {
-      // eslint-disable-next-line no-console
-      console.warn(`⚠ No OPENROUTER_API_KEY — "${doc.slug}" indexed without embeddings.`);
-    }
+  if (chunks.length === 0) {
     await removeDocumentChunks(documentId);
     return;
   }
 
+  const hasKey = !!process.env.OPENROUTER_API_KEY;
+  if (!hasKey) {
+    // eslint-disable-next-line no-console
+    console.warn(`⚠ No OPENROUTER_API_KEY — "${doc.slug}" indexed for full-text search only.`);
+  }
   // Embed section title + body together so the heading contributes to the vector
   // (same convention as the seed's `${section}\n${content}`).
-  const vectors = await embedTexts(chunks.map((c) => `${c.section}\n${c.content}`));
+  const vectors = hasKey
+    ? await embedTexts(chunks.map((c) => `${c.section}\n${c.content}`))
+    : null;
 
   await prisma.$transaction(
     async (tx) => {
@@ -57,11 +63,13 @@ export async function ingestDocument(documentId: string): Promise<void> {
             visibility: doc.visibility,
           },
         });
-        await tx.$executeRawUnsafe(
-          `UPDATE "HandbookChunk" SET embedding = $1::halfvec WHERE id = $2`,
-          toVectorLiteral(vectors[i]),
-          row.id,
-        );
+        if (vectors) {
+          await tx.$executeRawUnsafe(
+            `UPDATE "HandbookChunk" SET embedding = $1::halfvec WHERE id = $2`,
+            toVectorLiteral(vectors[i]),
+            row.id,
+          );
+        }
       }
     },
     { timeout: 20_000 },

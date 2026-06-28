@@ -72,8 +72,11 @@ describe("KB reader listing", () => {
 });
 
 describe("RAG retrieval respects status + visibility (HARI-59/62)", () => {
+  // Queries use terms that genuinely appear in the target docs so the assertions
+  // hold on the lexical (full-text) half alone — i.e. without embeddings, exactly
+  // as CI runs (no API key → chunks indexed for FTS only).
   it("an employee never retrieves restricted or draft content", async () => {
-    const hits = await searchHandbook("policy", 100, as("EMPLOYEE"));
+    const hits = await searchHandbook("vacation", 100, as("EMPLOYEE"));
     const slugs = hits.map((h) => h.articleSlug);
     expect(slugs).not.toContain("manager-playbook");
     expect(slugs).not.toContain("compensation-bands");
@@ -84,13 +87,17 @@ describe("RAG retrieval respects status + visibility (HARI-59/62)", () => {
   });
 
   it("a manager retrieves MANAGERS content but not HR_ONLY", async () => {
-    const slugs = (await searchHandbook("policy", 100, as("MANAGER"))).map((h) => h.articleSlug);
+    const slugs = (await searchHandbook("calibrate ratings", 100, as("MANAGER"))).map(
+      (h) => h.articleSlug,
+    );
     expect(slugs).toContain("manager-playbook");
     expect(slugs).not.toContain("compensation-bands");
   });
 
   it("HR retrieves HR_ONLY content", async () => {
-    const slugs = (await searchHandbook("policy", 100, as("HR_ADMIN"))).map((h) => h.articleSlug);
+    const slugs = (await searchHandbook("salary bands", 100, as("HR_ADMIN"))).map(
+      (h) => h.articleSlug,
+    );
     expect(slugs).toContain("compensation-bands");
   });
 });
@@ -114,13 +121,13 @@ describe("hybrid search — lexical recall (FTS half)", () => {
 
 describe("searchKb respects tier scoping", () => {
   it("an employee's search never returns restricted or draft articles", async () => {
-    const slugs = (await searchKb(as("EMPLOYEE"), "policy", 100)).map((r) => r.articleSlug);
+    const slugs = (await searchKb(as("EMPLOYEE"), "vacation", 100)).map((r) => r.articleSlug);
     expect(slugs).not.toContain("manager-playbook");
     expect(slugs).not.toContain("compensation-bands");
     expect(slugs).not.toContain("relocation-policy");
     expect(slugs).toContain("leave-and-time-off");
     // Results deep-link to a real section.
-    expect((await searchKb(as("EMPLOYEE"), "policy", 100)).every((r) => r.url.startsWith("/kb/"))).toBe(true);
+    expect((await searchKb(as("EMPLOYEE"), "vacation", 100)).every((r) => r.url.startsWith("/kb/"))).toBe(true);
   });
 
   it("HR search reaches HR_ONLY content", async () => {

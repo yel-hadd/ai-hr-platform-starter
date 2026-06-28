@@ -277,20 +277,26 @@ async function seedKnowledgeBase() {
     `• Seeded ${KB_COLLECTIONS.length} collections, ${publishedDocs.length} published documents.`,
   );
 
-  if (!process.env.OPENROUTER_API_KEY) {
-    console.warn(
-      "⚠ No OPENROUTER_API_KEY — documents created without embeddings. " +
-      "RAG returns nothing until you add the key and re-seed (db:reset).",
-    );
-    return;
-  }
-
-  // Chunk every published document, then embed all chunks in one batch.
+  // Chunk every published document. Chunks are always inserted so the lexical
+  // (full-text) half of the hybrid query works even without an API key; the
+  // embeddings (semantic half) are added only when a key is present. So a keyless
+  // seed (e.g. CI) still produces a searchable KB — semantic ranking turns on once
+  // a key is set and you re-seed (db:reset).
   const flat = publishedDocs.flatMap((d) =>
     chunkHtml(d.content).map((c) => ({ doc: d, chunk: c })),
   );
-  console.log(`• Embedding ${flat.length} chunks…`);
-  const vectors = await embedTexts(flat.map((f) => `${f.chunk.section}\n${f.chunk.content}`));
+  const hasKey = !!process.env.OPENROUTER_API_KEY;
+  if (hasKey) {
+    console.log(`• Embedding ${flat.length} chunks…`);
+  } else {
+    console.warn(
+      "⚠ No OPENROUTER_API_KEY — chunks indexed for full-text search only. " +
+      "Semantic ranking is disabled until you add the key and re-seed (db:reset).",
+    );
+  }
+  const vectors = hasKey
+    ? await embedTexts(flat.map((f) => `${f.chunk.section}\n${f.chunk.content}`))
+    : null;
 
   // Atomic: a mid-loop failure rolls back so a retry re-embeds cleanly instead
   // of leaving a partial corpus that the count() guard above would skip forever.
@@ -309,16 +315,18 @@ async function seedKnowledgeBase() {
             visibility: doc.visibility,
           },
         });
-        await tx.$executeRawUnsafe(
-          `UPDATE "HandbookChunk" SET embedding = $1::halfvec WHERE id = $2`,
-          toVectorLiteral(vectors[i]),
-          row.id,
-        );
+        if (vectors) {
+          await tx.$executeRawUnsafe(
+            `UPDATE "HandbookChunk" SET embedding = $1::halfvec WHERE id = $2`,
+            toVectorLiteral(vectors[i]),
+            row.id,
+          );
+        }
       }
     },
     { timeout: 30_000 },
   );
-  console.log("• Knowledge base embedded.");
+  console.log(hasKey ? "• Knowledge base embedded." : "• Knowledge base indexed (full-text only).");
 }
 
 async function main() {
