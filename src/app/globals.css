@@ -147,3 +147,12 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* KB reader: flash the section a citation deep-link points at. Token-based so it
+   works in both themes; the transition above is neutralized under reduce-motion. */
+.kb-highlight {
+  background-color: var(--accent);
+  border-radius: 0.25rem;
+  box-shadow: 0 0 0 0.5rem var(--accent);
+  transition: background-color 1.2s ease-out, box-shadow 1.2s ease-out;
+}

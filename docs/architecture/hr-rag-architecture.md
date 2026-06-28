@@ -35,19 +35,47 @@ holds the relational HR data, so there is no separate vector store to run.
 ## Data model
 
 ```prisma
-model HandbookChunk {
+enum DocStatus     { DRAFT PUBLISHED ARCHIVED }
+enum DocVisibility { ALL_EMPLOYEES MANAGERS HR_ONLY }
+
+model KbCollection { id  slug @unique  name  description?  order  documents HrDocument[] }
+
+model HrDocument {                       // HARI-58
+  id  slug @unique  title  content       // content = markdown source of truth
+  status     DocStatus     @default(DRAFT)
+  visibility DocVisibility @default(ALL_EMPLOYEES)
+  version    Int           @default(1)   // bumped each publish (HARI-59)
+  collection KbCollection  @relation(...)
+  chunks     HandbookChunk[]
+  publishedAt DateTime?
+}
+
+model HandbookChunk {                    // HARI-59: now attached to its document
   id        String                       @id @default(cuid())
-  section   String
+  section   String                       // heading text
+  anchor    String                       // heading slug → citation deep-link
   content   String
+  chunkIndex Int                         // order within the document
   embedding Unsupported("halfvec(384)")?
-  createdAt DateTime                     @default(now())
+  document   HrDocument?  @relation(...)  // documentId FK, onDelete: Cascade
+  version    Int                          // snapshot of the doc's version
+  visibility DocVisibility                // denormalized for fast filtered retrieval
+  createdAt DateTime                      @default(now())
 }
 ```
 
-`HandbookChunk` is **standalone** — no foreign keys into the HR tables — because the
-RAG corpus is reference content, not employee data. Prisma can't model the pgvector
-type or an index on it, so `embedding` is declared `Unsupported("halfvec(384)")` and
-the real column type **and** the HNSW index live in the migration SQL:
+The KB is **collections → documents → chunks** (`prisma/handbook.ts` is the seed
+corpus). Only **PUBLISHED** documents are chunked & embedded
+(`src/lib/kb/ingest.ts`), so DRAFT/ARCHIVED docs have **zero** chunks and are
+invisible to the chatbot. Each chunk denormalizes the document's `visibility` tier
+and the `anchor` of its heading. Retrieval (`src/lib/rag.ts`) filters
+`status='PUBLISHED' AND visibility = ANY(visibleDocTiers(caller.role))`, so a tool
+can never surface a draft, an archived doc, or one above the caller's tier — and
+returns the article/collection slug + anchor so a citation can deep-link to the
+exact section (`/kb/{collection}/{article}#{anchor}`). Prisma can't model the
+pgvector type or an index on it, so `embedding` is declared
+`Unsupported("halfvec(384)")` and the real column type **and** the HNSW index live
+in the migration SQL:
 
 ```sql
 -- prisma/migrations/0_init/migration.sql
@@ -196,15 +224,20 @@ as a clear error instead of a silent corruption. Reference widths:
 
 | Concern | File |
 |---|---|
-| Corpus | `prisma/handbook.ts` |
+| Seed corpus (collections → documents) | `prisma/handbook.ts` |
+| Markdown chunker + shared heading slugger | `src/lib/kb/markdown.ts` |
+| Indexing pipeline (chunk + embed on publish) | `src/lib/kb/ingest.ts` |
+| Role-scoped KB data layer (reader + admin CRUD) | `src/lib/kb.ts` |
 | Embeddings client + dimension guard | `src/lib/ai/embeddings.ts` |
-| Schema (`Unsupported` halfvec column) | `prisma/schema.prisma` |
-| Column type, extension, HNSW index | `prisma/migrations/0_init/migration.sql` |
+| Schema (collections, documents, halfvec chunks) | `prisma/schema.prisma` |
+| Column type, extension, HNSW index | `prisma/migrations/0_init/migration.sql`, `…_add_knowledge_base/migration.sql` |
 | Indexing (seed) | `prisma/seed.ts` |
-| Retrieval | `src/lib/rag.ts` |
+| Retrieval (status + tier filtered) | `src/lib/rag.ts` |
+| Visibility tiers per role | `src/lib/rbac.ts` (`visibleDocTiers`) |
 | Tool + permission gate + graceful failure | `src/lib/ai/tools.ts` |
-| Citations UI | `src/components/chat/generative/citations.tsx` |
-| Live RAG test | `tests/rag.live.test.ts` |
+| Citations UI (linked sources + inline `[n]`) | `src/components/chat/generative/citations.tsx`, `src/components/chat/citations-rehype.ts` |
+| Reader + admin pages | `src/app/(dashboard)/kb/**`, `src/components/kb/**` |
+| Tests (RBAC tiers, status gating, IDOR) | `tests/kb.integration.test.ts`, `tests/rag.live.test.ts` |
 
 ## Related
 

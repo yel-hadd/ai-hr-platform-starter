@@ -40,6 +40,9 @@ passwordHash String
 role Role @default(EMPLOYEE)
 employee Employee?
 createdAt DateTime @default(now())
+kbCreated HrDocument[] @relation("KbCreatedBy")
+kbUpdated HrDocument[] @relation("KbUpdatedBy")
+kbFeedback KbFeedback[]
 }
 
 /// HR profile / org data.
@@ -101,13 +104,91 @@ model OrgSettings {
   updatedAt DateTime @updatedAt
 }
 
-/// Employee-handbook chunks for RAG. `embedding` is a pgvector halfvec(384).
+/// Knowledge-base lifecycle. Only PUBLISHED documents feed the RAG (HARI-62).
+enum DocStatus {
+DRAFT
+PUBLISHED
+ARCHIVED
+}
+
+/// Per-document access level (HARI-59). Mapped to roles via visibleDocTiers().
+enum DocVisibility {
+ALL_EMPLOYEES
+MANAGERS
+HR_ONLY
+}
+
+/// A KB collection groups related HR documents (e.g. "Employee Handbook").
+model KbCollection {
+id String @id @default(cuid())
+slug String @unique
+name String
+description String?
+order Int @default(0)
+documents HrDocument[]
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+}
+
+/// HARI-58: an HR document usable by the RAG. Markdown body, chunked on publish.
+model HrDocument {
+id String @id @default(cuid())
+slug String @unique
+title String
+content String // HTML source of truth (authored in BlockNote)
+status DocStatus @default(DRAFT)
+visibility DocVisibility @default(ALL_EMPLOYEES)
+version Int @default(1) // bumped each publish (HARI-59)
+tags String[] @default([]) // freeform topic tags
+viewCount Int @default(0) // reader views (engagement signal)
+collection KbCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+collectionId String
+chunks HandbookChunk[]
+// Authorship (shown on the reader + admin). SetNull so deleting a user keeps docs.
+createdBy User? @relation("KbCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+createdById String?
+updatedBy User? @relation("KbUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+updatedById String?
+feedback KbFeedback[]
+publishedAt DateTime?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([collectionId])
+@@index([status])
+}
+
+/// "Was this helpful?" — one vote per (document, user); re-voting updates it.
+model KbFeedback {
+id String @id @default(cuid())
+document HrDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+documentId String
+voter User @relation(fields: [voterId], references: [id], onDelete: Cascade)
+voterId String
+helpful Boolean
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@unique([documentId, voterId])
+}
+
+/// RAG chunks. `embedding` is a pgvector halfvec(384). HARI-59: each chunk is
+/// attached to its document, version, and (denormalized) access level so
+/// retrieval can filter by tier without a join on the hot path.
 model HandbookChunk {
 id String @id @default(cuid())
-section String
+section String // heading text
+anchor String @default("") // slug of the heading → citation deep-link
 content String
+chunkIndex Int @default(0) // order within the document
 embedding Unsupported("halfvec(384)")?
+document HrDocument? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+documentId String?
+version Int @default(1)
+visibility DocVisibility @default(ALL_EMPLOYEES)
 createdAt DateTime @default(now())
+
+@@index([documentId])
 }
 
 enum EmploymentStatus {

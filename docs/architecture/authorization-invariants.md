@@ -105,6 +105,32 @@ When you add a tool, verify each line:
 - [ ] **Add tests** for per-role exposure (whether the tool is offered) and, if it
       takes an id, the out-of-scope-id path.
 
+## Knowledge base (HARI-58/59/62)
+
+The KB extends the same model, with two governance axes on each `HrDocument`:
+
+- **`status`** (DRAFT / PUBLISHED / ARCHIVED) — only PUBLISHED docs are chunked &
+  embedded (`src/lib/kb/ingest.ts`), so a draft has *zero* RAG chunks and is
+  invisible to the chatbot. Retrieval also filters `status='PUBLISHED'` as belt-and-suspenders.
+- **`visibility`** (ALL_EMPLOYEES / MANAGERS / HR_ONLY) — mapped to roles by
+  `visibleDocTiers(role)` in `lib/rbac.ts`, derived from the directory permissions
+  so KB access tracks the rest of the app.
+
+Enforcement points (all server-side):
+
+- **Reading** is gated by `handbook:read` (every role). Both retrieval
+  (`searchHandbook` → `lib/rag.ts`) and the reader/data layer (`lib/kb.ts`) filter
+  by `visibleDocTiers(role)` + PUBLISHED, so the chatbot can never surface a
+  document the reader wouldn't show that role. Direct-URL access to a hidden/draft
+  article (`getArticle`) resolves to `null` → `notFound()` (IDOR-safe).
+- **Managing** is gated by `kb:manage` (HR_ADMIN/SUPER_ADMIN). Admin pages redirect
+  non-holders; every server action **and** every `lib/kb.ts` admin function
+  re-checks `can(role,"kb:manage")` (defense in depth), and form inputs (slug,
+  visibility, status) are validated against allowed values before any write.
+- Citation URLs are built **server-side from the DB** (article/collection slug +
+  heading anchor); the model only emits a `[n]` number, so a citation can never
+  point somewhere the model invented.
+
 ## What is intentionally not here
 
 - **Opaque id handles / capability tokens.** A mature multi-tenant system might hand

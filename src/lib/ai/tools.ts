@@ -173,7 +173,15 @@ function buildAllHrTools(caller: ToolCaller) {
       }),
       execute: withPermission(caller, "handbook:read", async ({ query }) => {
         try {
-          const results = await searchHandbook(query, 4);
+          const hits = await searchHandbook(query, 4, caller);
+          // Attach a stable citation number and the canonical reader URL (built
+          // server-side from the DB) so the UI can render hallucination-proof
+          // deep links — the model only ever emits the number.
+          const results = hits.map((h, i) => ({
+            ...h,
+            ref: i + 1,
+            url: `/kb/${h.collectionSlug}/${h.articleSlug}${h.anchor ? `#${h.anchor}` : ""}`,
+          }));
           return { query, results };
         } catch {
           // Most likely no embedding API key configured (or handbook not seeded).

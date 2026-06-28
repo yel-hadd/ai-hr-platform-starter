@@ -1,10 +1,27 @@
 /* eslint-disable no-console */
 import "dotenv/config"; // self-contained when run directly via tsx
-import { PrismaClient, type Role, EmploymentStatus, EmploymentType } from "@prisma/client";
+import {
+  PrismaClient,
+  type Role,
+  type DocVisibility,
+  EmploymentStatus,
+  EmploymentType,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
+import rehypeStringify from "rehype-stringify";
 import { embedTexts, toVectorLiteral } from "../src/lib/ai/embeddings";
+import { chunkHtml } from "../src/lib/kb/html";
 import { DEMO_USERS } from "../src/lib/demo-users";
-import { HANDBOOK } from "./handbook";
+import { KB_COLLECTIONS } from "./handbook";
+
+// Seed corpus is authored in markdown for readability; store it as HTML (the
+// editor + reader work in HTML). Seed-only, so it lives here rather than in the
+// runtime lib/kb/html module.
+const mdToHtml = unified().use(remarkParse).use(remarkRehype).use(rehypeStringify);
+const markdownToHtml = (markdown: string): string => String(mdToHtml.processSync(markdown));
 
 const prisma = new PrismaClient();
 const PASSWORD = "password123";
@@ -198,48 +215,115 @@ async function seedPeople() {
 
 // Data only — the schema (halfvec column, HNSW index, pgvector extension) is
 // owned by the Prisma migration in prisma/migrations, not by the seed.
-async function seedHandbook() {
-  if ((await prisma.handbookChunk.count()) > 0) {
-    console.log("• Handbook already seeded — skipping.");
+//
+// Seeds collections + documents, then chunks & embeds the PUBLISHED ones (DRAFT
+// docs are intentionally left unindexed — invisible to the chatbot). Only
+// PUBLISHED chunks carry the denormalized visibility tier, so RAG access control
+// works the same as the live publish pipeline (src/lib/kb/ingest.ts).
+async function seedKnowledgeBase() {
+  if ((await prisma.hrDocument.count()) > 0) {
+    console.log("• Knowledge base already seeded — skipping.");
     return;
   }
 
+  // Attribute seeded docs to the HR admin (falls back to any user) so the reader
+  // and admin show an author.
+  const author =
+    (await prisma.user.findUnique({ where: { email: "rh@hari.ma" }, select: { id: true } })) ??
+    (await prisma.user.findFirst({ select: { id: true } }));
+  const authorId = author?.id ?? null;
+
+  // Create collections + documents (relational rows; no embeddings yet).
+  const publishedDocs: {
+    id: string;
+    content: string;
+    visibility: DocVisibility;
+    version: number;
+  }[] = [];
+  for (const col of KB_COLLECTIONS) {
+    const collection = await prisma.kbCollection.create({
+      data: { slug: col.slug, name: col.name, description: col.description, order: col.order },
+    });
+    for (const doc of col.documents) {
+      const status = doc.status ?? "PUBLISHED";
+      // Authored in markdown for readability; stored as HTML (the editor + reader
+      // work in HTML).
+      const html = markdownToHtml(doc.content);
+      const created = await prisma.hrDocument.create({
+        data: {
+          slug: doc.slug,
+          title: doc.title,
+          content: html,
+          visibility: doc.visibility,
+          tags: doc.tags ?? [],
+          status,
+          collectionId: collection.id,
+          createdById: authorId,
+          updatedById: authorId,
+          publishedAt: status === "PUBLISHED" ? new Date() : null,
+        },
+      });
+      if (status === "PUBLISHED") {
+        publishedDocs.push({
+          id: created.id,
+          content: html,
+          visibility: doc.visibility,
+          version: created.version,
+        });
+      }
+    }
+  }
+  console.log(
+    `• Seeded ${KB_COLLECTIONS.length} collections, ${publishedDocs.length} published documents.`,
+  );
+
   if (!process.env.OPENROUTER_API_KEY) {
     console.warn(
-      "⚠ No OPENROUTER_API_KEY — skipping handbook embedding. " +
-      "RAG will return no results until you add the key and re-seed.",
+      "⚠ No OPENROUTER_API_KEY — documents created without embeddings. " +
+      "RAG returns nothing until you add the key and re-seed (db:reset).",
     );
     return;
   }
 
-  console.log(`• Embedding ${HANDBOOK.length} handbook sections…`);
-  const vectors = await embedTexts(
-    HANDBOOK.map((h) => `${h.section}\n${h.content}`),
+  // Chunk every published document, then embed all chunks in one batch.
+  const flat = publishedDocs.flatMap((d) =>
+    chunkHtml(d.content).map((c) => ({ doc: d, chunk: c })),
   );
+  console.log(`• Embedding ${flat.length} chunks…`);
+  const vectors = await embedTexts(flat.map((f) => `${f.chunk.section}\n${f.chunk.content}`));
 
   // Atomic: a mid-loop failure rolls back so a retry re-embeds cleanly instead
   // of leaving a partial corpus that the count() guard above would skip forever.
   await prisma.$transaction(
     async (tx) => {
-      for (let i = 0; i < HANDBOOK.length; i++) {
-        const chunk = await tx.handbookChunk.create({
-          data: { section: HANDBOOK[i].section, content: HANDBOOK[i].content },
+      for (let i = 0; i < flat.length; i++) {
+        const { doc, chunk } = flat[i];
+        const row = await tx.handbookChunk.create({
+          data: {
+            documentId: doc.id,
+            section: chunk.section,
+            anchor: chunk.anchor,
+            content: chunk.content,
+            chunkIndex: chunk.chunkIndex,
+            version: doc.version,
+            visibility: doc.visibility,
+          },
         });
         await tx.$executeRawUnsafe(
           `UPDATE "HandbookChunk" SET embedding = $1::halfvec WHERE id = $2`,
           toVectorLiteral(vectors[i]),
-          chunk.id,
+          row.id,
         );
       }
     },
-    { timeout: 20_000 },
+    { timeout: 30_000 },
   );
-  console.log("• Handbook embedded.");
+  console.log("• Knowledge base embedded.");
 }
 
 async function main() {
   await seedPeople();
-  await seedHandbook();
+  await seedKnowledgeBase();
 }
 
 main()
