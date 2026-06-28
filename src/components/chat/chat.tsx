@@ -5,7 +5,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { ArrowUp, Square, Bot, Plus, RotateCcw, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ChatModel, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
+import { type ChatModel, DEFAULT_MODEL_ID, CHAT_ERROR_CODES } from "@/lib/ai/providers";
 import { can, type Role } from "@/lib/rbac";
 import { ChatMessage } from "./message";
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,9 @@ import {
 
 const MODEL_STORAGE_KEY = "hari.chat.model";
 
-// Error codes the server emits (chat.errors.<code>); anything else → generic.
-const KNOWN_ERROR_CODES = new Set([
-  "auth_missing",
-  "rate_limited",
-  "model_unavailable",
-  "generic",
-]);
+// The codes the server emits (chat.errors.<code>). Single source of truth shared
+// with the route via CHAT_ERROR_CODES; anything else → generic / network.
+const KNOWN_ERROR_CODES = new Set<string>(CHAT_ERROR_CODES);
 
 // Starter prompts, gated by capability so we never offer a role something its
 // tools can't deliver (e.g. the team directory to a self-only employee).
@@ -109,8 +105,16 @@ export function Chat({
     inputRef.current?.focus();
   }
 
-  const errorCode =
-    error && KNOWN_ERROR_CODES.has(error.message) ? error.message : "generic";
+  // Resolve the banner code: a known server code → that; otherwise an offline
+  // browser → "network"; otherwise "generic". (Network/transport failures don't
+  // carry a server code, so we infer connectivity rather than mislabel them.)
+  const errorCode = !error
+    ? null
+    : KNOWN_ERROR_CODES.has(error.message)
+      ? error.message
+      : typeof navigator !== "undefined" && !navigator.onLine
+        ? "network"
+        : "generic";
 
   return (
     <div className="flex h-full flex-col">
@@ -196,9 +200,18 @@ export function Chat({
               className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
             >
               <span className="flex-1">{t(`errors.${errorCode}` as Parameters<typeof t>[0])}</span>
-              <Button size="sm" variant="ghost" onClick={() => regenerate()} className="h-7 text-destructive hover:text-destructive">
-                <RotateCcw className="size-3.5" /> {t("retry")}
-              </Button>
+              {errorCode === "session_expired" ? (
+                // Retrying can't help an expired session — reload to re-authenticate.
+                <Button size="sm" variant="ghost" onClick={() => window.location.reload()} className="h-7 text-destructive hover:text-destructive">
+                  <RotateCcw className="size-3.5" /> {t("reload")}
+                </Button>
+              ) : (
+                // Retry on the SAME model the user has selected (regenerate() alone
+                // drops the body, silently falling back to the default model).
+                <Button size="sm" variant="ghost" onClick={() => regenerate({ body: { modelKey: modelId } })} className="h-7 text-destructive hover:text-destructive">
+                  <RotateCcw className="size-3.5" /> {t("retry")}
+                </Button>
+              )}
               <Button size="icon" variant="ghost" onClick={() => clearError()} aria-label={t("dismiss")} className="size-7 text-destructive hover:text-destructive">
                 <X className="size-3.5" />
               </Button>

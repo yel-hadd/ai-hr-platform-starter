@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Brain, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,14 @@ export function Reasoning({
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   const expanded = userOpen ?? streaming;
   const panelId = useId();
+
+  // When streaming ends, drop any user override so the panel returns to its auto
+  // state (collapsed to a one-line summary). Without this, a single mid-stream
+  // click would pin the panel open/closed forever for this message.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync override to streaming lifecycle
+    if (!streaming) setUserOpen(null);
+  }, [streaming]);
 
   return (
     <div className="rounded-lg border bg-muted/40 text-sm">

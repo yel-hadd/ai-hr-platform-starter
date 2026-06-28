@@ -67,6 +67,19 @@ export const CHAT_MODELS: ChatModel[] = [
 // so the tool-call UI and the thinking UI both light up out of the box.
 export const DEFAULT_MODEL_ID = "gpt-oss-120b";
 
+// The closed vocabulary of chat error codes the server emits and the client
+// localizes (chat.errors.<code>). Single source of truth so the two sides can't
+// drift — imported by both route.ts (producer) and chat.tsx (consumer).
+export const CHAT_ERROR_CODES = [
+  "auth_missing",
+  "rate_limited",
+  "model_unavailable",
+  "session_expired",
+  "network",
+  "generic",
+] as const;
+export type ChatErrorCode = (typeof CHAT_ERROR_CODES)[number];
+
 // Lazy, memoized provider clients. Created on first use (never at module load),
 // so a missing/empty key can't crash the whole route at import time — only a
 // request that actually needs that provider fails, with a clear, specific error
@@ -119,12 +132,14 @@ export function getChatModel(id: string | undefined): LanguageModel {
       ? openrouterProvider()(meta.providerModelId)
       : gatewayProvider()(meta.providerModelId);
 
-  // Only models that natively emit a <think> channel need the reasoning extractor;
-  // wrapping a non-reasoning model would scrape for tags that never appear.
-  return meta.reasoning
-    ? wrapLanguageModel({
-        model: base,
-        middleware: extractReasoningMiddleware({ tagName: "think" }),
-      })
-    : base;
+  // Wrap EVERY model with the reasoning extractor. It's a no-op when no
+  // <think>…</think> appears, and it guarantees any model that does emit them —
+  // including whatever `openrouter-auto` routes to, or a model mislabeled
+  // reasoning:false — has them surfaced in the thinking UI instead of leaking raw
+  // tags into the answer. The `reasoning` flag is metadata for the settings badge
+  // only; it deliberately does not gate this.
+  return wrapLanguageModel({
+    model: base,
+    middleware: extractReasoningMiddleware({ tagName: "think" }),
+  });
 }

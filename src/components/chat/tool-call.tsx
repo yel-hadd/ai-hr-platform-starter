@@ -31,7 +31,14 @@ const SILENT_TOOLS = new Set(["getCurrentDateTime", "getDateInfo", "businessDays
 export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boolean }) {
   const t = useTranslations("tools");
   const name = part.type.replace(/^tool-/, "");
-  if (SILENT_TOOLS.has(name)) return null;
+  const isSilent = SILENT_TOOLS.has(name);
+  const errored =
+    part.state === "output-error" ||
+    (part.state === "output-available" && !!part.output?.error);
+  // Silent utility tools (date math) render nothing on success — the agent just
+  // states the result in prose. But a FAILURE must still surface, so the user
+  // isn't left with an invisible gap when a date tool rejects bad input.
+  if (isSilent && !errored) return null;
   // `name` is dynamic; narrow the key to the translator's expected type.
   const statusKey = `status.${name}` as Parameters<typeof t>[0];
   const label = t.has(statusKey) ? t(statusKey) : name;
@@ -39,19 +46,21 @@ export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boole
 
   return (
     <div className="space-y-2">
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex items-center gap-2 text-xs text-muted-foreground"
-      >
-        {running ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : (
-          <Wrench className="size-3.5" />
-        )}
-        <span>{label}</span>
-        <code className="rounded bg-muted px-1 py-0.5 text-[10px] text-foreground">{name}</code>
-      </div>
+      {!isSilent && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 text-xs text-muted-foreground"
+        >
+          {running ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Wrench className="size-3.5" />
+          )}
+          <span>{label}</span>
+          <code className="rounded bg-muted px-1 py-0.5 text-[10px] text-foreground">{name}</code>
+        </div>
+      )}
 
       {part.state === "output-error" && (
         // An unexpected tool throw. Show a generic localized message — never the
@@ -85,9 +94,9 @@ function ToolOutput({
   if (output.refused) return null;
   if (output.error) {
     // Prefer a localized message keyed by the tool's stable errorCode; fall back
-    // to the raw (English) error string, then to the generic label.
+    // to the generic localized label (never the raw English string — i18n mandate).
     const key = typeof output.errorCode === "string" ? `errors.${output.errorCode}` : null;
-    const text = key && t.has(key as Parameters<typeof t>[0]) ? t(key as Parameters<typeof t>[0]) : output.error;
+    const text = key && t.has(key as Parameters<typeof t>[0]) ? t(key as Parameters<typeof t>[0]) : t("error");
     return (
       <p className="rounded-lg border border-dashed p-2 text-xs text-muted-foreground">
         {text}
