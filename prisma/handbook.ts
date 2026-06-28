@@ -45,15 +45,15 @@ export const KB_COLLECTIONS: SeedCollection[] = [
         tags: ["leave", "vacation", "benefits"],
         content: `## Paid Time Off (Vacation)
 
-Full-time employees accrue 20 days of paid vacation per year. Vacation must be requested in advance through the platform and approved by your manager. Unused days roll over up to a maximum of 5 days into the next calendar year. Vacation cannot be taken before it has accrued except with HR approval.
+Full-time employees accrue 1.5 working days of paid leave per month of service — 18 working days per year for a full year — rising with seniority up to a maximum of 30 days. Vacation must be requested in advance through the platform and approved by your manager. Unused days may be carried over until March 31 of the following year, after which they are forfeited except by exceptional HR approval.
 
 ## Sick Leave
 
-Employees receive 10 paid sick days per year. Sick leave can be used for personal illness or to care for an immediate family member. For absences longer than three consecutive days, a doctor's note may be required. Sick days do not roll over and are not paid out on termination.
+Any sick absence must be justified by a medical certificate sent to HR within 48 hours; partial salary is maintained in line with CNSS rules, subject to eligibility. Sick leave can be used for personal illness or to care for an immediate family member.
 
 ## Parental Leave
 
-The company offers 16 weeks of fully paid parental leave for all new parents, including birth, adoption, and foster placement, regardless of gender. Leave must be taken within 12 months of the child's arrival. Employees are eligible after 6 months of employment. Contact HR at least 30 days before your intended start date.`,
+Maternity leave is 14 weeks, including 7 weeks that must be taken after the birth. Paternity leave is 3 working days, taken within the month following the birth. Contact HR at least 30 days before your intended start date.`,
       },
       {
         slug: "work-and-compensation",
@@ -62,19 +62,19 @@ The company offers 16 weeks of fully paid parental leave for all new parents, in
         tags: ["remote", "expenses", "benefits"],
         content: `## Remote Work Policy
 
-Most roles are eligible for hybrid or fully remote work. Hybrid employees are expected in the office at least two days per week. Remote employees must be reachable during core hours of 10am–4pm in their team's primary time zone. A one-time home-office stipend of $500 is available; request it through Expenses.
+Eligible roles may work remotely up to two days per week after six months of tenure; employees are expected in the office at least three days per week. Remote employees must be reachable during standard hours (9:00–18:00). A monthly remote-work allowance of 150 MAD covers connectivity and electricity, and a one-time home-office stipend of 5,000 MAD is available; request it through Expenses.
 
 ## Working Hours and Overtime
 
-Standard working hours are 40 per week. Core collaboration hours are 10am–4pm local time. Non-exempt employees are eligible for overtime pay at 1.5x for hours worked beyond 40 in a week, which must be pre-approved by a manager. Flexible start and end times are permitted as long as core hours are covered.
+Standard hours are 9:00–18:00 with a one-hour lunch break, for 40 hours per week. Non-exempt employees are eligible for overtime pay at 1.5x for hours worked beyond 40 in a week, which must be pre-approved by a manager. Flexible start and end times are permitted as long as the standard hours are covered.
 
 ## Expense Reimbursement
 
-Business expenses are reimbursed when submitted with a receipt within 30 days. Eligible expenses include travel, client meals (up to $75 per person), software subscriptions, and professional development. Expenses over $1,000 require manager pre-approval. Reimbursements are paid with the next payroll cycle.
+Business expenses are reimbursed when submitted with a receipt within 30 days. Eligible expenses include travel, client meals (up to 750 MAD per person), software subscriptions, and professional development. Expenses over 10,000 MAD require manager pre-approval. Reimbursements are paid with the next payroll cycle.
 
 ## Health Benefits
 
-The company covers 100% of the employee premium and 70% of dependent premiums for medical, dental, and vision insurance. Coverage begins on the first day of the month after your start date. Open enrollment occurs each November. A $1,200 annual wellness reimbursement covers gym memberships and mental-health services.`,
+The company covers 100% of the employee premium and 70% of dependent premiums for medical, dental, and vision insurance. Coverage begins on the first day of the month after your start date. Open enrollment occurs each November. A 12,000 MAD annual wellness reimbursement covers gym memberships and mental-health services.`,
       },
       {
         slug: "workplace-and-equipment",
@@ -155,12 +155,13 @@ Off-cycle increases require HR director approval and a written justification (re
     ],
   },
   {
-    // SCRUM-050 — Politiques RH fictives (Atlas Industries). Tous les documents
-    // sont seedés en DRAFT : ils n'atteignent ni le reader ni le chatbot tant
-    // qu'ils ne sont pas publiés et validés (cf. relocation-policy / HARI-62).
+    // SCRUM-050 — Politiques RH fictives (HARI SARL). Publiées et
+    // visibles du reader et du chatbot. Les chiffres légaux (congés, maternité,
+    // CNSS) suivent le Code du travail marocain (loi n° 65-99) ; les versions
+    // anglaises du handbook ont été alignées sur ces mêmes chiffres.
     slug: "politiques-rh",
     name: "Politiques RH",
-    description: "Politiques et procédures RH internes — en cours de validation.",
+    description: "Politiques et procédures RH internes d'HARI.",
     image: cover("#8b5cf6", "#a855f7", "#ec4899"),
     order: 3,
     documents: [
@@ -168,13 +169,12 @@ Off-cycle increases require HR director approval and a written justification (re
         slug: "politique-conges-absences",
         title: "Politique de congés et absences",
         visibility: "ALL_EMPLOYEES",
-        status: "DRAFT",
         tags: ["congés", "absences", "RTT"],
         content: `_Conformément au Code du travail marocain — loi n° 65-99._
 
 ## Article 1 — Objet et champ d'application
 
-La présente politique définit les règles applicables aux congés payés et aux différentes absences au sein d'Atlas Industries SARL, conformément aux dispositions du Code du travail marocain (loi n° 65-99). Elle s'applique à l'ensemble des salariés en CDI et CDD, dès la confirmation de leur période d'essai.
+La présente politique définit les règles applicables aux congés payés et aux différentes absences au sein d'HARI SARL, conformément aux dispositions du Code du travail marocain (loi n° 65-99). Elle s'applique à l'ensemble des salariés en CDI et CDD, dès la confirmation de leur période d'essai.
 
 ## Article 2 — Congé payé annuel
 
@@ -213,13 +213,12 @@ Toute absence non justifiée dans un délai de 48 heures est considérée comme 
         slug: "reglement-teletravail",
         title: "Règlement télétravail",
         visibility: "ALL_EMPLOYEES",
-        status: "DRAFT",
         tags: ["télétravail", "organisation"],
         content: `_Conformément au Code du travail marocain — loi n° 65-99._
 
 ## Article 1 — Objet et champ d'application
 
-Ce règlement encadre les modalités de mise en œuvre du télétravail au sein d'Atlas Industries SARL pour les postes éligibles, dans une démarche volontaire et réversible.
+Ce règlement encadre les modalités de mise en œuvre du télétravail au sein d'HARI SARL pour les postes éligibles, dans une démarche volontaire et réversible.
 
 ## Article 2 — Conditions d'éligibilité
 
@@ -249,7 +248,6 @@ Le télétravail peut être suspendu à tout moment, à la demande du salarié o
         slug: "procedure-attestation-travail",
         title: "Procédure de demande d'attestation de travail",
         visibility: "ALL_EMPLOYEES",
-        status: "DRAFT",
         tags: ["attestation", "administratif"],
         content: `_Article L.1234-19 du Code du travail et dispositions équivalentes — loi n° 65-99._
 
@@ -259,11 +257,11 @@ Cette procédure décrit les étapes permettant à un salarié d'obtenir une att
 
 ## Article 2 — Qui peut faire une demande
 
-Tout salarié actif d'Atlas Industries SARL, en CDI ou CDD, peut formuler une demande d'attestation de travail, quelle que soit son ancienneté.
+Tout salarié actif d'HARI SARL, en CDI ou CDD, peut formuler une demande d'attestation de travail, quelle que soit son ancienneté.
 
 ## Article 3 — Canal et modalités de demande
 
-La demande s'effectue via le portail RH interne, rubrique « Demandes administratives », ou par e-mail à rh@atlas-industries.ma en précisant le motif de la demande (logement, visa, banque, etc.).
+La demande s'effectue via le portail RH interne, rubrique « Demandes administratives », ou par e-mail à rh@hari.ma en précisant le motif de la demande (logement, visa, banque, etc.).
 
 ## Article 4 — Délai de traitement
 
@@ -281,7 +279,6 @@ Pour un salarié ayant quitté l'entreprise, c'est un certificat de travail (et 
         slug: "guide-onboarding",
         title: "Guide d'intégration (onboarding)",
         visibility: "ALL_EMPLOYEES",
-        status: "DRAFT",
         tags: ["onboarding", "nouvel-arrivant"],
         content: `_Procédure interne RH._
 
@@ -313,13 +310,12 @@ Le livret d'accueil, la charte informatique, le règlement intérieur et l'annua
         slug: "politique-confidentialite-securite-rh",
         title: "Politique de confidentialité et sécurité des données RH",
         visibility: "ALL_EMPLOYEES",
-        status: "DRAFT",
         tags: ["RGPD", "CNDP", "sécurité"],
         content: `_Loi n° 09-08 relative à la protection des données à caractère personnel — CNDP._
 
 ## Article 1 — Objet
 
-Cette politique décrit les engagements d'Atlas Industries SARL en matière de protection des données personnelles des collaborateurs, conformément à la loi n° 09-08 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel, et aux exigences de la CNDP.
+Cette politique décrit les engagements d'HARI SARL en matière de protection des données personnelles des collaborateurs, conformément à la loi n° 09-08 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel, et aux exigences de la CNDP.
 
 ## Article 2 — Données personnelles collectées
 
@@ -347,7 +343,7 @@ Chaque collaborateur dispose d'un droit d'accès, de rectification et, dans les 
 
 ## Article 8 — Contact — référent données personnelles
 
-Toute question relative à la présente politique peut être adressée à dpo@atlas-industries.ma.`,
+Toute question relative à la présente politique peut être adressée à dpo@hari.ma.`,
       },
     ],
   },
