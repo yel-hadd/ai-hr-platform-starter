@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can, type Permission, type Role } from "@/lib/rbac";
+import { SETTINGS_SECTIONS } from "@/components/settings/sections";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -36,6 +37,9 @@ type NavItem = {
   label: "dashboard" | "assistant" | "directory" | "timeOff" | "knowledgeBase" | "settings";
   icon: React.ComponentType<{ className?: string }>;
   permission?: Permission; // hidden unless the role holds it
+  // Sub-items shown nested under the parent when its section is active. `labelKey`
+  // is resolved against the "settings" namespace.
+  children?: { href: string; labelKey: (typeof SETTINGS_SECTIONS)[number]["key"] }[];
 };
 
 const NAV: NavItem[] = [
@@ -46,7 +50,18 @@ const NAV: NavItem[] = [
   // Read access (handbook:read) is held by every role; documents are still
   // visibility-filtered server-side, so the link is shown to everyone.
   { href: "/kb", label: "knowledgeBase", icon: BookOpen },
-  { href: "/settings", label: "settings", icon: Settings, permission: "admin:settings" },
+  {
+    href: "/settings",
+    label: "settings",
+    icon: Settings,
+    permission: "admin:settings",
+    // Settings categories surface as nested sub-items (the parent link is the
+    // Overview). Excludes the overview entry to avoid duplicating the parent.
+    children: SETTINGS_SECTIONS.filter((s) => s.href !== "/settings").map((s) => ({
+      href: s.href,
+      labelKey: s.key,
+    })),
+  },
 ];
 
 function initialsOf(name: string) {
@@ -63,8 +78,11 @@ function initialsOf(name: string) {
 function NavBody({ user, onNavigate }: { user: User; onNavigate?: () => void }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
+  const tSettings = useTranslations("settings");
   const tRoles = useTranslations("roles");
   const items = NAV.filter((i) => !i.permission || can(user.role, i.permission));
+
+  const inSection = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>
@@ -75,24 +93,57 @@ function NavBody({ user, onNavigate }: { user: User; onNavigate?: () => void }) 
 
       <nav className="flex-1 space-y-1 px-3" aria-label={t("primary")}>
         {items.map((item) => {
+          const hasChildren = !!item.children?.length;
+          // Parent with children highlights only on its own page (Overview); a
+          // sub-page highlights the matching child instead.
           const active =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            item.href === "/"
+              ? pathname === "/"
+              : hasChildren
+                ? pathname === item.href
+                : pathname.startsWith(item.href);
+          const open = hasChildren && inSection(item.href);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <item.icon className="size-4" />
+                {t(item.label)}
+              </Link>
+
+              {open && (
+                <div className="mt-1 space-y-0.5">
+                  {item.children!.map((child) => {
+                    const childActive = inSection(child.href);
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        onClick={onNavigate}
+                        aria-current={childActive ? "page" : undefined}
+                        className={cn(
+                          "block rounded-md py-1.5 pl-10 pr-3 text-sm transition-colors",
+                          childActive
+                            ? "bg-muted font-medium text-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        )}
+                      >
+                        {tSettings(child.labelKey)}
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <item.icon className="size-4" />
-              {t(item.label)}
-            </Link>
+            </div>
           );
         })}
       </nav>
