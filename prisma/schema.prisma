@@ -126,6 +126,7 @@ name String
 description String?
 image String? // optional decorative cover (data URL or external URL)
 order Int @default(0)
+assistantEnabled Boolean @default(true) // may the AI assistant draw on this collection? (super-admin policy)
 documents HrDocument[]
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
@@ -142,6 +143,7 @@ visibility DocVisibility @default(ALL_EMPLOYEES)
 version Int @default(1) // bumped each publish (HARI-59)
 tags String[] @default([]) // freeform topic tags
 viewCount Int @default(0) // reader views (engagement signal)
+assistantEnabled Boolean? // AI-assistant override: null = inherit collection, true = force on, false = force off
 collection KbCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 collectionId String
 chunks HandbookChunk[]

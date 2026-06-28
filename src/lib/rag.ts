@@ -38,9 +38,16 @@ export async function searchHandbook(
 ): Promise<HandbookHit[]> {
   const vec = toVectorLiteral(await embedText(query));
   const tiers = visibleDocTiers(caller.role);
-  // `query` is bound as a text param to websearch_to_tsquery (injection-safe); it
-  // parses user-style input ("paid leave", quoted phrases, OR) into a tsquery.
-  const visible = Prisma.sql`d.status = 'PUBLISHED' AND hc.visibility = ANY(${tiers}::"DocVisibility"[])`;
+  // What the assistant may retrieve = the reader's gate (PUBLISHED + caller's
+  // visible tiers) AND the super-admin assistant-access policy. The policy is
+  // additive-only: a per-document override (true/false) wins over the collection
+  // default, NULL inherits the collection — it can hide content from the assistant
+  // but never widens access beyond status + visibility tier (see
+  // docs/architecture/knowledge-base.md). `query` is bound as a text param to
+  // websearch_to_tsquery (injection-safe).
+  const visible = Prisma.sql`d.status = 'PUBLISHED'
+    AND hc.visibility = ANY(${tiers}::"DocVisibility"[])
+    AND COALESCE(d."assistantEnabled", col."assistantEnabled") = true`;
 
   const rows = await prisma.$queryRaw<HandbookHit[]>(
     Prisma.sql`
@@ -49,6 +56,7 @@ export async function searchHandbook(
         SELECT hc.id, row_number() OVER (ORDER BY hc.embedding <=> ${vec}::halfvec) AS rank
         FROM "HandbookChunk" hc
         JOIN "HrDocument" d ON d.id = hc."documentId"
+        JOIN "KbCollection" col ON col.id = d."collectionId"
         WHERE ${visible} AND hc.embedding IS NOT NULL
         ORDER BY hc.embedding <=> ${vec}::halfvec
         LIMIT ${CANDIDATES}
@@ -58,6 +66,7 @@ export async function searchHandbook(
                row_number() OVER (ORDER BY ts_rank_cd(hc."contentTsv", q.query) DESC) AS rank
         FROM "HandbookChunk" hc
         JOIN "HrDocument" d ON d.id = hc."documentId"
+        JOIN "KbCollection" col ON col.id = d."collectionId"
         CROSS JOIN q
         WHERE ${visible} AND hc."contentTsv" @@ q.query
         ORDER BY ts_rank_cd(hc."contentTsv", q.query) DESC

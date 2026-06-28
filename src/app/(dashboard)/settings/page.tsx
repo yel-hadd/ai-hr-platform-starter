@@ -9,7 +9,13 @@ import {
 import { CHAT_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai/providers";
 import { TOOL_CATALOGUE, toolsForRole } from "@/lib/ai/tools";
 import { CURRENCIES, TIMEZONES, getOrgSettings } from "@/lib/settings";
-import { updateOrgSettings } from "./actions";
+import { listAssistantAccess } from "@/lib/kb";
+import {
+  updateOrgSettings,
+  setCollectionAssistantAction,
+  setDocumentAssistantAction,
+} from "./actions";
+import { AssistantAccessPanel } from "@/components/kb/assistant-access-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +39,7 @@ export default async function SettingsPage() {
   const tPerm = await getTranslations("permissions");
   const tSummary = await getTranslations("tools.summary");
   const orgSettings = await getOrgSettings();
+  const assistantAccess = await listAssistantAccess({ role: user.role, id: user.id });
 
   return (
     <>
@@ -76,6 +83,12 @@ export default async function SettingsPage() {
             </form>
           </CardContent>
         </Card>
+
+        <AssistantAccessPanel
+          collections={assistantAccess}
+          setCollection={setCollectionAssistantAction}
+          setDocument={setDocumentAssistantAction}
+        />
 
         <Card>
           <CardHeader>
