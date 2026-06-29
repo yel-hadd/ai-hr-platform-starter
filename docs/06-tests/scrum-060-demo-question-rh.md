@@ -56,4 +56,5 @@ source *Politique de congés et absences* § Article 2. Cohérent en FR comme en
 La contre-démonstration (question **hors périmètre / refus contrôlé**) relève de
 **SCRUM-059** (test d'accès RAG non autorisé) et n'est pas couverte ici.
 
-> Validation attendue : Driss LHBIL, Chaimaa MELLOUK, Yassine EL HADDAD.
+<img width="1366" height="695" alt="image" src="https://github.com/user-attachments/assets/48d41854-bf11-4c61-8874-11c7ab8404d2" />
+
