@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Wrench, AlertTriangle } from "lucide-react";
-import { DeniedCard } from "./generative/denied";
+import { useTranslations } from "next-intl";
 import { Citations } from "./generative/citations";
 import { DirectoryCards } from "./generative/directory";
 import {
@@ -12,16 +12,6 @@ import {
 } from "./generative/leave";
 import { Payslip } from "./generative/payslip";
 
-const TOOL_LABELS: Record<string, string> = {
-  searchHandbook: "Searching the handbook",
-  getEmployeeDirectory: "Looking up the directory",
-  getLeaveBalance: "Checking leave balance",
-  requestTimeOff: "Submitting time-off request",
-  listPendingApprovals: "Fetching pending approvals",
-  approveLeave: "Processing approval",
-  getPayslip: "Retrieving payslip",
-};
-
 type ToolPart = {
   type: string; // "tool-<name>"
   state: "input-streaming" | "input-available" | "output-available" | "output-error";
@@ -31,51 +21,86 @@ type ToolPart = {
   errorText?: string;
 };
 
-export function ToolCall({ part }: { part: ToolPart }) {
+// Silent utility tools — the agent uses them internally (date math) and states
+// the result in its answer; there's nothing meaningful to render. Mirrors the
+// `permission: null` utility rows in TOOL_CATALOGUE (lib/ai/tools.ts) — kept as a
+// small client-side list so this client component doesn't import server-only
+// tool code. Add a calendar/utility tool there → add its name here.
+const SILENT_TOOLS = new Set(["getCurrentDateTime", "getDateInfo", "businessDaysBetween"]);
+
+export function ToolCall({ part, streaming }: { part: ToolPart; streaming: boolean }) {
+  const t = useTranslations("tools");
   const name = part.type.replace(/^tool-/, "");
-  const label = TOOL_LABELS[name] ?? name;
+  if (SILENT_TOOLS.has(name)) return null;
+  // `name` is dynamic; narrow the key to the translator's expected type.
+  const statusKey = `status.${name}` as Parameters<typeof t>[0];
+  const label = t.has(statusKey) ? t(statusKey) : name;
   const running = part.state === "input-streaming" || part.state === "input-available";
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex items-center gap-2 text-xs text-muted-foreground"
+      >
         {running ? (
           <Loader2 className="size-3.5 animate-spin" />
         ) : (
           <Wrench className="size-3.5" />
         )}
         <span>{label}</span>
-        <code className="rounded bg-muted px-1 py-0.5 text-[10px]">{name}</code>
+        <code className="rounded bg-muted px-1 py-0.5 text-[10px] text-foreground">{name}</code>
       </div>
 
       {part.state === "output-error" && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
-          <AlertTriangle className="size-3.5" /> {part.errorText ?? "Tool error"}
+        // An unexpected tool throw. Show a generic localized message — never the
+        // raw errorText, which can carry server/DB internals. Expected, explained
+        // failures come back as an { error, errorCode } output instead (below).
+        <div
+          role="alert"
+          className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive"
+        >
+          <AlertTriangle className="size-3.5" /> {t("error")}
         </div>
       )}
 
-      {part.state === "output-available" && <ToolOutput name={name} output={part.output} />}
+      {part.state === "output-available" && (
+        <ToolOutput name={name} output={part.output} streaming={streaming} />
+      )}
     </div>
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ToolOutput({ name, output }: { name: string; output: any }) {
+function ToolOutput({
+  name,
+  output,
+  streaming,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+}: { name: string; output: any; streaming: boolean }) {
+  const t = useTranslations("tools");
   if (!output) return null;
-  if (output.denied) return <DeniedCard reason={output.reason} />;
-  if (output.error)
+  // Scope refusals are intentionally invisible — the agent works with the
+  // authorized data and explains in prose; we don't surface an error.
+  if (output.refused) return null;
+  if (output.error) {
+    // Prefer a localized message keyed by the tool's stable errorCode; fall back
+    // to the raw (English) error string, then to the generic label.
+    const key = typeof output.errorCode === "string" ? `errors.${output.errorCode}` : null;
+    const text = key && t.has(key as Parameters<typeof t>[0]) ? t(key as Parameters<typeof t>[0]) : output.error;
     return (
       <p className="rounded-lg border border-dashed p-2 text-xs text-muted-foreground">
-        {output.error}
+        {text}
       </p>
     );
+  }
 
   switch (name) {
     case "searchHandbook":
-      return <Citations query={output.query} results={output.results} />;
+      return <Citations query={output.query} results={output.results} streaming={streaming} />;
     case "getEmployeeDirectory":
       return <DirectoryCards people={output.people} />;
-    case "getLeaveBalance":
+    case "getLeaveBalances":
       return <LeaveBalances balances={output.balances} />;
     case "requestTimeOff":
       return <LeaveRequestCard request={output.request} />;
