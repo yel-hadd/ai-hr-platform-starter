@@ -53,5 +53,3 @@ champs de citation (titre + section) sont présents.
 Le RAG répond correctement et de façon sourcée sur les documents RH validés pour
 le rôle Collaborateur. Les critères d'acceptation SCRUM-058 sont satisfaits ; les
 anomalies ci-dessus sont mineures et non bloquantes pour la démo Sprint 2.
-
-> Validation technique attendue : Yassine EL HADDAD (qualité RAG), Driss LHBIL.
