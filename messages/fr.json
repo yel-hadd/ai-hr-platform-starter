@@ -74,7 +74,12 @@
     "example1": "« Quelle est notre politique de congé parental ? »",
     "example2": "« Montre-moi l'annuaire de l'équipe. »",
     "example3": "« Combien de jours de congés me reste-t-il, et pose-en 2 lundi prochain. »",
-    "openAssistant": "Ouvrir l'assistant IA"
+    "openAssistant": "Ouvrir l'assistant IA",
+    "leaveBalances": "Solde de congés",
+    "vacationUsed": "Congés utilisés",
+    "daysUsedOfTotal": "{used} / {total} jours",
+    "remainingShort": "{n} restants",
+    "noBalances": "Aucun solde de congés"
   },
   "directory": {
     "title": "Annuaire",
@@ -416,5 +421,17 @@
     "ALL_EMPLOYEES": "Tous les employés",
     "MANAGERS": "Managers et plus",
     "HR_ONLY": "RH uniquement"
+  },
+  "topbar": {
+    "descriptor": "Human Resources · AI",
+    "workspace": "Espace {role}",
+    "search": "Rechercher…",
+    "noResults": "Aucun résultat",
+    "notifications": "Notifications",
+    "noNotifications": "Aucune notification",
+    "approvals": "{count, plural, one {# demande à approuver} other {# demandes à approuver}}",
+    "approvalsDesc": "Congés en attente de votre validation",
+    "myPending": "Votre demande de congé est en attente",
+    "myPendingDesc": "{count, plural, one {# en cours de traitement} other {# en cours de traitement}}"
   }
 }

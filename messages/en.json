@@ -74,7 +74,12 @@
     "example1": "“What's our parental leave policy?”",
     "example2": "“Show me the team directory.”",
     "example3": "“How many vacation days do I have left, and request 2 of them next Monday.”",
-    "openAssistant": "Open AI Assistant"
+    "openAssistant": "Open AI Assistant",
+    "leaveBalances": "Leave balances",
+    "vacationUsed": "Vacation used",
+    "daysUsedOfTotal": "{used} / {total} days",
+    "remainingShort": "{n} left",
+    "noBalances": "No leave balances"
   },
   "directory": {
     "title": "Directory",
@@ -416,5 +421,17 @@
     "ALL_EMPLOYEES": "All employees",
     "MANAGERS": "Managers & above",
     "HR_ONLY": "HR only"
+  },
+  "topbar": {
+    "descriptor": "Human Resources · AI",
+    "workspace": "{role} workspace",
+    "search": "Search…",
+    "noResults": "No results",
+    "notifications": "Notifications",
+    "noNotifications": "No notifications",
+    "approvals": "{count, plural, one {# request to approve} other {# requests to approve}}",
+    "approvalsDesc": "Leave awaiting your validation",
+    "myPending": "Your leave request is pending",
+    "myPendingDesc": "{count, plural, one {# in progress} other {# in progress}}"
   }
 }

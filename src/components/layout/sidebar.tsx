@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -11,34 +10,20 @@ import {
   CalendarDays,
   BookOpen,
   Settings,
-  LogOut,
-  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can, type Permission, type Role } from "@/lib/rbac";
 import { SETTINGS_SECTIONS } from "@/components/settings/sections";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
-import { logout } from "@/lib/auth-actions";
+import { HariMark } from "@/components/brand/logo";
 
-type User = { name: string; email: string; role: Role };
+export type NavUser = { name: string; email: string; role: Role };
 
 type NavItem = {
   href: string;
   label: "dashboard" | "assistant" | "directory" | "timeOff" | "knowledgeBase" | "settings";
   icon: React.ComponentType<{ className?: string }>;
-  permission?: Permission; // hidden unless the role holds it
-  // Sub-items shown nested under the parent when its section is active. `labelKey`
-  // is resolved against the "settings" namespace.
+  permission?: Permission;
   children?: { href: string; labelKey: (typeof SETTINGS_SECTIONS)[number]["key"] }[];
 };
 
@@ -47,16 +32,12 @@ const NAV: NavItem[] = [
   { href: "/chat", label: "assistant", icon: Bot },
   { href: "/directory", label: "directory", icon: Users },
   { href: "/time-off", label: "timeOff", icon: CalendarDays },
-  // Read access (handbook:read) is held by every role; documents are still
-  // visibility-filtered server-side, so the link is shown to everyone.
   { href: "/kb", label: "knowledgeBase", icon: BookOpen },
   {
     href: "/settings",
     label: "settings",
     icon: Settings,
     permission: "admin:settings",
-    // Settings categories surface as nested sub-items (the parent link is the
-    // Overview). Excludes the overview entry to avoid duplicating the parent.
     children: SETTINGS_SECTIONS.filter((s) => s.href !== "/settings").map((s) => ({
       href: s.href,
       labelKey: s.key,
@@ -73,29 +54,42 @@ function initialsOf(name: string) {
     .toUpperCase();
 }
 
-// The nav body, shared by the desktop sidebar and the mobile sheet. `onNavigate`
-// lets the mobile sheet close itself when a link is tapped.
-function NavBody({ user, onNavigate }: { user: User; onNavigate?: () => void }) {
+// Shared nav body — desktop rail + mobile sheet. `onNavigate` closes the sheet.
+export function NavBody({
+  user,
+  onNavigate,
+}: {
+  user: NavUser;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tSettings = useTranslations("settings");
   const tRoles = useTranslations("roles");
+  const tTop = useTranslations("topbar");
   const items = NAV.filter((i) => !i.permission || can(user.role, i.permission));
-
   const inSection = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <>
-      <div className="flex items-center gap-2 px-5 py-4 font-semibold">
-        <Bot className="size-5 text-primary" />
-        HARI
+    <div className="flex h-full flex-col glass-navy text-white">
+      {/* Brand */}
+      <div className="flex items-center gap-3 px-5 py-5">
+        <HariMark className="size-9" />
+        <div className="leading-none">
+          <div className="text-xl font-extrabold tracking-[0.06em] text-white">HARI</div>
+          <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white/45">
+            {tTop("descriptor")}
+          </div>
+        </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3" aria-label={t("primary")}>
+      <p className="px-5 pb-2 pt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
+        {tTop("workspace", { role: tRoles(user.role) })}
+      </p>
+
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3" aria-label={t("primary")}>
         {items.map((item) => {
           const hasChildren = !!item.children?.length;
-          // Parent with children highlights only on its own page (Overview); a
-          // sub-page highlights the matching child instead.
           const active =
             item.href === "/"
               ? pathname === "/"
@@ -110,13 +104,13 @@ function NavBody({ user, onNavigate }: { user: User; onNavigate?: () => void }) 
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+                    : "text-white/70 hover:bg-white/10 hover:text-white",
                 )}
               >
-                <item.icon className="size-4" />
+                <item.icon className="size-[18px]" />
                 {t(item.label)}
               </Link>
 
@@ -133,8 +127,8 @@ function NavBody({ user, onNavigate }: { user: User; onNavigate?: () => void }) 
                         className={cn(
                           "block rounded-md py-1.5 pl-10 pr-3 text-sm transition-colors",
                           childActive
-                            ? "bg-muted font-medium text-foreground"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            ? "bg-white/10 font-medium text-white"
+                            : "text-white/55 hover:bg-white/5 hover:text-white",
                         )}
                       >
                         {tSettings(child.labelKey)}
@@ -148,69 +142,29 @@ function NavBody({ user, onNavigate }: { user: User; onNavigate?: () => void }) 
         })}
       </nav>
 
-      <div className="border-t p-3">
-        <div className="flex items-center gap-3 rounded-md px-2 py-2">
-          <Avatar className="size-8">
-            <AvatarFallback>{initialsOf(user.name)}</AvatarFallback>
+      {/* Profile */}
+      <div className="p-3">
+        <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3 ring-1 ring-white/10">
+          <Avatar className="size-9">
+            <AvatarFallback className="bg-brand-gradient text-xs font-semibold text-white">
+              {initialsOf(user.name)}
+            </AvatarFallback>
           </Avatar>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{user.name}</p>
-            <Badge variant="secondary" className="mt-0.5 text-[10px]">
-              {tRoles(user.role)}
-            </Badge>
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+            <p className="truncate text-xs text-white/50">{tRoles(user.role)}</p>
           </div>
-          <LanguageSwitcher />
-          <ThemeToggle />
         </div>
-        <form action={logout}>
-          <Button
-            type="submit"
-            variant="ghost"
-            size="sm"
-            className="mt-1 w-full justify-start text-muted-foreground"
-          >
-            <LogOut className="size-4" /> {t("signOut")}
-          </Button>
-        </form>
       </div>
-    </>
+    </div>
   );
 }
 
-/** Desktop sidebar — fixed rail, hidden below `md`. */
-export function Sidebar({ user }: { user: User }) {
+/** Desktop sidebar — fixed rail, hidden below `md` (the top bar exposes it on mobile). */
+export function Sidebar({ user }: { user: NavUser }) {
   return (
-    <aside className="hidden h-dvh w-64 shrink-0 flex-col border-r bg-card md:flex">
+    <aside className="hidden h-dvh w-64 shrink-0 border-r border-white/10 md:block">
       <NavBody user={user} />
     </aside>
-  );
-}
-
-/** Mobile top bar — the hamburger opens the same nav in a left sheet. Hidden at `md+`. */
-export function MobileNav({ user }: { user: User }) {
-  const [open, setOpen] = useState(false);
-  const t = useTranslations("nav");
-
-  return (
-    <header className="flex h-14 items-center gap-2 border-b bg-card px-3 md:hidden">
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger
-          render={<Button variant="ghost" size="icon" aria-label={t("openNavigation")} />}
-        >
-          <Menu className="size-5" />
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          <SheetTitle className="sr-only">{t("navigation")}</SheetTitle>
-          <div className="flex h-full flex-col">
-            <NavBody user={user} onNavigate={() => setOpen(false)} />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <span className="flex items-center gap-2 font-semibold">
-        <Bot className="size-5 text-primary" />
-        HARI
-      </span>
-    </header>
   );
 }
