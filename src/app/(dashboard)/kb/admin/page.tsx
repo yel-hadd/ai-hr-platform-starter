@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { ButtonLink } from "@/components/ui/button-link";
 import { DocumentRowActions } from "@/components/kb/document-row-actions";
 import { CollectionRowActions } from "@/components/kb/collection-row-actions";
+import { CollectionCover } from "@/components/kb/collection-cover";
 import { SavedToast } from "@/components/kb/saved-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -214,11 +215,10 @@ export default async function KbAdminPage({
                       <TableCell className="font-medium">
                         <span className="flex items-center gap-2">
                           {c.image && (
-                            // eslint-disable-next-line @next/next/no-img-element -- decorative cover thumbnail, often a data URL
-                            <img
+                            <CollectionCover
                               src={c.image}
-                              alt=""
-                              className="size-8 shrink-0 rounded border object-cover"
+                              className="size-8 shrink-0 rounded border"
+                              sizes="32px"
                             />
                           )}
                           <span>

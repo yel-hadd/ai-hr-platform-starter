@@ -376,6 +376,8 @@
     "imageRemove": "Remove image",
     "imageTooLarge": "Image is too large (1 MB max).",
     "imageInvalid": "Please choose an image file.",
+    "imageUploading": "Uploading…",
+    "imageUploadFailed": "Upload failed. Please try again.",
     "articleCount": "{count, plural, =0 {No articles} one {# article} other {# articles}}",
     "browse": "Browse",
     "rowActions": "Actions",

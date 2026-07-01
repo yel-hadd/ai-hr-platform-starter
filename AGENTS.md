@@ -12,10 +12,11 @@ Vercel AI SDK v6 · OpenRouter (chat + embeddings) · Postgres + pgvector (`half
 > for that version rather than assuming older behavior.
 
 ## Commands
-- `docker compose up --build` — full stack (db + adminer + app); migrates + seeds on boot.
-- `npm run dev` — app only (expects Postgres on `:5432`).
+- `docker compose up --build` — full stack (db + adminer + **minio** + app); migrates + seeds on boot.
+- `npm run dev` — app only (expects Postgres on `:5432` and MinIO on `:9000`; `docker compose up -d db minio`).
 - `npm run db:migrate` / `db:deploy` / `db:reset` — Prisma migrations (schema lives in migrations, **not** `db push`).
-- `npm run db:seed` — demo data (idempotent; won't re-embed if the handbook already exists — use `db:reset` after editing it).
+- `npm run db:seed` — demo data (idempotent; won't re-embed if the handbook already exists — use `db:reset` after editing it). Seeding uploads collection covers to MinIO, so it needs MinIO up.
+- `npm run db:migrate-covers` — one-off: move any legacy inline `data:` KB covers into MinIO.
 - `npm test` — vitest **deterministic** suite (RBAC unit + tool/RBAC integration); no network/keys (needs a running Postgres for the integration test).
 - `npm run test:live` / `test:all` — live OpenRouter + RAG smoke (`*.live.test.ts`, needs `OPENROUTER_API_KEY`) / both.
 
@@ -39,4 +40,9 @@ Vercel AI SDK v6 · OpenRouter (chat + embeddings) · Postgres + pgvector (`half
   (`NEXT_LOCALE`, no URL prefixes, no middleware). Every user-facing string is a key in
   `messages/{en,fr}.json` — never a hardcoded literal; the AI answers in the active locale.
   Keys are type-checked against `en.json`. See `docs/i18n.md`.
+- **KB cover images** live in S3-compatible object storage (MinIO in dev), via `lib/storage.ts`
+  (a PRIVATE bucket). They're served through the same-origin proxy `api/kb/images/[...key]` so
+  `next/image` optimizes them; the browser never talks to MinIO. Uploads go through
+  `POST /api/kb/upload` (gated on `kb:manage`); `KbCollection.image` stores the `/api/kb/images/…`
+  path. `S3_*` / `MINIO_*` env vars configure it (see `.env.example`).
 - Secrets stay in `.env` (git-ignored) and are read only in server code / Route Handlers.

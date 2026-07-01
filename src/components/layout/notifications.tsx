@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -11,22 +12,48 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import type { NotificationItem } from "@/lib/notifications";
 
-export type AppNotification = {
-  id: string;
-  title: string;
-  description: string;
-  href: string;
-};
-
-export function Notifications({ items }: { items: AppNotification[] }) {
+// Self-fetching bell: loads role-scoped items on mount (to populate the badge)
+// and refetches each time the dropdown opens (so it can't go stale). The layout
+// no longer computes these, so no leave queries block first paint on any route.
+export function Notifications() {
   const router = useRouter();
   const t = useTranslations("topbar");
+  const tLeave = useTranslations("leaveType");
+  const [items, setItems] = useState<NotificationItem[]>([]);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (!res.ok) return;
+      const data = (await res.json()) as { items: NotificationItem[] };
+      setItems(data.items ?? []);
+    } catch {
+      /* keep the previous list on a transient failure */
+    }
+  }, []);
+
+  useEffect(() => {
+    // Populate the badge on mount. `load` sets state only after the fetch
+    // resolves (asynchronously), so this can't cascade — the rule can't see
+    // through the async callback.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
   const count = items.length;
   const viewAllHref = items[0]?.href ?? "/time-off";
 
+  function titleFor(n: NotificationItem): string {
+    const type = tLeave(n.leaveType);
+    return n.kind === "approval"
+      ? t("approvalItem", { name: n.employeeName ?? "", type })
+      : t("myPendingItem", { type });
+  }
+
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={(open) => open && load()}>
       <DropdownMenuTrigger
         render={
           <Button
@@ -66,8 +93,10 @@ export function Notifications({ items }: { items: AppNotification[] }) {
                 onClick={() => router.push(n.href)}
                 className="flex-col items-start gap-0.5 py-2"
               >
-                <span className="text-sm font-medium text-foreground">{n.title}</span>
-                <span className="text-xs text-muted-foreground">{n.description}</span>
+                <span className="text-sm font-medium text-foreground">{titleFor(n)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {n.startDate} → {n.endDate}
+                </span>
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />

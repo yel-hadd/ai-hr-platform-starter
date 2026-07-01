@@ -43,14 +43,16 @@ export type CollectionWithArticles = {
   articles: ArticleSummary[];
 };
 
-// Accept only safe cover sources — an uploaded image (data:image/... URL) or an
-// external http(s) URL. Anything else (javascript:, oversized blobs, junk) → null,
-// so a hand-crafted POST can't smuggle an unsafe value into the rendered <img>.
-const MAX_IMAGE_LEN = 1_500_000; // ~1 MB once base64-encoded
+// Accept only safe cover sources — a same-origin object-storage path
+// (/api/kb/images/…), an external https URL, or a legacy inline data:image URL.
+// Anything else (javascript:, oversized blobs, junk) → null, so a hand-crafted
+// POST can't smuggle an unsafe value into the rendered cover.
+const MAX_IMAGE_LEN = 1_500_000; // ~1 MB once base64-encoded (legacy data: URLs)
 export function sanitizeImage(value: string | null | undefined): string | null {
   const v = (value ?? "").trim();
   if (!v) return null;
   if (v.length > MAX_IMAGE_LEN) return null;
+  if (/^\/api\/kb\/images\/[\w./-]+$/i.test(v)) return v;
   if (/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);/i.test(v)) return v;
   if (/^https:\/\//i.test(v)) return v;
   return null;

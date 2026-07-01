@@ -2,28 +2,18 @@
 
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const MAX_BYTES = 1_000_000; // 1 MB source cap (the cover is stored inline as a data URL)
-const MAX_COVER_WIDTH = 1280; // covers render small — cap the stored resolution
+const MAX_BYTES = 1_000_000; // 1 MB source cap (before client-side compression)
+const MAX_COVER_WIDTH = 1280; // covers render small — cap the uploaded resolution
 const WEBP_QUALITY = 0.82;
 const RASTER_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
-// Downscale + re-encode a raster image to a compact WebP data URL so the inline
-// cover stays small — the Image optimizer can't touch data: URLs, so we optimize
-// here at pick time. SVG/GIF pass through untouched (vector sharpness / animation).
-async function toStoredDataUrl(file: File): Promise<string> {
-  if (!RASTER_TYPES.includes(file.type)) return readAsDataUrl(file);
+// Downscale + re-encode a raster image to a compact WebP blob before upload, so
+// what we store stays small. SVG/GIF pass through untouched (vector / animation).
+async function toUploadBlob(file: File): Promise<Blob> {
+  if (!RASTER_TYPES.includes(file.type)) return file;
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   const scale = Math.min(1, MAX_COVER_WIDTH / bitmap.width);
   const width = Math.round(bitmap.width * scale);
@@ -34,23 +24,25 @@ async function toStoredDataUrl(file: File): Promise<string> {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     bitmap.close();
-    return readAsDataUrl(file);
+    return file;
   }
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
-  const webp = canvas.toDataURL("image/webp", WEBP_QUALITY);
-  // Engines without WebP encoding fall back to the original file bytes.
-  return webp.startsWith("data:image/webp") ? webp : readAsDataUrl(file);
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/webp", WEBP_QUALITY),
+  );
+  return blob ?? file; // engines without WebP encoding fall back to the original
 }
 
-// Decorative cover-image picker for a collection. Compresses the chosen file to a
-// small WebP data URL entirely client-side (no upload endpoint / blob storage
-// needed) and mirrors it into a hidden input so the existing server action stores
-// it as text. An empty hidden value clears the image on save.
+// Decorative cover-image picker for a collection. Compresses the chosen file
+// client-side, uploads it to object storage (POST /api/kb/upload), and mirrors
+// the returned same-origin URL into a hidden input so the existing server action
+// stores it as text. An empty hidden value clears the image on save.
 export function ImageField({ defaultValue }: { defaultValue?: string | null }) {
   const t = useTranslations("kb");
   const [value, setValue] = useState<string>(defaultValue ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -64,11 +56,20 @@ export function ImageField({ defaultValue }: { defaultValue?: string | null }) {
       setError(t("imageTooLarge"));
       return;
     }
+    setError(null);
+    setUploading(true);
     try {
-      setValue(await toStoredDataUrl(file));
-      setError(null);
+      const blob = await toUploadBlob(file);
+      const fd = new FormData();
+      fd.append("file", blob, blob === file ? file.name : "cover.webp");
+      const res = await fetch("/api/kb/upload", { method: "POST", body: fd });
+      if (!res.ok) throw new Error(`upload failed: ${res.status}`);
+      const { url } = (await res.json()) as { url: string };
+      setValue(url);
     } catch {
-      setError(t("imageInvalid"));
+      setError(t("imageUploadFailed"));
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -81,12 +82,12 @@ export function ImageField({ defaultValue }: { defaultValue?: string | null }) {
   return (
     <div className="space-y-1 text-sm">
       <span className="font-medium">{t("fieldImage")}</span>
-      {/* The actual stored value — a data URL (or empty to clear). */}
+      {/* The actual stored value — a same-origin /api/kb/images/… URL (or empty to clear). */}
       <input type="hidden" name="image" value={value} />
 
       <div className="flex items-start gap-3">
         {value ? (
-          // eslint-disable-next-line @next/next/no-img-element -- decorative, user-provided data URL; the Next optimizer doesn't apply to data: sources
+          // eslint-disable-next-line @next/next/no-img-element -- small form preview; the value may still be a legacy data: URL
           <img
             src={value}
             alt=""
@@ -94,7 +95,11 @@ export function ImageField({ defaultValue }: { defaultValue?: string | null }) {
           />
         ) : (
           <div className="flex h-20 w-32 shrink-0 items-center justify-center rounded-md border border-dashed text-muted-foreground">
-            <ImagePlus className="size-5" />
+            {uploading ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <ImagePlus className="size-5" />
+            )}
           </div>
         )}
 
@@ -103,10 +108,16 @@ export function ImageField({ defaultValue }: { defaultValue?: string | null }) {
             ref={inputRef}
             type="file"
             accept="image/*"
+            disabled={uploading}
             onChange={onPick}
-            className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground hover:file:bg-muted"
+            className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground hover:file:bg-muted disabled:opacity-60"
           />
-          {value && (
+          {uploading && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" /> {t("imageUploading")}
+            </span>
+          )}
+          {value && !uploading && (
             <Button
               type="button"
               size="sm"
