@@ -8,6 +8,7 @@ import { can, visibleDocTiers, type Role } from "@/lib/rbac";
 import { slugify } from "@/lib/kb/markdown";
 import { ingestDocument, removeDocumentChunks } from "@/lib/kb/ingest";
 import { searchHandbook } from "@/lib/rag";
+import { deleteObject, keyFromCoverUrl } from "@/lib/storage";
 
 // `id` is the signed-in user's id — used to stamp authorship on admin mutations.
 // Reader functions only need `role`.
@@ -446,22 +447,41 @@ export async function updateCollection(
   },
 ) {
   assertManage(caller);
-  return prisma.kbCollection.update({
+  const existing = await prisma.kbCollection.findUnique({
+    where: { id },
+    select: { image: true },
+  });
+  const nextImage = sanitizeImage(input.image);
+  const updated = await prisma.kbCollection.update({
     where: { id },
     data: {
       slug: await uniqueSlug("kbCollection", input.slug || input.name, id),
       name: input.name,
       description: input.description || null,
-      image: sanitizeImage(input.image),
+      image: nextImage,
       order: input.order ?? 0,
     },
   });
+  // Best-effort: drop the previous stored cover if it changed or was cleared, so
+  // object storage doesn't accumulate orphans. Never fails the update.
+  const oldKey = keyFromCoverUrl(existing?.image);
+  if (oldKey && existing?.image !== nextImage) {
+    await deleteObject(oldKey).catch(() => {});
+  }
+  return updated;
 }
 
 /** Cascades to its documents and their chunks (FK onDelete: Cascade). */
 export async function deleteCollection(caller: KbCaller, id: string) {
   assertManage(caller);
-  return prisma.kbCollection.delete({ where: { id } });
+  const existing = await prisma.kbCollection.findUnique({
+    where: { id },
+    select: { image: true },
+  });
+  const deleted = await prisma.kbCollection.delete({ where: { id } });
+  const key = keyFromCoverUrl(existing?.image);
+  if (key) await deleteObject(key).catch(() => {});
+  return deleted;
 }
 
 // ── Document mutations ──────────────────────────────────────────────────────

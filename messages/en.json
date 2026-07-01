@@ -434,6 +434,8 @@
     "noResults": "No results",
     "notifications": "Notifications",
     "noNotifications": "No notifications",
+    "notificationsError": "Couldn't load notifications.",
+    "retry": "Retry",
     "approvals": "{count, plural, one {# request to approve} other {# requests to approve}}",
     "approvalsDesc": "Leave awaiting your validation",
     "myPending": "Your leave request is pending",

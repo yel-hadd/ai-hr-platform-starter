@@ -434,6 +434,8 @@
     "noResults": "Aucun résultat",
     "notifications": "Notifications",
     "noNotifications": "Aucune notification",
+    "notificationsError": "Impossible de charger les notifications.",
+    "retry": "Réessayer",
     "approvals": "{count, plural, one {# demande à approuver} other {# demandes à approuver}}",
     "approvalsDesc": "Congés en attente de votre validation",
     "myPending": "Votre demande de congé est en attente",

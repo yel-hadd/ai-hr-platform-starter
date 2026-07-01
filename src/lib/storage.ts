@@ -15,6 +15,7 @@ import {
 // imported into any client component.
 
 const BUCKET = process.env.S3_BUCKET ?? "kb-images";
+const COVER_URL_PREFIX = "/api/kb/images/";
 
 const s3 = new S3Client({
   region: process.env.S3_REGION ?? "us-east-1",
@@ -28,14 +29,35 @@ const s3 = new S3Client({
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Fail fast in production if storage isn't configured — never silently fall back
+// to the dev minioadmin/localhost defaults against a real deployment.
+function assertConfigured(): void {
+  if (process.env.NODE_ENV !== "production") return;
+  const missing = ["S3_ENDPOINT", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"].filter(
+    (k) => !process.env[k],
+  );
+  if (missing.length) {
+    throw new Error(`Object storage is not configured — set ${missing.join(", ")}.`);
+  }
+}
+
+function isNotFound(err: unknown): boolean {
+  const status = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
+  const name = (err as { name?: string })?.name;
+  return status === 404 || name === "NotFound" || name === "NoSuchBucket" || name === "NoSuchKey";
+}
+
 let bucketReady = false;
 
 /**
  * Create the bucket if it doesn't exist. Retries a few times so we tolerate
  * MinIO still starting up (compose brings it up alongside the app). Idempotent.
+ * A genuine error (e.g. 403 AccessDenied — wrong creds) is rethrown immediately
+ * rather than masked as "missing bucket" + a slow retry loop.
  */
 export async function ensureBucket(): Promise<void> {
   if (bucketReady) return;
+  assertConfigured();
   let lastErr: unknown;
   for (let attempt = 0; attempt < 12; attempt++) {
     try {
@@ -43,7 +65,14 @@ export async function ensureBucket(): Promise<void> {
       bucketReady = true;
       return;
     } catch (headErr) {
-      // Missing bucket (or first boot): try to create it.
+      // Only "missing bucket" warrants a create; a 403/misconfig must surface.
+      if (!isNotFound(headErr) && (headErr as { name?: string })?.name !== "Forbidden") {
+        const status = (headErr as { $metadata?: { httpStatusCode?: number } })?.$metadata
+          ?.httpStatusCode;
+        // Connection refused (MinIO booting) has no HTTP status → keep retrying;
+        // any real HTTP error (403 etc.) is fatal.
+        if (status) throw headErr;
+      }
       try {
         await s3.send(new CreateBucketCommand({ Bucket: BUCKET }));
         bucketReady = true;
@@ -54,8 +83,7 @@ export async function ensureBucket(): Promise<void> {
           bucketReady = true;
           return;
         }
-        // Likely MinIO not reachable yet — back off and retry.
-        lastErr = createErr ?? headErr;
+        lastErr = createErr;
         await sleep(1000);
       }
     }
@@ -68,7 +96,6 @@ function extFor(contentType: string): string {
   if (ct.includes("webp")) return "webp";
   if (ct.includes("png")) return "png";
   if (ct.includes("jpeg") || ct.includes("jpg")) return "jpg";
-  if (ct.includes("svg")) return "svg";
   if (ct.includes("gif")) return "gif";
   return "bin";
 }
@@ -81,38 +108,43 @@ export async function putCover(
   await ensureBucket();
   const key = `covers/${randomUUID()}.${extFor(contentType)}`;
   await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: bytes,
-      ContentType: contentType,
-    }),
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: bytes, ContentType: contentType }),
   );
   return key;
 }
 
-/** Fetch an object's bytes + content type, or null if it doesn't exist. */
+/** Stream an object (body + content type), or null if it doesn't exist. */
 export async function getObject(
   key: string,
-): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+): Promise<{ stream: ReadableStream; contentType: string; contentLength?: number } | null> {
   try {
     const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
-    const bytes = await res.Body!.transformToByteArray();
-    return { bytes, contentType: res.ContentType ?? "application/octet-stream" };
+    return {
+      stream: res.Body!.transformToWebStream(),
+      contentType: res.ContentType ?? "application/octet-stream",
+      contentLength: res.ContentLength,
+    };
   } catch (err) {
-    const status = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata
-      ?.httpStatusCode;
-    const name = (err as { name?: string })?.name;
-    if (status === 404 || name === "NoSuchKey" || name === "NotFound") return null;
+    if (isNotFound(err)) return null;
     throw err;
   }
 }
 
 export async function deleteObject(key: string): Promise<void> {
-  await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+  try {
+    await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+  } catch (err) {
+    if (!isNotFound(err)) throw err; // best-effort: a missing object is fine
+  }
 }
 
-/** Turn a stored object key into the same-origin proxy path used in <img>/<Image>. */
+/** Turn a stored object key into the same-origin proxy path used in <Image>. */
 export function coverUrl(key: string): string {
-  return `/api/kb/images/${key}`;
+  return `${COVER_URL_PREFIX}${key}`;
+}
+
+/** Parse a stored cover URL back to its object key (null if not a proxy path). */
+export function keyFromCoverUrl(url: string | null | undefined): string | null {
+  if (!url || !url.startsWith(COVER_URL_PREFIX)) return null;
+  return url.slice(COVER_URL_PREFIX.length);
 }
