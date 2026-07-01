@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -76,8 +77,15 @@ export function NavBody({
       <div className="flex items-center gap-3 px-5 py-5">
         <HariMark className="size-9" />
         <div className="leading-none">
-          <div className="text-xl font-extrabold tracking-[0.06em] text-white">HARI</div>
-          <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white/45">
+          <Image
+            src="/assets/Logo_HARI_Light.png"
+            alt="HARI"
+            width={506}
+            height={105}
+            priority
+            className="h-5 w-auto object-contain object-left"
+          />
+          <div className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.2em] text-white/45">
             {tTop("descriptor")}
           </div>
         </div>
