@@ -28,7 +28,9 @@
     "themeSystem": "Système",
     "skipToContent": "Aller au contenu",
     "mainContent": "Contenu principal",
-    "knowledgeBase": "Base de connaissances"
+    "knowledgeBase": "Base de connaissances",
+    "breadcrumb": "Fil d'Ariane",
+    "userMenu": "Menu du compte"
   },
   "roles": {
     "EMPLOYEE": "Collaborateur",
@@ -251,6 +253,7 @@
     "pitchTitle": "Un starter de plateforme RH propulsée par l'IA.",
     "pitchDescription": "Une implémentation de référence montrant des outils IA contrôlés par RBAC, le RAG sur votre guide, le raisonnement en streaming et une interface de chat générative — sur Next.js, Postgres + pgvector et le Vercel AI SDK.",
     "demoBuild": "Version démo · choisissez un rôle pour explorer comment les permissions façonnent l'expérience.",
+    "tagline": "Ressources Humaines · Intelligence Artificielle",
     "signIn": "Se connecter",
     "chooseRole": "Choisissez un rôle de démonstration — chacun a des permissions différentes.",
     "orManually": "ou connectez-vous manuellement",
@@ -423,7 +426,7 @@
     "HR_ONLY": "RH uniquement"
   },
   "topbar": {
-    "descriptor": "Human Resources · AI",
+    "descriptor": "Ressources Humaines · IA",
     "workspace": "Espace {role}",
     "search": "Rechercher…",
     "noResults": "Aucun résultat",

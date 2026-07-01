@@ -31,8 +31,8 @@ export function Donut({
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${v}%`}>
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#2563EB" />
-            <stop offset="100%" stopColor="#14B8A6" />
+            <stop offset="0%" stopColor="var(--brand-from)" />
+            <stop offset="100%" stopColor="var(--brand-to)" />
           </linearGradient>
         </defs>
         <circle cx={center} cy={center} r={r} fill="none" stroke="var(--muted)" strokeWidth={stroke} />
@@ -72,64 +72,5 @@ export function ProgressBar({
     <div className={cn("h-2.5 w-full overflow-hidden rounded-full bg-muted", className)}>
       <div className="h-full rounded-full bg-brand-gradient" style={{ width: `${pct}%` }} />
     </div>
-  );
-}
-
-/** Sparkline from a series of numbers (brand-gradient stroke + soft area). */
-export function Sparkline({
-  data,
-  width = 160,
-  height = 44,
-  idSuffix = "",
-  className,
-}: {
-  data: number[];
-  width?: number;
-  height?: number;
-  idSuffix?: string;
-  className?: string;
-}) {
-  if (data.length < 2) return null;
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const span = max - min || 1;
-  const pad = 3;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * (width - pad * 2) + pad;
-    const y = height - pad - ((v - min) / span) * (height - pad * 2);
-    return [x, y] as const;
-  });
-  const line = pts.map(([x, y]) => `${x},${y}`).join(" ");
-  const area = `${pad},${height - pad} ${line} ${width - pad},${height - pad}`;
-  const gid = `hari-spark${idSuffix}`;
-
-  return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      className={className}
-      aria-hidden
-    >
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#2563EB" />
-          <stop offset="100%" stopColor="#14B8A6" />
-        </linearGradient>
-        <linearGradient id={`${gid}-fill`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#2563EB" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={area} fill={`url(#${gid}-fill)`} />
-      <polyline
-        points={line}
-        fill="none"
-        stroke={`url(#${gid})`}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }

@@ -78,17 +78,19 @@ export default async function OverviewPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("vacationUsed")}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center justify-center pb-6">
-                <Donut
-                  value={vacationUsedPct}
-                  sublabel={vacation ? t("remainingShort", { n: vacation.remainingDays }) : undefined}
-                />
-              </CardContent>
-            </Card>
+            {vacation && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("vacationUsed")}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center pb-6">
+                  <Donut
+                    value={vacationUsedPct}
+                    sublabel={t("remainingShort", { n: vacation.remainingDays })}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 
@@ -107,7 +109,7 @@ export default async function OverviewPage() {
           </ul>
           <Link
             href="/chat"
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-white/90"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-ink shadow-sm transition-colors hover:bg-white/90"
           >
             {t("openAssistant")} <ArrowRight className="size-4" />
           </Link>

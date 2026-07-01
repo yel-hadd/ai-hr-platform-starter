@@ -28,7 +28,9 @@
     "themeSystem": "System",
     "skipToContent": "Skip to content",
     "mainContent": "Main content",
-    "knowledgeBase": "Knowledge Base"
+    "knowledgeBase": "Knowledge Base",
+    "breadcrumb": "Breadcrumb",
+    "userMenu": "Account menu"
   },
   "roles": {
     "EMPLOYEE": "Employee",
@@ -251,6 +253,7 @@
     "pitchTitle": "An AI-powered HR platform starter.",
     "pitchDescription": "A reference implementation showing RBAC-gated AI tools, RAG over your handbook, streaming reasoning, and generative chat UI — on Next.js, Postgres + pgvector, and the Vercel AI SDK.",
     "demoBuild": "Demo build · pick any role to explore how permissions shape the experience.",
+    "tagline": "Human Resources · Artificial Intelligence",
     "signIn": "Sign in",
     "chooseRole": "Choose a demo role — each has different permissions.",
     "orManually": "or sign in manually",

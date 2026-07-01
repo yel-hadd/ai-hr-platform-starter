@@ -5,11 +5,9 @@ import { cn } from "@/lib/utils";
 //  • Legacy → the gradient H-mark (works on any background)
 //  • Dark   → navy wordmark, for LIGHT backgrounds (light mode)
 //  • Light  → light wordmark, for DARK backgrounds (dark mode)
-//  • Full   → stacked lockup (mark + wordmark + tagline) for hero areas
-const MARK = "/assets/Logo_HARI_Legacy.png";
-const WORDMARK_FOR_LIGHT = "/assets/Logo_HARI_Dark.png";
-const WORDMARK_FOR_DARK = "/assets/Logo_HARI_Light.png";
-const FULL = "/assets/Logo_HARI_Full.png";
+const MARK = "/assets/Logo_HARI_Legacy.webp";
+const WORDMARK_FOR_LIGHT = "/assets/Logo_HARI_Dark.webp";
+const WORDMARK_FOR_DARK = "/assets/Logo_HARI_Light.webp";
 
 /** Compact square H-mark (favicons, avatars, tight spots). */
 export function HariMark({ className }: { className?: string }) {
@@ -101,19 +99,5 @@ export function HariLogo({
         </>
       )}
     </span>
-  );
-}
-
-/** Full stacked lockup (mark + wordmark + tagline) for hero areas. */
-export function HariLockup({ className }: { className?: string }) {
-  return (
-    <Image
-      src={FULL}
-      alt="HARI — Empowering Human Resources with Artificial Intelligence"
-      width={614}
-      height={614}
-      priority
-      className={cn("h-auto w-44 object-contain", className)}
-    />
   );
 }

@@ -39,6 +39,15 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Always-branded surfaces (navy chrome, brand-gradient banner, login panel).
+     Defined identically in :root and .dark — they must not theme-flip. */
+  --color-brand-ink: var(--brand-ink);
+  --color-on-navy: var(--on-navy);
+  --color-on-navy-muted: var(--on-navy-muted);
+  --color-brand-panel: var(--brand-panel);
+  --color-brand-panel-foreground: var(--brand-panel-foreground);
+  --color-brand-panel-muted: var(--brand-panel-muted);
+  --color-nav-active: var(--nav-active);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -91,6 +100,16 @@
   --brand-to: #14b8a6;
   --glass-bg: oklch(1 0 0 / 65%);
   --glass-border: oklch(0.55 0.21 263 / 12%);
+  /* Active nav pill on the always-navy rail — fixed blue that clears AA with
+     white text in both themes (brand-from is too light in dark for that). */
+  --nav-active: oklch(0.48 0.21 264);
+  /* Always-branded surface roles — identical in light/dark (see .dark below). */
+  --brand-ink: oklch(0.42 0.17 263);
+  --on-navy: oklch(0.985 0.005 247);
+  --on-navy-muted: oklch(0.985 0.005 247 / 72%);
+  --brand-panel: #0b1733;
+  --brand-panel-foreground: oklch(0.985 0.005 247);
+  --brand-panel-muted: oklch(0.83 0.02 256);
 }
 
 .dark {
@@ -131,6 +150,14 @@
   --brand-to: #2dd4bf;
   --glass-bg: oklch(0.21 0.05 264 / 60%);
   --glass-border: oklch(1 0 0 / 10%);
+  --nav-active: oklch(0.48 0.21 264);
+  /* Always-branded surface roles — identical to :root (must not theme-flip). */
+  --brand-ink: oklch(0.42 0.17 263);
+  --on-navy: oklch(0.985 0.005 247);
+  --on-navy-muted: oklch(0.985 0.005 247 / 72%);
+  --brand-panel: #0b1733;
+  --brand-panel-foreground: oklch(0.985 0.005 247);
+  --brand-panel-muted: oklch(0.83 0.02 256);
 }
 
 @layer base {

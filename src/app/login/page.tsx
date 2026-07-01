@@ -23,7 +23,7 @@ export default async function LoginPage() {
   return (
     <main className="min-h-dvh grid lg:grid-cols-2">
       {/* Brand / pitch side — always-dark brand panel */}
-      <section className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-[#0b1733] text-neutral-100 p-12">
+      <section className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-brand-panel text-brand-panel-foreground p-12">
         <div className="pointer-events-none absolute -right-24 -top-24 size-96 rounded-full bg-brand-gradient opacity-30 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-32 -left-16 size-96 rounded-full bg-brand-gradient opacity-20 blur-3xl" />
 
@@ -33,14 +33,14 @@ export default async function LoginPage() {
           <p className="text-4xl font-extrabold leading-tight tracking-tight">
             {t("pitchTitle")}
           </p>
-          <p className="text-base leading-relaxed text-neutral-300">
+          <p className="text-base leading-relaxed text-brand-panel-muted">
             {t("pitchDescription")}
           </p>
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-neutral-400">
-            Human Resources · Artificial Intelligence
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-brand-panel-muted">
+            {t("tagline")}
           </p>
         </div>
-        <p className="relative text-xs text-neutral-500">
+        <p className="relative text-xs text-brand-panel-muted">
           {t("demoBuild")}
         </p>
       </section>

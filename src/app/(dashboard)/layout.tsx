@@ -30,9 +30,15 @@ export default async function DashboardLayout({
   const leaveLabel = (type: string) =>
     tLeave(type as "VACATION" | "SICK" | "PERSONAL");
 
+  // HR/Admin approvers see all pending requests, which can include their own —
+  // don't surface those as "to approve" too (they appear under "my pending" below).
+  const myPendingIds = new Set(myPending.map((r) => r.id));
+
   const notifications: AppNotification[] = [
     // Requests awaiting the caller's approval (managers / HR / admin).
-    ...approvals.map((a) => ({
+    ...approvals
+      .filter((a) => !myPendingIds.has(a.id))
+      .map((a) => ({
       id: `approval-${a.id}`,
       title: tTop("approvalItem", { name: a.employeeName, type: leaveLabel(a.type) }),
       description: `${a.startDate} → ${a.endDate}`,
