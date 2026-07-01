@@ -432,6 +432,9 @@
     "approvals": "{count, plural, one {# request to approve} other {# requests to approve}}",
     "approvalsDesc": "Leave awaiting your validation",
     "myPending": "Your leave request is pending",
-    "myPendingDesc": "{count, plural, one {# in progress} other {# in progress}}"
+    "myPendingDesc": "{count, plural, one {# in progress} other {# in progress}}",
+    "approvalItem": "{name} · {type} leave",
+    "myPendingItem": "Your {type} request is pending",
+    "viewAll": "View all"
   }
 }

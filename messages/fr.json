@@ -432,6 +432,9 @@
     "approvals": "{count, plural, one {# demande à approuver} other {# demandes à approuver}}",
     "approvalsDesc": "Congés en attente de votre validation",
     "myPending": "Votre demande de congé est en attente",
-    "myPendingDesc": "{count, plural, one {# en cours de traitement} other {# en cours de traitement}}"
+    "myPendingDesc": "{count, plural, one {# en cours de traitement} other {# en cours de traitement}}",
+    "approvalItem": "{name} · congé {type}",
+    "myPendingItem": "Votre demande {type} est en attente",
+    "viewAll": "Tout voir"
   }
 }

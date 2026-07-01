@@ -17,32 +17,35 @@ export default async function DashboardLayout({
   const caller = { role: user.role, employeeId: user.employeeId };
   const t = await getTranslations("nav");
   const tTop = await getTranslations("topbar");
+  const tLeave = await getTranslations("leaveType");
   const orgSettings = await getOrgSettings();
 
-  // Real, role-scoped notifications for the bell.
+  // Real, role-scoped notifications for the bell — one entry per actionable item
+  // so the badge count reflects reality (not a fixed number of summary cards).
   const [approvals, myRequests] = await Promise.all([
     getPendingApprovals(caller),
     user.employeeId ? getMyLeaveRequests(user.employeeId) : Promise.resolve([]),
   ]);
   const myPending = myRequests.filter((r) => r.status === "PENDING");
+  const leaveLabel = (type: string) =>
+    tLeave(type as "VACATION" | "SICK" | "PERSONAL");
 
-  const notifications: AppNotification[] = [];
-  if (approvals.length > 0) {
-    notifications.push({
-      id: "approvals",
-      title: tTop("approvals", { count: approvals.length }),
-      description: tTop("approvalsDesc"),
+  const notifications: AppNotification[] = [
+    // Requests awaiting the caller's approval (managers / HR / admin).
+    ...approvals.map((a) => ({
+      id: `approval-${a.id}`,
+      title: tTop("approvalItem", { name: a.employeeName, type: leaveLabel(a.type) }),
+      description: `${a.startDate} → ${a.endDate}`,
       href: "/time-off",
-    });
-  }
-  if (myPending.length > 0) {
-    notifications.push({
-      id: "my-pending",
-      title: tTop("myPending"),
-      description: tTop("myPendingDesc", { count: myPending.length }),
+    })),
+    // The caller's own pending requests.
+    ...myPending.map((r) => ({
+      id: `mine-${r.id}`,
+      title: tTop("myPendingItem", { type: leaveLabel(r.type) }),
+      description: `${r.startDate} → ${r.endDate}`,
       href: "/time-off",
-    });
-  }
+    })),
+  ];
 
   return (
     <OrgSettingsProvider value={orgSettings}>
