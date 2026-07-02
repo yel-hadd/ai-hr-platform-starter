@@ -106,7 +106,7 @@
   /* Always-branded surface roles — identical in light/dark (see .dark below). */
   --brand-ink: oklch(0.42 0.17 263);
   --on-navy: oklch(0.985 0.005 247);
-  --on-navy-muted: oklch(0.985 0.005 247 / 72%);
+  --on-navy-muted: oklch(0.985 0.005 247 / 85%);
   --brand-panel: #0b1733;
   --brand-panel-foreground: oklch(0.985 0.005 247);
   --brand-panel-muted: oklch(0.83 0.02 256);
@@ -154,7 +154,7 @@
   /* Always-branded surface roles — identical to :root (must not theme-flip). */
   --brand-ink: oklch(0.42 0.17 263);
   --on-navy: oklch(0.985 0.005 247);
-  --on-navy-muted: oklch(0.985 0.005 247 / 72%);
+  --on-navy-muted: oklch(0.985 0.005 247 / 85%);
   --brand-panel: #0b1733;
   --brand-panel-foreground: oklch(0.985 0.005 247);
   --brand-panel-muted: oklch(0.83 0.02 256);
