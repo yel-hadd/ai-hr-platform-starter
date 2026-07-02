@@ -41,6 +41,25 @@ jobs:
 
       - run: npm ci
 
+      # Object storage for the seed's KB cover uploads. MinIO needs a `server`
+      # command arg, which the `services:` block can't supply — so run it as a
+      # step. storage.ts defaults (minioadmin / us-east-1 / kb-images /
+      # localhost:9000) already match, so no extra env is needed; the seed
+      # creates the bucket via ensureBucket().
+      - name: Start MinIO (object storage for seed covers)
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9000/minio/health/live >/dev/null; then
+              echo "MinIO ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "MinIO did not become ready in time" >&2; exit 1
+
       - name: Apply migrations + seed (handbook embedding self-skips without a key)
         run: |
           npm run db:deploy

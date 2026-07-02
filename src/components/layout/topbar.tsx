@@ -24,7 +24,7 @@ import { NavBody, type NavUser } from "@/components/layout/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { CommandSearch } from "@/components/layout/command-search";
-import { Notifications, type AppNotification } from "@/components/layout/notifications";
+import { Notifications } from "@/components/layout/notifications";
 import { NAV_ITEMS, SEGMENT_TO_KEY } from "@/lib/nav-items";
 import { logout } from "@/lib/auth-actions";
 
@@ -34,13 +34,7 @@ function humanize(segment: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function Topbar({
-  user,
-  notifications,
-}: {
-  user: NavUser;
-  notifications: AppNotification[];
-}) {
+export function Topbar({ user }: { user: NavUser }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tRoles = useTranslations("roles");
@@ -116,7 +110,7 @@ export function Topbar({
 
       <div className="ml-auto flex items-center gap-1 md:gap-2">
         <CommandSearch role={user.role} />
-        <Notifications items={notifications} />
+        <Notifications />
         <ThemeToggle />
         <LanguageSwitcher />
 

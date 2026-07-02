@@ -22,13 +22,12 @@ export type SeedCollection = {
   documents: SeedDocument[];
 };
 
-// A tiny gradient SVG as a data URL — a pleasant default cover so the collection
-// UI looks complete out of the box (admins can replace it with an uploaded image).
-// Rendered via <img>, so the SVG is inert (no script execution).
+// A tiny gradient SVG used as a pleasant default cover so the collection UI looks
+// complete out of the box (admins can replace it with an uploaded image). The seed
+// rasterizes this to WebP and stores it in object storage (see prisma/seed.ts), so
+// it is served + optimized exactly like a real upload.
 const cover = (a: string, b: string, c: string): string =>
-  `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="0.55" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></linearGradient></defs><rect width="1200" height="300" fill="url(#g)"/></svg>`,
-  )}`;
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="0.55" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></linearGradient></defs><rect width="1200" height="300" fill="url(#g)"/></svg>`;
 
 export const KB_COLLECTIONS: SeedCollection[] = [
   {

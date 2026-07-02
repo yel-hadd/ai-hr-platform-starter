@@ -8,6 +8,7 @@ import {
   EmploymentType,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import sharp from "sharp";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -15,6 +16,7 @@ import rehypeStringify from "rehype-stringify";
 import { embedTexts, toVectorLiteral } from "../src/lib/ai/embeddings";
 import { chunkHtml } from "../src/lib/kb/html";
 import { DEMO_USERS } from "../src/lib/demo-users";
+import { putCover, coverUrl } from "../src/lib/storage";
 import { KB_COLLECTIONS } from "./handbook";
 
 // Seed corpus is authored in markdown for readability; store it as HTML (the
@@ -22,6 +24,14 @@ import { KB_COLLECTIONS } from "./handbook";
 // runtime lib/kb/html module.
 const mdToHtml = unified().use(remarkParse).use(remarkRehype).use(rehypeStringify);
 const markdownToHtml = (markdown: string): string => String(mdToHtml.processSync(markdown));
+
+// Rasterize a seed SVG gradient to WebP and store it in object storage, so seed
+// covers are served + optimized through next/image exactly like admin uploads.
+async function uploadCover(svg: string): Promise<string> {
+  const webp = await sharp(Buffer.from(svg)).resize(1200, 300).webp({ quality: 82 }).toBuffer();
+  const key = await putCover(webp, "image/webp");
+  return coverUrl(key);
+}
 
 const prisma = new PrismaClient();
 const PASSWORD = "password123";
@@ -246,7 +256,7 @@ async function seedKnowledgeBase() {
         slug: col.slug,
         name: col.name,
         description: col.description,
-        image: col.image ?? null,
+        image: col.image ? await uploadCover(col.image) : null,
         assistantEnabled: col.assistantEnabled ?? true,
         order: col.order,
       },

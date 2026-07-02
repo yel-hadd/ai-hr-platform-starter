@@ -8,6 +8,7 @@ import { can, visibleDocTiers, type Role } from "@/lib/rbac";
 import { slugify } from "@/lib/kb/markdown";
 import { ingestDocument, removeDocumentChunks } from "@/lib/kb/ingest";
 import { searchHandbook } from "@/lib/rag";
+import { deleteObject, keyFromCoverUrl } from "@/lib/storage";
 
 // `id` is the signed-in user's id — used to stamp authorship on admin mutations.
 // Reader functions only need `role`.
@@ -43,14 +44,16 @@ export type CollectionWithArticles = {
   articles: ArticleSummary[];
 };
 
-// Accept only safe cover sources — an uploaded image (data:image/... URL) or an
-// external http(s) URL. Anything else (javascript:, oversized blobs, junk) → null,
-// so a hand-crafted POST can't smuggle an unsafe value into the rendered <img>.
-const MAX_IMAGE_LEN = 1_500_000; // ~1 MB once base64-encoded
+// Accept only safe cover sources — a same-origin object-storage path
+// (/api/kb/images/…), an external https URL, or a legacy inline data:image URL.
+// Anything else (javascript:, oversized blobs, junk) → null, so a hand-crafted
+// POST can't smuggle an unsafe value into the rendered cover.
+const MAX_IMAGE_LEN = 1_500_000; // ~1 MB once base64-encoded (legacy data: URLs)
 export function sanitizeImage(value: string | null | undefined): string | null {
   const v = (value ?? "").trim();
   if (!v) return null;
   if (v.length > MAX_IMAGE_LEN) return null;
+  if (/^\/api\/kb\/images\/[\w./-]+$/i.test(v)) return v;
   if (/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);/i.test(v)) return v;
   if (/^https:\/\//i.test(v)) return v;
   return null;
@@ -444,22 +447,41 @@ export async function updateCollection(
   },
 ) {
   assertManage(caller);
-  return prisma.kbCollection.update({
+  const existing = await prisma.kbCollection.findUnique({
+    where: { id },
+    select: { image: true },
+  });
+  const nextImage = sanitizeImage(input.image);
+  const updated = await prisma.kbCollection.update({
     where: { id },
     data: {
       slug: await uniqueSlug("kbCollection", input.slug || input.name, id),
       name: input.name,
       description: input.description || null,
-      image: sanitizeImage(input.image),
+      image: nextImage,
       order: input.order ?? 0,
     },
   });
+  // Best-effort: drop the previous stored cover if it changed or was cleared, so
+  // object storage doesn't accumulate orphans. Never fails the update.
+  const oldKey = keyFromCoverUrl(existing?.image);
+  if (oldKey && existing?.image !== nextImage) {
+    await deleteObject(oldKey).catch(() => {});
+  }
+  return updated;
 }
 
 /** Cascades to its documents and their chunks (FK onDelete: Cascade). */
 export async function deleteCollection(caller: KbCaller, id: string) {
   assertManage(caller);
-  return prisma.kbCollection.delete({ where: { id } });
+  const existing = await prisma.kbCollection.findUnique({
+    where: { id },
+    select: { image: true },
+  });
+  const deleted = await prisma.kbCollection.delete({ where: { id } });
+  const key = keyFromCoverUrl(existing?.image);
+  if (key) await deleteObject(key).catch(() => {});
+  return deleted;
 }
 
 // ── Document mutations ──────────────────────────────────────────────────────

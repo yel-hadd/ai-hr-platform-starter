@@ -6,6 +6,7 @@ import { listCollectionsWithArticles } from "@/lib/kb";
 import { PageHeader } from "@/components/layout/page-header";
 import { ButtonLink } from "@/components/ui/button-link";
 import { KbSearch } from "@/components/kb/kb-search";
+import { CollectionCover } from "@/components/kb/collection-cover";
 import { Settings2, ArrowRight, BookOpen } from "lucide-react";
 
 export default async function KnowledgeBasePage() {
@@ -42,8 +43,11 @@ export default async function KnowledgeBasePage() {
                 >
                   {/* Decorative cover — alt="" so screen readers skip it. */}
                   {c.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- decorative cover, often a data URL the Next optimizer can't process
-                    <img src={c.image} alt="" className="h-24 w-full object-cover" />
+                    <CollectionCover
+                      src={c.image}
+                      className="h-24 w-full"
+                      sizes="(max-width: 640px) 100vw, 300px"
+                    />
                   ) : (
                     <div className="flex h-24 w-full items-center justify-center bg-muted text-muted-foreground">
                       <BookOpen className="size-6" />

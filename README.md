@@ -49,11 +49,12 @@ end-to-end, yet every piece is independently swappable and production-grade.
 
 ```bash
 cp .env.example .env                       # paste your OPENROUTER_API_KEY into .env
-docker compose up --build                  # starts db + adminer + app
+docker compose up --build                  # starts db + adminer + minio + app
 # open http://localhost:3000  → pick a demo role (password: password123)
 ```
 
-That single command starts **Postgres (pgvector)**, **Adminer** (DB UI on `:8080`), and the **app**.
+That single command starts **Postgres (pgvector)**, **Adminer** (DB UI on `:8080`), **MinIO**
+(S3-compatible object storage for KB cover images; console on `:9001`), and the **app**.
 On first boot the app runs the Prisma migrations and seeds demo data automatically
 (`prisma migrate deploy && prisma db seed`). The default `.env` already has a working
 `AUTH_SECRET`, so the **only** value you must set is `OPENROUTER_API_KEY`.
@@ -87,7 +88,7 @@ npm --version      # → 10.x or 11.x
 
 # 3. Install & run
 npm install
-docker compose up -d db        # just Postgres
+docker compose up -d db minio  # Postgres + object storage
 npm run db:deploy && npm run db:seed   # apply migrations, then seed
 npm run dev
 ```
@@ -291,7 +292,7 @@ dimension needs a migration to ALTER the column. See `lib/rag.ts` and `lib/ai/em
 
 ```
 hr-boilerplate/
-├─ docker-compose.yml          # db (pgvector) + adminer + app
+├─ docker-compose.yml          # db (pgvector) + adminer + minio + app
 ├─ Dockerfile                  # dev image for the Next.js app
 ├─ docker/db-init/             # CREATE EXTENSION vector on first boot
 ├─ prisma/

@@ -7,6 +7,7 @@ import { getCollection } from "@/lib/kb";
 import { PageHeader } from "@/components/layout/page-header";
 import { ButtonLink } from "@/components/ui/button-link";
 import { Badge } from "@/components/ui/badge";
+import { CollectionCover } from "@/components/kb/collection-cover";
 import { ChevronRight, FileText, Plus, Settings2 } from "lucide-react";
 
 type Props = { params: Promise<{ collection: string }> };
@@ -49,11 +50,10 @@ export default async function CollectionPage({ params }: Props) {
 
         {/* Decorative cover — alt="" so screen readers skip it. */}
         {col.image && (
-          // eslint-disable-next-line @next/next/no-img-element -- decorative cover, often a data URL the Next optimizer can't process
-          <img
+          <CollectionCover
             src={col.image}
-            alt=""
-            className="h-40 w-full rounded-xl border object-cover sm:h-48"
+            className="h-40 w-full rounded-xl border sm:h-48"
+            sizes="(max-width: 768px) 100vw, 700px"
           />
         )}
 
