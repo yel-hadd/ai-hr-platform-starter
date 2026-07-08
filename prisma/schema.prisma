@@ -1,6 +1,7 @@
 // HR Platform starter — data model.
 // Note: pgvector's `halfvec` column is declared via Prisma's `Unsupported` type.
-// The HNSW index over it is created in `prisma/seed.ts` (Prisma can't model it).
+// The HNSW index over it is created in the Prisma migration
+// (`prisma/migrations/0_init`), since Prisma can't model an index on it.
 
 generator client {
   provider = "prisma-client-js"
@@ -32,26 +33,39 @@ enum LeaveStatus {
 
 /// Auth identity. One User maps to one Employee profile.
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  name         String
-  passwordHash String
-  role         Role      @default(EMPLOYEE)
-  employee     Employee?
-  createdAt    DateTime  @default(now())
+  id             String       @id @default(cuid())
+  email          String       @unique
+  name           String
+  passwordHash   String
+  role           Role         @default(EMPLOYEE)
+  employee       Employee?
+  createdAt      DateTime     @default(now())
+  kbCreated      HrDocument[] @relation("KbCreatedBy")
+  kbUpdated      HrDocument[] @relation("KbUpdatedBy")
+  kbFeedback     KbFeedback[]
+  aiEvents       AiEvent[]
+  alertsRaised   Alert[]      @relation("AlertSubject")
+  alertsAcked    Alert[]      @relation("AlertAck")
+  alertsResolved Alert[]      @relation("AlertResolved")
+
+  // HARI-88: document generation back-relations.
+  documentsRequested GeneratedDocument[] @relation("DocumentRequester")
+  documentsValidated GeneratedDocument[] @relation("DocumentValidator")
 }
 
 /// HR profile / org data.
 model Employee {
-  id         String   @id @default(cuid())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String   @unique
-  title      String
-  department String
-  location   String
-  startDate  DateTime
-  salary     Int // annual, in USD — sensitive: only HR/Super can read via tools
-  avatarUrl  String?
+  id             String           @id @default(cuid())
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String           @unique
+  title          String
+  department     String
+  location       String
+  startDate      DateTime
+  status         EmploymentStatus @default(ACTIVE)
+  employmentType EmploymentType   @default(FULL_TIME)
+  salary         Int // annual, in the org's configured currency (see OrgSettings) — sensitive: only HR/Super can read via tools
+  avatarUrl      String?
 
   // Self-referential org chart.
   manager   Employee?  @relation("Reports", fields: [managerId], references: [id])
@@ -75,25 +89,313 @@ model LeaveBalance {
 }
 
 model LeaveRequest {
-  id         String      @id @default(cuid())
-  employee   Employee    @relation("Requester", fields: [employeeId], references: [id], onDelete: Cascade)
-  employeeId String
-  type       LeaveType
-  startDate  DateTime
-  endDate    DateTime
-  days       Int
-  reason     String?
-  status     LeaveStatus @default(PENDING)
-  approver   Employee?   @relation("Approver", fields: [approverId], references: [id])
-  approverId String?
-  createdAt  DateTime    @default(now())
+  id           String      @id @default(cuid())
+  employee     Employee    @relation("Requester", fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId   String
+  type         LeaveType
+  startDate    DateTime
+  endDate      DateTime
+  days         Int
+  reason       String? // the requester's stated reason for the leave
+  decisionNote String? // the approver's note (required on rejection) — SCRUM-071 B1
+  status       LeaveStatus @default(PENDING)
+  approver     Employee?   @relation("Approver", fields: [approverId], references: [id])
+  approverId   String?
+  createdAt    DateTime    @default(now())
 }
 
-/// Employee-handbook chunks for RAG. `embedding` is a pgvector halfvec(384).
+/// Org-wide settings, a single row (id = "singleton"). Editable by a super admin
+/// in Settings; drives currency formatting and the timezone the AI reasons in.
+model OrgSettings {
+  id        String   @id @default("singleton")
+  currency  String   @default("MAD")
+  timezone  String   @default("UTC")
+  updatedAt DateTime @updatedAt
+}
+
+/// Knowledge-base lifecycle. Only PUBLISHED documents feed the RAG (HARI-62).
+enum DocStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Per-document access level (HARI-59). Mapped to roles via visibleDocTiers().
+enum DocVisibility {
+  ALL_EMPLOYEES
+  MANAGERS
+  HR_ONLY
+}
+
+/// A KB collection groups related HR documents (e.g. "Employee Handbook").
+model KbCollection {
+  id               String       @id @default(cuid())
+  slug             String       @unique
+  name             String
+  description      String?
+  image            String? // optional decorative cover (data URL or external URL)
+  order            Int          @default(0)
+  assistantEnabled Boolean      @default(true) // may the AI assistant draw on this collection? (super-admin policy)
+  documents        HrDocument[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+/// HARI-58: an HR document usable by the RAG. Markdown body, chunked on publish.
+model HrDocument {
+  id               String          @id @default(cuid())
+  slug             String          @unique
+  title            String
+  content          String // HTML source of truth (authored in BlockNote)
+  status           DocStatus       @default(DRAFT)
+  visibility       DocVisibility   @default(ALL_EMPLOYEES)
+  version          Int             @default(1) // bumped each publish (HARI-59)
+  tags             String[]        @default([]) // freeform topic tags
+  viewCount        Int             @default(0) // reader views (engagement signal)
+  assistantEnabled Boolean? // AI-assistant override: null = inherit collection, true = force on, false = force off
+  collection       KbCollection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collectionId     String
+  chunks           HandbookChunk[]
+  // Authorship (shown on the reader + admin). SetNull so deleting a user keeps docs.
+  createdBy        User?           @relation("KbCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById      String?
+  updatedBy        User?           @relation("KbUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById      String?
+  feedback         KbFeedback[]
+  publishedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([collectionId])
+  @@index([status])
+}
+
+/// "Was this helpful?" — one vote per (document, user); re-voting updates it.
+model KbFeedback {
+  id         String     @id @default(cuid())
+  document   HrDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+  voter      User       @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  voterId    String
+  helpful    Boolean
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@unique([documentId, voterId])
+}
+
+/// RAG chunks. `embedding` is a pgvector halfvec(384). HARI-59: each chunk is
+/// attached to its document, version, and (denormalized) access level so
+/// retrieval can filter by tier without a join on the hot path.
 model HandbookChunk {
-  id        String                       @id @default(cuid())
-  section   String
-  content   String
-  embedding Unsupported("halfvec(384)")?
-  createdAt DateTime                      @default(now())
+  id         String                       @id @default(cuid())
+  section    String // heading text
+  anchor     String                       @default("") // slug of the heading → citation deep-link
+  content    String
+  chunkIndex Int                          @default(0) // order within the document
+  embedding  Unsupported("halfvec(384)")?
+  // Generated tsvector for lexical (full-text) search — the lexical half of hybrid
+  // retrieval. The GENERATED expression + GIN index live in the migration SQL
+  // (Prisma can't model either), like the halfvec column + HNSW index.
+  contentTsv Unsupported("tsvector")?
+  document   HrDocument?                  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String?
+  version    Int                          @default(1)
+  visibility DocVisibility                @default(ALL_EMPLOYEES)
+  createdAt  DateTime                     @default(now())
+
+  @@index([documentId])
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACTOR
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// AI observability + guardrails (SCRUM-062 / SCRUM-063)
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Kind of AI interaction event traced. Metadata only — never message content.
+enum AiEventKind {
+  TURN // one assistant turn completed (usage/latency/finishReason)
+  TOOL_CALL // a tool was invoked
+  REFUSAL // a tool refused (permission / in-body authorization)
+  GUARD_BLOCK // deterministic input guard blocked the request before the model
+  CONVERSATION_CLOSED // the assistant ended the chat via endConversation
+  ERROR // model/stream error
+}
+
+/// SCRUM-062: a trace of one AI interaction. Deliberately stores only metadata
+/// (role, model, token counts, codes) — NEVER the prompt/response text, names,
+/// or salary — so tracing can't leak sensitive HR data.
+model AiEvent {
+  id             String      @id @default(cuid())
+  createdAt      DateTime    @default(now())
+  conversationId String // opaque client uuid grouping a chat — not content
+  user           User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId         String?
+  role           Role // actor role, denormalized so it survives user deletion
+  kind           AiEventKind
+  model          String?
+  inputTokens    Int?
+  outputTokens   Int?
+  totalTokens    Int?
+  latencyMs      Int?
+  stepCount      Int?
+  finishReason   String?
+  toolName       String? // for TOOL_CALL / REFUSAL
+  errorCode      String? // ChatErrorCode / tool errorCode
+  guardRule      String? // which guardrail fired (GUARD_BLOCK)
+  reasonCode     String? // endConversation reason (CONVERSATION_CLOSED)
+  meta           Json? // small structured extras — no PII
+  alerts         Alert[]
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@index([kind])
+  @@index([userId])
+}
+
+/// Category of an actionable alert raised for Admin/HR.
+enum AlertKind {
+  AI_REFUSAL // repeated refusals in a conversation
+  AI_GUARD_BLOCK // deterministic guard blocked a request
+  AI_ERROR // model/stream failure
+  CONVERSATION_CLOSED // the assistant ended a chat
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+/// SCRUM-063: an actionable alert for Admin/HR (gated by `alerts:read`). Stores
+/// an i18n key + small params, not localized/sensitive text, so it honors the
+/// same no-PII contract as AiEvent and the app's mandatory-i18n rule.
+model Alert {
+  id             String        @id @default(cuid())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  kind           AlertKind
+  severity       AlertSeverity @default(WARNING)
+  status         AlertStatus   @default(OPEN)
+  titleKey       String // i18n key: alerts.kind.<x>.title
+  params         Json? // small i18n params (role, model, count) — no PII
+  href           String? // deep link (e.g. /alerts)
+  subject        User?         @relation("AlertSubject", fields: [subjectId], references: [id], onDelete: SetNull)
+  subjectId      String? // actor that triggered it
+  aiEvent        AiEvent?      @relation(fields: [aiEventId], references: [id], onDelete: SetNull)
+  aiEventId      String?
+  acknowledgedBy User?         @relation("AlertAck", fields: [ackById], references: [id], onDelete: SetNull)
+  ackById        String?
+  resolvedBy     User?         @relation("AlertResolved", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedById   String?
+  resolvedAt     DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([kind])
+}
+
+/// SCRUM-064: the sensitive actions worth recording for after-the-fact review.
+enum AuditAction {
+  ALERT_ACKNOWLEDGED
+  ALERT_RESOLVED
+  ALERT_REOPENED
+  ALERTS_CONSOLE_VIEWED
+}
+
+/// SCRUM-064: a minimal audit trail of sensitive admin/security actions (alert
+/// triage + alerts-console access). Metadata only — never full confidential
+/// content — mirroring the AiEvent/Alert no-PII contract. The actor and target
+/// are stored as raw ids with a denormalized role, so the trail deliberately
+/// SURVIVES user/target deletion (an audit record must persist); it soft-links
+/// to an Alert / AiEvent by id when relevant.
+model AuditLog {
+  id         String      @id @default(cuid())
+  createdAt  DateTime    @default(now())
+  actorId    String? // who performed it (raw id; kept even if the user is later deleted)
+  actorRole  Role // denormalized so the trail survives user deletion
+  action     AuditAction
+  targetType String? // e.g. "Alert"
+  targetId   String? // opaque id of the target — never content
+  alertId    String? // linked alert (soft reference)
+  aiEventId  String? // linked AiEvent (soft reference)
+  meta       Json? // small structured extras — no PII
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([actorId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// HR document generation (HARI-88 / SCRUM-078)
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Document types that can be generated. Sprint 4 supports WORK_CERTIFICATE only.
+enum GeneratedDocumentType {
+  WORK_CERTIFICATE
+}
+
+/// Lifecycle of a generated document request.
+enum GeneratedDocumentStatus {
+  REQUESTED // employee submitted the request
+  VALIDATED // HR approved, PDF generation queued
+  GENERATED // PDF produced, download link available
+  DOWNLOADED // employee has downloaded the document
+  REJECTED // HR rejected the request
+}
+
+/// HARI-88 / SCRUM-078: an HR document requested by an employee (e.g. work certificate).
+/// Drives the full generation workflow: request → HR validation → PDF generation → download.
+/// PDF generation (SCRUM-081) and MinIO storage are deferred; pdfUrl is reserved for that sprint.
+model GeneratedDocument {
+  id     String                  @id @default(cuid())
+  type   GeneratedDocumentType
+  status GeneratedDocumentStatus @default(REQUESTED)
+
+  // Requester — SetNull so the record outlives account deletion.
+  requestedBy   User?   @relation("DocumentRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  requestedById String?
+
+  // HR validator — null until HR acts on the request.
+  validatedBy   User?   @relation("DocumentValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  validatedById String?
+
+  // Required when status = REJECTED, null otherwise.
+  rejectionNote String?
+
+  // Link to the generated PDF — populated by SCRUM-081, null until then.
+  pdfUrl String?
+
+  // Workflow timestamps — one per lifecycle transition.
+  requestedAt  DateTime  @default(now())
+  validatedAt  DateTime?
+  generatedAt  DateTime?
+  downloadedAt DateTime?
+  rejectedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([requestedById])
+  @@index([validatedById])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
 }
