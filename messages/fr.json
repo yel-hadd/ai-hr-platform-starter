@@ -1,0 +1,1100 @@
+{
+  "metadata": {
+    "title": "HARI — Plateforme RH propulsée par l'IA",
+    "description": "Un starter de plateforme RH propulsée par l'IA : outils IA contrôlés par RBAC, RAG sur le guide et interface de chat générative, sur Next.js + pgvector + Vercel AI SDK."
+  },
+  "common": {
+    "you": "Vous",
+    "none": "—",
+    "cancel": "Annuler",
+    "decisionNote": "Note de décision"
+  },
+  "languageSwitcher": {
+    "label": "Langue",
+    "en": "English",
+    "fr": "Français"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "assistant": "Assistant IA",
+    "directory": "Annuaire",
+    "team": "Mon équipe",
+    "hrActivity": "Activité RH",
+    "predictions": "Prédictions",
+    "timeOff": "Congés",
+    "onboarding": "Intégration",
+    "offboarding": "Départ",
+    "settings": "Paramètres",
+    "signOut": "Se déconnecter",
+    "openNavigation": "Ouvrir la navigation",
+    "navigation": "Navigation",
+    "primary": "Principal",
+    "changeTheme": "Changer de thème",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "themeSystem": "Système",
+    "skipToContent": "Aller au contenu",
+    "mainContent": "Contenu principal",
+    "knowledgeBase": "Base de connaissances",
+    "breadcrumb": "Fil d'Ariane",
+    "userMenu": "Menu du compte",
+    "alerts": "Alertes",
+    "audit": "Journal d'audit",
+    "analytics": "Analytique RH",
+    "teamAnalytics": "Analytique équipe",
+    "documents": "Documents",
+    "documentRequests": "Demandes de documents",
+    "documentHistory": "Historique des documents"
+  },
+  "roles": {
+    "EMPLOYEE": "Collaborateur",
+    "MANAGER": "Manager",
+    "HR_ADMIN": "Admin RH",
+    "SUPER_ADMIN": "Super Admin"
+  },
+  "permissions": {
+    "directory:read:self": "Voir son propre profil",
+    "directory:read:team": "Voir ses subordonnés directs",
+    "directory:read:all": "Voir tout l'annuaire de l'entreprise",
+    "salary:read:all": "Voir la rémunération de chacun",
+    "leave:request": "Demander des congés",
+    "leave:read:self": "Voir ses propres congés",
+    "leave:approve": "Approuver / refuser les congés",
+    "dashboard:read:team": "Voir le tableau de bord de l'équipe",
+    "dashboard:read:company": "Voir le tableau de bord de l'activité IA et des documents de l'entreprise",
+    "analytics:full": "Voir les analyses RH de l'entreprise (absentéisme, turnover, masse salariale)",
+    "analytics:team": "Voir les analyses RH de l'équipe",
+    "payslip:read:self": "Voir ses propres fiches de paie",
+    "payslip:read:any": "Voir les fiches de paie de chacun",
+    "handbook:read": "Interroger le guide (RAG)",
+    "employee:manage": "Gérer les dossiers des employés",
+    "admin:settings": "Gérer les paramètres de la plateforme",
+    "kb:manage": "Gérer la base de connaissances",
+    "alerts:read": "Voir les alertes IA",
+    "documents:download:any": "Télécharger tout document RH généré",
+    "documents:request": "Demander ses propres documents RH",
+    "documents:validate": "Approuver / refuser une demande de document",
+    "predictions:read": "Voir les prédictions de risque de départ",
+    "predictions:manage": "Recalibrer le modèle prédictif"
+  },
+  "leaveType": {
+    "VACATION": "Congés",
+    "SICK": "Maladie",
+    "PERSONAL": "Personnel"
+  },
+  "contractType": {
+    "all": "Tous les contrats",
+    "CDI": "CDI",
+    "CDD": "CDD",
+    "ALTERNANCE": "Alternance",
+    "STAGE": "Stage"
+  },
+  "hrAnalytics": {
+    "title": "Analytique RH",
+    "description": "Absentéisme, turnover, masse salariale, diversité et entretiens de l'entreprise.",
+    "noData": "Aucune donnée pour cette sélection",
+    "teamTitle": "Analytique de l'équipe",
+    "teamDescription": "Effectif, absences et entretiens de votre équipe.",
+    "exportCsv": "Exporter CSV",
+    "filters": {
+      "department": "Département",
+      "allDepartments": "Tous les départements",
+      "contract": "Contrat",
+      "level": "Niveau",
+      "allLevels": "Tous les niveaux",
+      "period": "Période",
+      "month": "Ce mois-ci",
+      "quarter": "Dernier trimestre",
+      "semester": "6 derniers mois",
+      "year": "12 derniers mois"
+    },
+    "kpi": {
+      "headcount": "Effectif actif",
+      "absenteeism": "Taux d'absentéisme",
+      "turnover": "Turnover (12 mois)",
+      "payroll": "Masse salariale mensuelle",
+      "timeToHire": "Délai moyen de recrutement",
+      "vsPrevMonth": "vs mois précédent",
+      "vsLastYear": "vs année précédente",
+      "days": "jours"
+    },
+    "absenteeism": {
+      "title": "Absentéisme",
+      "byMonth": "Taux mensuel (12 mois)",
+      "byType": "Par type d'absence",
+      "topDepartments": "Départements les plus touchés",
+      "rate": "Taux",
+      "department": "Département",
+      "daysLost": "Jours perdus"
+    },
+    "turnover": {
+      "title": "Turnover",
+      "trend": "Départs par mois (24 mois)",
+      "byReason": "Par motif",
+      "byTenure": "Ancienneté des partants",
+      "topDepartments": "Départements par départs",
+      "departures": "Départs"
+    },
+    "departureReason": {
+      "VOLUNTARY": "Démission",
+      "INVOLUNTARY": "Licenciement",
+      "RETIREMENT": "Retraite",
+      "END_OF_CONTRACT": "Fin de contrat"
+    },
+    "tenure": {
+      "lt1y": "< 1 an",
+      "y1to3": "1–3 ans",
+      "gt3y": "> 3 ans"
+    },
+    "payroll": {
+      "title": "Masse salariale",
+      "trend": "Masse salariale brute (12 mois)",
+      "byBand": "Par tranche de salaire",
+      "byDepartment": "Par département (ce mois-ci)",
+      "currentMonth": "Ce mois-ci",
+      "restricted": "Les données de masse salariale sont réservées aux RH et administrateurs."
+    },
+    "salaryBand": {
+      "lt120k": "< 120k",
+      "120to180k": "120–180k",
+      "180to250k": "180–250k",
+      "gte250k": "> 250k"
+    },
+    "diversity": {
+      "title": "Âges & diversité",
+      "agePyramid": "Pyramide des âges",
+      "genderByLevel": "Répartition H/F par niveau",
+      "tenureByDept": "Ancienneté moyenne par département",
+      "years": "ans"
+    },
+    "gender": {
+      "FEMALE": "Femmes",
+      "MALE": "Hommes",
+      "OTHER": "Autre"
+    },
+    "reviews": {
+      "title": "Entretiens annuels",
+      "coverage": "Entretien cette année",
+      "overdue": "Sans entretien depuis plus de 12 mois",
+      "employee": "Collaborateur",
+      "department": "Département",
+      "lastReview": "Dernier entretien",
+      "never": "Jamais",
+      "allDone": "Tout le monde a un entretien récent.",
+      "reviewsToPlan": "Entretiens à planifier"
+    },
+    "team": {
+      "headcount": "Effectif de l'équipe",
+      "onLeave": "En congé actuellement"
+    }
+  },
+  "leaveStatus": {
+    "PENDING": "En attente",
+    "APPROVED": "Approuvée",
+    "REJECTED": "Refusée"
+  },
+  "dashboard": {
+    "welcome": "Bon retour, {name}",
+    "signedInAs": "Vous êtes connecté en tant que {role}. Ce que vous voyez ci-dessous dépend de vos permissions.",
+    "peopleInCompany": "Personnes dans l'entreprise",
+    "peopleYouCanSee": "Personnes que vous pouvez voir",
+    "vacationDaysLeft": "Jours de congés restants",
+    "pendingApprovals": "Validations en attente",
+    "assistantTitle": "Demandez à l'assistant IA",
+    "rbacAware": "Sensible au RBAC",
+    "assistantDescription": "L'assistant répond aux questions sur le guide avec citations (RAG), exécute des actions RH via des outils contrôlés par permissions, diffuse son raisonnement et affiche des résultats enrichis. Essayez l'une de ces questions :",
+    "example1": "« Quelle est notre politique de congé parental ? »",
+    "example2": "« Montre-moi l'annuaire de l'équipe. »",
+    "example3": "« Combien de jours de congés me reste-t-il, et pose-en 2 lundi prochain. »",
+    "openAssistant": "Ouvrir l'assistant IA",
+    "leaveBalances": "Solde de congés",
+    "vacationUsed": "Congés utilisés",
+    "daysUsedOfTotal": "{used} / {total} jours",
+    "remainingShort": "{n} restants",
+    "noBalances": "Aucun solde de congés"
+  },
+  "directory": {
+    "title": "Annuaire",
+    "scopeAll": "Tout le monde dans l'entreprise.",
+    "scopeTeam": "Vous et vos subordonnés directs.",
+    "scopeSelf": "Uniquement votre propre profil — les managers et les RH en voient plus.",
+    "name": "Nom",
+    "jobTitle": "Poste",
+    "department": "Département",
+    "location": "Lieu",
+    "manager": "Manager",
+    "salary": "Salaire",
+    "status": "Statut",
+    "employmentType": "Type",
+    "filters": "Filtres",
+    "searchPlaceholder": "Rechercher un collaborateur…",
+    "optionPlaceholder": "Filtrer…",
+    "noResults": "Aucun employé ne correspond aux filtres sélectionnés."
+  },
+  "employmentStatus": {
+    "ACTIVE": "Actif",
+    "ON_LEAVE": "En congé",
+    "TERMINATED": "Parti"
+  },
+  "employmentTypeLabel": {
+    "FULL_TIME": "Temps plein",
+    "PART_TIME": "Temps partiel",
+    "CONTRACTOR": "Prestataire"
+  },
+  "team": {
+    "title": "Tableau de bord de l'équipe",
+    "description": "Indicateurs clés pour les personnes qui vous sont rattachées.",
+    "last7Days": "7 derniers jours",
+    "kpi": {
+      "headcount": "Effectif de l'équipe",
+      "pendingRequests": "Demandes RH en attente",
+      "aiTurns7d": "Échanges avec l'assistant IA",
+      "aiRefusals7d": "Refus de l'IA"
+    },
+    "anomaly": {
+      "normal": "Normal",
+      "elevated": "Élevé",
+      "high": "Critique",
+      "insufficient_data": "Pas d'historique"
+    },
+    "capacity": {
+      "title": "Capacité de l'équipe",
+      "description": "Nombre de collègues en congé chaque jour dans les semaines à venir. Plus c'est foncé, plus il y a d'absents — et un risque accru de sous-effectif.",
+      "busiest": "Journée la plus chargée : {date} — {count} sur {total} en congé ({pct} %).",
+      "allClear": "Aucun chevauchement de congés à venir — couverture complète chaque jour.",
+      "onLeave": "en congé",
+      "risk": "Risque de sous-effectif",
+      "none": "Aucun",
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé",
+      "fewer": "Moins d'absents",
+      "more": "Plus d'absents"
+    },
+    "pendingApprovals": "Approbations en attente",
+    "noPending": "Aucune demande en attente de votre équipe.",
+    "employee": "Employé",
+    "type": "Type",
+    "dates": "Dates",
+    "days": "Jours",
+    "reason": "Motif",
+    "actions": "Actions",
+    "approve": "Approuver",
+    "reject": "Refuser",
+    "status": "Statut",
+    "leaveHistory": "Historique des congés",
+    "viewNote": "Voir la note",
+    "decisionNoteFor": "Note du manager pour {name}",
+    "filters": "Filtres",
+    "searchPlaceholder": "Rechercher par nom d'employé…",
+    "optionPlaceholder": "Filtrer les options…",
+    "filterStatus": "Statut",
+    "filterType": "Type",
+    "filterDepartment": "Département",
+    "clearFilters": "Effacer les filtres",
+    "noMatching": "Aucune demande ne correspond à ces filtres.",
+    "selectAll": "Tout sélectionner",
+    "selectRow": "Sélectionner {name}",
+    "selectedCount": "{count, plural, one {# sélectionnée} other {# sélectionnées}}",
+    "approveSelected": "Approuver la sélection",
+    "rejectSelected": "Refuser la sélection",
+    "rejectDialog": {
+      "title": "Refuser la demande",
+      "titleBulk": "Refuser {count} demandes",
+      "description": "Un motif est obligatoire. Il est communiqué à l'employé.",
+      "placeholder": "Expliquez le motif du refus…"
+    },
+    "toast": {
+      "approved": "{count, plural, one {# demande approuvée} other {# demandes approuvées}}",
+      "rejected": "{count, plural, one {# demande refusée} other {# demandes refusées}}",
+      "failed": "Aucun changement — la demande a peut-être déjà été traitée."
+    }
+  },
+  "hrDashboard": {
+    "title": "Tableau de bord Activité RH",
+    "description": "Activité de l'assistant IA à l'échelle de l'entreprise et état du corpus documentaire.",
+    "kpi": {
+      "aiQuestions7d": "Questions IA (7j)",
+      "aiRefusals7d": "Refus IA (7j)",
+      "aiErrors7d": "Erreurs IA (7j)",
+      "openAlerts": "Alertes ouvertes"
+    },
+    "anomaly": {
+      "normal": "Normal",
+      "elevated": "Élevé",
+      "high": "Fort",
+      "insufficient_data": "Pas de référence"
+    },
+    "corpus": {
+      "title": "Corpus documentaire",
+      "publishedShare": "Publiés"
+    }
+  },
+  "timeOff": {
+    "title": "Congés",
+    "description": "Astuce : demandez des congés ou validez des demandes en interrogeant l'assistant IA.",
+    "outOf": "/ {count, plural, one {# jour} other {# jours}}",
+    "myRequests": "Mes demandes",
+    "pendingApprovals": "Validations en attente",
+    "employee": "Employé",
+    "type": "Type",
+    "dates": "Dates",
+    "days": "Jours",
+    "reason": "Motif",
+    "status": "Statut",
+    "empty": "Rien pour le moment."
+  },
+  "onboarding": {
+    "title": "Intégration",
+    "description": "Votre checklist des premiers jours — cochez chaque étape une fois terminée.",
+    "myOnboarding": "Mon intégration",
+    "progressCount": "{done} / {total} terminées",
+    "empty": "Aucune étape d'intégration assignée pour l'instant.",
+    "stepDone": "Terminé",
+    "teamProgress": "Intégration de l'équipe",
+    "overviewEmpty": "Aucun employé à afficher.",
+    "employee": "Employé",
+    "role": "Poste",
+    "department": "Département",
+    "progress": "Progression",
+    "status": "Statut",
+    "statusComplete": "Terminée",
+    "categories": {
+      "PAPERWORK": "Administratif",
+      "EQUIPMENT": "Équipement",
+      "ACCESS": "Accès",
+      "TRAINING": "Formation",
+      "ORIENTATION": "Orientation"
+    },
+    "steps": {
+      "signContract": "Signer votre contrat de travail",
+      "submitId": "Fournir votre pièce d'identité et documents légaux",
+      "bankDetails": "Communiquer votre RIB pour la paie",
+      "laptop": "Récupérer votre ordinateur et votre équipement",
+      "accessBadge": "Obtenir votre badge d'accès aux locaux",
+      "accounts": "Activer votre e-mail et vos comptes",
+      "securityTraining": "Suivre la formation sécurité & confidentialité",
+      "handbookReview": "Lire le manuel de l'employé",
+      "teamIntro": "Rencontrer votre équipe",
+      "managerMeeting": "Premier entretien avec votre manager"
+    }
+  },
+  "offboarding": {
+    "title": "Départ",
+    "description": "Déroulez la checklist de départ d'un employé, puis archivez son dossier.",
+    "initiate": "Démarrer un départ",
+    "noCandidates": "Aucun employé actif disponible pour un départ.",
+    "employee": "Employé",
+    "reason": "Motif",
+    "lastDay": "Dernier jour",
+    "startProcess": "Démarrer",
+    "inProgress": "En cours",
+    "noneInProgress": "Aucun départ en cours.",
+    "progress": "Progression",
+    "progressCount": "{done} / {total} terminées",
+    "completeAndArchive": "Terminer et archiver",
+    "archived": "Archivés",
+    "archivedOn": "Archivé le",
+    "reasons": {
+      "RESIGNATION": "Démission",
+      "TERMINATION": "Licenciement",
+      "END_OF_CONTRACT": "Fin de contrat",
+      "RETIREMENT": "Départ à la retraite",
+      "OTHER": "Autre"
+    },
+    "categories": {
+      "ACCESS": "Accès",
+      "EQUIPMENT": "Équipement",
+      "PAYROLL": "Paie",
+      "KNOWLEDGE": "Connaissances",
+      "EXIT": "Sortie"
+    },
+    "steps": {
+      "revokeAccounts": "Révoquer les comptes et l'accès SSO",
+      "disableEmail": "Désactiver l'e-mail et la boîte mail",
+      "collectBadge": "Récupérer le badge d'accès aux locaux",
+      "returnLaptop": "Récupérer l'ordinateur portable",
+      "returnDevices": "Récupérer le téléphone et les autres appareils",
+      "finalPay": "Traiter le solde de tout compte",
+      "benefitsTermination": "Résilier les avantages et l'assurance",
+      "knowledgeHandover": "Réaliser la passation des connaissances",
+      "documentation": "Archiver la documentation et les fichiers",
+      "exitInterview": "Mener l'entretien de départ",
+      "offboardingLetter": "Émettre la lettre de départ"
+    }
+  },
+  "audit": {
+    "title": "Journal d'audit",
+    "description": "La piste de conformité des actions sensibles — métadonnées uniquement, jamais le contenu.",
+    "filterLabel": "Filtrer par action",
+    "filterAll": "Toutes",
+    "empty": "Aucune entrée d'audit à afficher.",
+    "colTime": "Horodatage (UTC)",
+    "colActor": "Auteur",
+    "colAction": "Action",
+    "colTarget": "Cible",
+    "actions": {
+      "ALERT_ACKNOWLEDGED": "Alerte prise en charge",
+      "ALERT_RESOLVED": "Alerte résolue",
+      "ALERT_REOPENED": "Alerte rouverte",
+      "ALERTS_CONSOLE_VIEWED": "Console d'alertes consultée",
+      "OFFBOARDING_INITIATED": "Départ initié",
+      "OFFBOARDING_STEP_COMPLETED": "Étape de départ terminée",
+      "EMPLOYEE_OFFBOARDED": "Employé archivé",
+      "LEAVE_APPROVED": "Congé approuvé",
+      "LEAVE_REJECTED": "Congé refusé",
+      "AUDIT_CONSOLE_VIEWED": "Journal d'audit consulté",
+      "DOCUMENT_VALIDATED": "Demande de document validée",
+      "DOCUMENT_REJECTED": "Demande de document refusée"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "description": "La matrice RBAC unique qui contrôle l'interface, les actions serveur et les outils IA.",
+    "permissionMatrix": "Matrice des permissions",
+    "permission": "Permission",
+    "aiToolsByRole": "Outils IA par rôle",
+    "aiToolsDescription": "L'assistant ne reçoit que les outils qu'un rôle peut utiliser — les outils hors périmètre ne sont jamais injectés, donc le modèle ne peut pas les invoquer.",
+    "tool": "Outil",
+    "allowed": "Autorisé",
+    "notAllowed": "Non autorisé",
+    "modelRegistry": "Registre des modèles IA",
+    "modelRegistryDescription": "Le chat utilise par défaut les modèles gratuits d'OpenRouter ; la passerelle Vercel AI est sélectionnable par requête. Configurez les clés via les variables d'environnement.",
+    "reasoning": "raisonnement",
+    "default": "par défaut",
+    "requiresGatewayKey": "nécessite AI_GATEWAY_API_KEY",
+    "localization": "Localisation",
+    "localizationDescription": "Devise et fuseau horaire utilisés dans toute l'application et par l'assistant IA.",
+    "currency": "Devise",
+    "timezone": "Fuseau horaire",
+    "save": "Enregistrer",
+    "overview": "Aperçu",
+    "overviewDescription": "Gérez votre organisation, l’assistant IA et la politique d’accès.",
+    "navLocalization": "Localisation",
+    "navAssistant": "Accès de l’assistant",
+    "navPermissions": "Permissions",
+    "navAiTools": "Outils IA",
+    "navModels": "Modèles",
+    "cardLocalizationDesc": "Devise et fuseau horaire pour l’application et l’assistant.",
+    "cardAssistantDesc": "Choisissez le contenu de la base de connaissances que l’assistant peut utiliser.",
+    "cardPermissionsDesc": "La matrice de permissions par rôle qui régit chaque surface.",
+    "cardAiToolsDesc": "Les outils IA attribués à chaque rôle.",
+    "cardModelsDesc": "Les modèles de chat disponibles pour l’assistant."
+  },
+  "chat": {
+    "assistant": "Assistant IA",
+    "modelLabel": "Modèle IA",
+    "greeting": "Comment puis-je aider, {name} ?",
+    "greetingDescription": "Posez des questions sur les politiques, vos congés, l'annuaire ou vos fiches de paie.",
+    "suggestion1": "Quelle est notre politique de congé parental ?",
+    "suggestion2": "Combien de jours de congés me reste-t-il ?",
+    "suggestion3": "Montre-moi l'annuaire de l'équipe",
+    "suggestion4": "Montre-moi ma dernière fiche de paie",
+    "suggestionMyProfile": "Montre-moi mon profil",
+    "suggestionApprovals": "Quelles demandes de congés attendent ma validation ?",
+    "placeholder": "Posez votre question… (Maj+Entrée pour un saut de ligne)",
+    "send": "Envoyer le message",
+    "stop": "Arrêter la génération",
+    "newChat": "Nouvelle conversation",
+    "retry": "Réessayer",
+    "reload": "Recharger",
+    "dismiss": "Fermer",
+    "messageLabel": "Message",
+    "conversation": "Conversation",
+    "assistantLabel": "Assistant",
+    "errors": {
+      "auth_missing": "L'assistant n'est pas encore configuré — la clé API du fournisseur est manquante.",
+      "rate_limited": "Le modèle est temporairement limité. Patientez un instant ou choisissez un autre modèle.",
+      "model_unavailable": "Ce modèle est indisponible pour le moment. Essayez-en un autre dans le sélecteur.",
+      "session_expired": "Votre session a expiré. Veuillez recharger la page et vous reconnecter.",
+      "network": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+      "generic": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "closed": {
+      "title": "Conversation terminée",
+      "body": "L'assistant a mis fin à cette conversation. Démarrez une nouvelle discussion pour continuer.",
+      "reason": {
+        "ABUSE": "Messages abusifs ou harcelants",
+        "DISALLOWED_REQUEST": "Action non autorisée demandée",
+        "SAFETY": "Problème de sécurité",
+        "OFF_TOPIC_PERSISTENT": "Hors sujet de façon répétée",
+        "oversize": "Message trop long",
+        "prompt_injection": "Tentative d'injection de prompt",
+        "system_exfiltration": "Tentative de révéler les instructions système"
+      }
+    }
+  },
+  "reasoning": {
+    "thinking": "Réflexion…",
+    "thoughtProcess": "Raisonnement"
+  },
+  "citations": {
+    "resultsFor": "Résultats du guide pour « {query} »",
+    "empty": "Aucune section correspondante.",
+    "match": "{pct} % de correspondance",
+    "sourceLabel": "Source {ref} : {article}, section {section}"
+  },
+  "leave": {
+    "daysRemainingLabel": "Jours de {type} restants",
+    "duration": "{type} · {count, plural, one {# jour} other {# jours}}",
+    "approvalResult": "La demande {type} de {days} jour(s) de {name} a été {status, select, APPROVED {approuvée} REJECTED {refusée} other {mise à jour}}.",
+    "noPendingApprovals": "Aucune demande en attente de validation.",
+    "noBalances": "Aucun solde de congés à afficher."
+  },
+  "directoryCard": {
+    "empty": "Aucune personne correspondante.",
+    "perYear": "/ an"
+  },
+  "payslip": {
+    "gross": "Brut",
+    "tax": "Impôt (22 %)",
+    "net": "Net",
+    "period": "Mois le plus récent"
+  },
+  "predictions":   {
+    "title": "Analyse prédictive des effectifs",
+    "description": "Signaux faibles de désengagement, projections de départs à 12 mois et préparation de la relève.",
+    "band": {
+      "green": "Faible",
+      "orange": "Modéré",
+      "red": "Élevé"
+    },
+    "metrics": {
+      "accuracy": "Précision du modèle",
+      "accuracyHint": "des {n} employés partis étaient signalés à risque élevé",
+      "noData": "Collecte des résultats — aucun départ évalué pour l'instant",
+      "evaluated": "Employés évalués",
+      "evaluatedHint": "Employés actifs avec un score de risque actuel",
+      "highRisk": "Risque élevé",
+      "highRiskHint": "Score supérieur à 60"
+    },
+    "recalibrate": {
+      "button": "Recalibrer",
+      "title": "Recalibrer le modèle",
+      "description": "Ajustez le poids de chaque facteur dans le score de risque de départ. Le total doit faire 100 %.",
+      "total": "Total",
+      "mustSum": "Doit être égal à 100 %",
+      "normalize": "Normaliser à 100 %",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "saved": "Modèle recalibré",
+      "errorTitle": "Échec du recalibrage",
+      "error": {
+        "forbidden": "Vous n'avez pas la permission de recalibrer le modèle.",
+        "invalid": "Le total des poids doit être exactement 100 %.",
+        "internal": "Une erreur est survenue lors de l'enregistrement. Veuillez réessayer."
+      }
+    },
+    "riskMap": {
+      "title": "Carte des risques",
+      "description": "Employés actifs classés par score de risque de départ actuel.",
+      "empty": "Aucun employé à évaluer pour le moment.",
+      "liveNote": "Calculé en direct — le traitement nocturne enregistrera ces scores.",
+      "col": {
+        "employee": "Employé",
+        "department": "Département",
+        "risk": "Risque",
+        "factors": "Pourquoi"
+      },
+      "filters": {
+        "label": "Filtrer",
+        "department": "Département",
+        "band": "Niveau de risque",
+        "allDepartments": "Tous les départements",
+        "allBands": "Tous les niveaux"
+      },
+      "pagination": {
+        "showing": "Affichage {from}–{to} sur {total}",
+        "previous": "Précédent",
+        "next": "Suivant"
+      }
+    },
+    "factor": {
+      "seniority": "Ancienneté",
+      "absenteeism": "Absentéisme",
+      "review": "Temps depuis le dernier entretien",
+      "salary": "Évolution salariale",
+      "turnover": "Turnover du département",
+      "jobProfile": "Profil de poste",
+      "burnout": "Épuisement (congés non pris)",
+      "roleStagnation": "Stagnation dans le poste",
+      "dominoEffect": "Départ du manager",
+      "engagement": "Score d'engagement"
+    },
+    "factors": {
+      "view": "Facteurs",
+      "sheetTitle": "Analyse du risque : {name}",
+      "title": "Facteurs contributifs",
+      "description": "Ce qui influence le score de risque de {name}, du plus déterminant au moins.",
+      "points": "{points} pts",
+      "none": "Aucun facteur ne contribue au risque actuellement.",
+      "privacyNote": "Affiche uniquement la contribution de chaque facteur — jamais les valeurs sensibles sous-jacentes."
+    },
+    "projection": {
+      "title": "Prévision des départs",
+      "description": "Départs attendus sur les 12 prochains mois, selon le risque actuel.",
+      "chartTitle": "Projection des départs sur 12 mois",
+      "calibrating": "Calibrage en cours",
+      "calibratingHint": "Les prévisions nécessitent au moins {min} employés actifs pour être fiables — actuellement {have}.",
+      "totalExpected": "départs attendus sur 12 mois",
+      "chartAria": "Départs cumulés attendus atteignant {total} sur 12 mois",
+      "legendCumulative": "Cumulé",
+      "legendMonthly": "Par mois"
+    },
+    "distribution": {
+      "title": "Répartition du risque par département",
+      "filterLabel": "Département",
+      "allCompany": "Toute l'entreprise"
+    },
+    "controls": {
+      "departments": "Départements",
+      "allDepartments": "Tous les départements",
+      "selected": "{count} sélectionnés",
+      "period": "Période",
+      "quarterShort": "T",
+      "stacked": "Empilé",
+      "grouped": "Groupé"
+    },
+    "period": {
+      "month": "Mensuel",
+      "quarter": "Trimestriel",
+      "year": "Annuel"
+    },
+    "chartStyle": {
+      "area": "Aire",
+      "line": "Ligne",
+      "bar": "Barres"
+    },
+    "simulator": {
+      "title": "Simulateur de recrutement (What-if)",
+      "description": "Modélisez le plan de remplacement si des personnes quittent un département.",
+      "help": "Choisissez un département et le nombre de départs ; l'IA propose un plan de remplacement — profils à recruter, délai et coût estimé.",
+      "department": "Département",
+      "departmentPlaceholder": "Choisir un département",
+      "seniorityLevel": "Niveau de séniorité",
+      "count": "Combien",
+      "budget": "Budget",
+      "budgetPlaceholder": "Budget total maximum",
+      "budgetHelp": "Le budget total maximum pour tout le remplacement (frais de recrutement + intégration). L'IA maintient le plan dans cette limite lorsque c'est possible.",
+      "urgency": "Urgence",
+      "submit": "Simuler",
+      "simulating": "Simulation…",
+      "aiErrorTitle": "Erreur IA",
+      "planTitle": "Plan de recrutement",
+      "downloadPdf": "Télécharger en PDF",
+      "timeToHire": "Délai de recrutement",
+      "estimatedCost": "Coût estimé",
+      "withinBudget": "Dans le budget",
+      "overBudget": "Dépasse le budget",
+      "weeks": "{weeks} semaines",
+      "profiles": "Profils à recruter",
+      "risks": "Risques",
+      "recommendations": "Recommandations",
+      "seniority": {
+        "JUNIOR": "Junior",
+        "MID": "Confirmé",
+        "SENIOR": "Senior",
+        "LEAD": "Lead"
+      },
+      "urgencyLevel": {
+        "NORMAL": "Normale",
+        "HIGH": "Élevée",
+        "CRITICAL": "Critique"
+      },
+      "error": {
+        "forbidden": "Vous n'avez pas accès à cette simulation.",
+        "invalid": "Veuillez choisir un département et un nombre valide.",
+        "rate_limited": "Le modèle IA est temporairement limité (trop de requêtes). Patientez un instant puis réessayez.",
+        "ai_unavailable": "Le planificateur IA est indisponible pour le moment. Réessayez plus tard."
+      }
+    },
+    "succession": {
+      "title": "Plans de succession",
+      "description": "Profondeur du vivier et préparation pour les rôles clés d'encadrement.",
+      "empty": "Aucun rôle d'encadrement à planifier pour le moment.",
+      "bench": "Vivier",
+      "benchCount": "{count, plural, one {# dans le vivier} other {# dans le vivier}}",
+      "gap": "Absence de relève",
+      "flightRisk": "Risque de départ",
+      "noSuccessor": "Aucun successeur interne évident — envisagez de former ou de recruter une relève.",
+      "criticalGap": "Manager à risque de départ sans relève prête — agissez maintenant.",
+      "tenure": "{years} ans d'ancienneté",
+      "transitionPlan": "Plan de transition IA",
+      "transition": {
+        "title": "Plan de transition : {role}",
+        "subtitle": "Plan de passation généré par l'IA pour sécuriser cette succession.",
+        "recommended": "Successeur recommandé",
+        "knowledgeTransfer": "Transfert de connaissances",
+        "skillGaps": "Compétences à développer",
+        "close": "Fermer",
+        "errorTitle": "Erreur IA",
+        "error": {
+          "forbidden": "Vous n'avez pas accès à la génération de ce plan.",
+          "rate_limited": "Le modèle IA est temporairement limité (trop de requêtes). Patientez un instant puis réessayez.",
+          "ai_unavailable": "Le planificateur IA est indisponible pour le moment. Réessayez plus tard."
+        }
+      }
+    },
+    "readiness": {
+      "READY_NOW": "Prêt maintenant",
+      "READY_1_2Y": "Prêt dans 1–2 ans",
+      "DEVELOPING": "En développement"
+    }
+  },
+  "tools": {
+    "status": {
+      "searchHandbook": "Recherche dans le guide",
+      "getEmployeeDirectory": "Consultation de l'annuaire",
+      "getLeaveBalances": "Vérification du solde de congés",
+      "requestTimeOff": "Envoi de la demande de congés",
+      "listPendingApprovals": "Récupération des validations en attente",
+      "approveLeave": "Traitement de la validation",
+      "getPayslip": "Récupération de la fiche de paie"
+    },
+    "error": "Erreur de l'outil",
+    "errors": {
+      "handbook_unavailable": "La recherche dans le guide est indisponible pour le moment.",
+      "handbook_dim_mismatch": "La recherche dans le guide est mal configurée (incompatibilité du modèle d'embedding).",
+      "no_employee_profile": "Aucun profil employé n'est lié à votre compte.",
+      "date_invalid": "Veuillez utiliser une date valide (AAAA-MM-JJ).",
+      "date_range_reversed": "La date de fin doit être égale ou postérieure à la date de début.",
+      "request_not_found": "Cette demande est introuvable.",
+      "request_not_pending": "Cette demande a déjà été traitée et ne peut plus être modifiée.",
+      "internal_error": "Une erreur s'est produite lors du traitement de votre demande. Veuillez réessayer."
+    },
+    "summary": {
+      "getCurrentDateTime": "La date, l'heure et le jour actuels (utilitaire).",
+      "getDateInfo": "Jour de la semaine / week-end pour une date donnée (utilitaire).",
+      "businessDaysBetween": "Nombre de jours ouvrés entre deux dates (utilitaire).",
+      "searchHandbook": "Recherche dans le guide de l'employé (RAG) et cite les sections.",
+      "getEmployeeDirectory": "Liste les employés que vous êtes autorisé à voir.",
+      "getLeaveBalances": "Vos propres soldes de congés.",
+      "requestTimeOff": "Soumet une demande de congés pour vous.",
+      "listPendingApprovals": "Liste les demandes en attente de votre validation.",
+      "approveLeave": "Approuve ou refuse une demande en attente.",
+      "getPayslip": "Une fiche de paie — la vôtre, ou celle de toute personne visible avec des droits élevés.",
+      "endConversation": "Mettre fin à la conversation et verrouiller le chat — uniquement pour refuser des abus ou des demandes dangereuses.",
+      "predictDepartures": "Classer les personnes les plus à risque de départ (managers : leur équipe, anonymisé ; RH : détail complet)."
+    }
+  },
+  "login": {
+    "pitchTitle": "Un starter de plateforme RH propulsée par l'IA.",
+    "pitchDescription": "Une implémentation de référence montrant des outils IA contrôlés par RBAC, le RAG sur votre guide, le raisonnement en streaming et une interface de chat générative — sur Next.js, Postgres + pgvector et le Vercel AI SDK.",
+    "demoBuild": "Version démo · choisissez un rôle pour explorer comment les permissions façonnent l'expérience.",
+    "tagline": "Ressources Humaines · Intelligence Artificielle",
+    "signIn": "Se connecter",
+    "chooseRole": "Choisissez un rôle de démonstration — chacun a des permissions différentes.",
+    "orManually": "ou connectez-vous manuellement",
+    "enter": "Entrer",
+    "signInAs": "Se connecter en tant que {name}, {role}",
+    "passwordNote": "Tous les comptes de démonstration utilisent le mot de passe <code>{password}</code>",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "emailPlaceholder": "email@hari.ma",
+    "passwordPlaceholder": "Mot de passe",
+    "signingIn": "Connexion…",
+    "invalidCredentials": "E-mail ou mot de passe invalide.",
+    "demo": {
+      "EMPLOYEE": "Ne voit que ses propres données. L'assistant IA n'a accès qu'à des outils en libre-service (pas de vue sur les autres employés ni de droits de validation).",
+      "MANAGER": "A une visibilité sur son équipe directe et peut approuver leurs demandes de congés.",
+      "HR_ADMIN": "Accès global à l'annuaire de toute l'entreprise, aux rémunérations et aux fiches de paie.",
+      "SUPER_ADMIN": "Possède tous les droits RH, plus l'accès aux paramètres techniques de la plateforme."
+    }
+  },
+  "kb": {
+    "title": "Base de connaissances",
+    "description": "Consultez les politiques de l'entreprise et les documents RH.",
+    "manage": "Gérer",
+    "emptyReader": "Aucun article n'est disponible pour vous pour le moment.",
+    "lastUpdated": "Dernière mise à jour",
+    "adminTitle": "Gérer la base de connaissances",
+    "adminDescription": "Créez, modifiez, publiez et archivez les documents RH et les collections.",
+    "backToReader": "Retour à la base de connaissances",
+    "backToAdmin": "Retour à la gestion",
+    "collectionsHeading": "Collections",
+    "documentsHeading": "Documents",
+    "newCollection": "Nouvelle collection",
+    "newDocument": "Nouveau document",
+    "editCollection": "Modifier la collection",
+    "editDocument": "Modifier le document",
+    "createCollection": "Créer la collection",
+    "createDocument": "Créer le document",
+    "fieldName": "Nom",
+    "fieldSlug": "Identifiant (slug)",
+    "fieldSlugHint": "Utilisé dans l'URL. Laissez vide pour le générer à partir du nom/titre.",
+    "fieldDescription": "Description",
+    "fieldOrder": "Ordre",
+    "fieldTitle": "Titre",
+    "fieldContent": "Contenu",
+    "fieldContentHint": "Utilisez Titre 2 / Titre 3 pour les sections — chacune devient une ancre citable.",
+    "fieldCollection": "Collection",
+    "fieldVisibility": "Niveau d'accès",
+    "fieldStatus": "Statut",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "publish": "Publier",
+    "unpublish": "Dépublier",
+    "archive": "Archiver",
+    "delete": "Supprimer",
+    "preview": "Aperçu",
+    "view": "Voir",
+    "edit": "Modifier",
+    "noCollections": "Aucune collection pour l'instant. Créez-en une pour ajouter des documents.",
+    "noDocuments": "Aucun document pour l'instant.",
+    "documentCount": "{count, plural, =0 {Aucun document} one {# document} other {# documents}}",
+    "status": "Statut",
+    "visibility": "Niveau d'accès",
+    "collection": "Collection",
+    "actions": "Actions",
+    "name": "Nom",
+    "draftNotice": "Ceci est un brouillon — non visible par les employés ni par l'assistant.",
+    "archivedNotice": "Ce document est archivé — non visible par les employés ni par l'assistant.",
+    "previewNotice": "Aperçu d'un document non publié.",
+    "editorWrite": "Rédiger",
+    "editorPreview": "Aperçu",
+    "editorBold": "Gras",
+    "editorItalic": "Italique",
+    "editorHeading": "Titre",
+    "editorSubheading": "Sous-titre",
+    "editorBulletList": "Liste à puces",
+    "editorNumberedList": "Liste numérotée",
+    "editorLink": "Lien",
+    "editorCode": "Code en ligne",
+    "editorQuote": "Citation",
+    "editorEmptyPreview": "Rien à prévisualiser pour l'instant.",
+    "by": "Par {name}",
+    "updatedByCol": "Modifié par",
+    "deleteDocTitle": "Supprimer ce document ?",
+    "deleteDocDesc": "« {title} » et ses entrées d’index de recherche seront définitivement supprimés. Action irréversible.",
+    "deleteCollectionTitle": "Supprimer cette collection ?",
+    "deleteCollectionDesc": "« {name} » et tous ses documents seront définitivement supprimés. Action irréversible.",
+    "confirmDelete": "Supprimer",
+    "toastSaved": "Document enregistré",
+    "toastPublished": "Document publié",
+    "toastUnpublished": "Repassé en brouillon",
+    "toastArchived": "Document archivé",
+    "toastDeleted": "Supprimé",
+    "onThisPage": "Sur cette page",
+    "relatedArticles": "Articles liés",
+    "inCollection": "Dans {name}",
+    "wasThisHelpful": "Cet article vous a-t-il été utile ?",
+    "helpfulYes": "Oui",
+    "helpfulNo": "Non",
+    "feedbackThanks": "Merci pour votre retour !",
+    "searchLabel": "Rechercher",
+    "searchPlaceholder": "Rechercher dans la base de connaissances…",
+    "searchEmpty": "Aucune section correspondante.",
+    "searchHint": "Saisissez au moins 2 caractères.",
+    "readingTime": "{min} min de lecture",
+    "slugChangeWarning": "Modifier l’identifiant casse les liens existants vers cette page.",
+    "filterTitlePlaceholder": "Filtrer par titre…",
+    "allStatuses": "Tous les statuts",
+    "allCollections": "Toutes les collections",
+    "sortRecent": "Récemment modifié",
+    "sortTitle": "Titre (A–Z)",
+    "apply": "Appliquer",
+    "clearFilters": "Effacer",
+    "fieldTags": "Étiquettes",
+    "fieldTagsHint": "Mots-clés séparés par des virgules.",
+    "viewsCol": "Vues",
+    "breadcrumb": "Fil d’Ariane",
+    "feedbackFailed": "Impossible d’enregistrer votre retour.",
+    "fieldImage": "Image de couverture",
+    "fieldImageHint": "Image décorative facultative affichée sur la collection. PNG, JPG, GIF ou WebP, jusqu’à 1 Mo.",
+    "imageRemove": "Supprimer l’image",
+    "imageTooLarge": "Image trop volumineuse (1 Mo max).",
+    "imageInvalid": "Veuillez choisir un fichier image.",
+    "imageUploading": "Téléversement…",
+    "imageUploadFailed": "Échec du téléversement. Veuillez réessayer.",
+    "articleCount": "{count, plural, =0 {Aucun article} one {# article} other {# articles}}",
+    "browse": "Parcourir",
+    "rowActions": "Actions",
+    "assistantAccessTitle": "Accès de l’assistant",
+    "assistantAccessDescription": "Choisissez le contenu de la base de connaissances que l’assistant IA peut utiliser pour répondre. Cela n’élargit jamais les accès — le rôle de la personne et le statut publié du document s’appliquent toujours. Le contenu masqué ici reste consultable dans la base de connaissances.",
+    "assistantBadgeOn": "Assistant : activé",
+    "assistantBadgeOff": "Assistant : désactivé",
+    "assistantDocHidden": "Masqué pour l’assistant",
+    "assistantDocForced": "Forcé pour l’assistant",
+    "assistantEffectiveOn": "Utilisé par l’assistant",
+    "assistantEffectiveOff": "Masqué pour l’assistant",
+    "assistantOverrideInherit": "Hériter",
+    "assistantOverrideOn": "Disponible",
+    "assistantOverrideOff": "Masqué",
+    "assistantSaved": "Accès de l’assistant mis à jour",
+    "assistantSaveFailed": "Impossible de mettre à jour l’accès de l’assistant",
+    "assistantToggleDocs": "Afficher les documents de {name}",
+    "assistantCollectionAria": "Accès de l’assistant pour la collection {name}",
+    "assistantDocAria": "Accès de l’assistant pour {title}",
+    "assistantManageDocuments": "Gérer les documents",
+    "assistantOverridesCount": "{count, plural, =0 {Aucune exception} one {# exception} other {# exceptions}}",
+    "assistantBackToCollections": "Retour aux collections",
+    "assistantSearchCollections": "Rechercher des collections…",
+    "assistantSearchDocuments": "Rechercher des documents…",
+    "assistantNoResults": "Aucun résultat.",
+    "paginationPrev": "Précédent",
+    "paginationNext": "Suivant",
+    "paginationPageOf": "Page {page} sur {pages}",
+    "assistantFieldLabel": "Accès au chatbot",
+    "assistantOverrideInheritState": "Hériter de la collection ({state})",
+    "assistantHintInherit": "Suit la collection — actuellement {state}.",
+    "assistantFieldHintOn": "Cet article peut être utilisé par l’assistant IA.",
+    "assistantFieldHintOff": "Cet article est masqué pour l’assistant IA.",
+    "tagAdd": "Ajouter une étiquette…",
+    "tagRemove": "Supprimer {tag}",
+    "articleSettings": "Paramètres de l’article",
+    "slugPlaceholder": "Auto depuis le titre",
+    "resizePanels": "Redimensionner les panneaux"
+  },
+  "kbStatus": {
+    "DRAFT": "Brouillon",
+    "PUBLISHED": "Publié",
+    "ARCHIVED": "Archivé"
+  },
+  "kbVisibility": {
+    "ALL_EMPLOYEES": "Tous les employés",
+    "MANAGERS": "Managers et plus",
+    "HR_ONLY": "RH uniquement"
+  },
+  "topbar": {
+    "descriptor": "Ressources Humaines · IA",
+    "workspace": "Espace {role}",
+    "search": "Rechercher…",
+    "noResults": "Aucun résultat",
+    "notifications": "Notifications",
+    "noNotifications": "Aucune notification",
+    "notificationsError": "Impossible de charger les notifications.",
+    "retry": "Réessayer",
+    "approvals": "{count, plural, one {# demande à approuver} other {# demandes à approuver}}",
+    "approvalsDesc": "Congés en attente de votre validation",
+    "myPending": "Votre demande de congé est en attente",
+    "myPendingDesc": "{count, plural, one {# en cours de traitement} other {# en cours de traitement}}",
+    "approvalItem": "{name} · congé {type}",
+    "myPendingItem": "Votre demande {type} est en attente",
+    "viewAll": "Tout voir",
+    "alertDesc": "Alerte de garde-fou IA"
+  },
+  "alerts": {
+    "title": "Alertes IA",
+    "description": "Alertes de garde-fous et d'observabilité déclenchées par l'assistant IA.",
+    "empty": "Aucune alerte à afficher.",
+    "system": "Système",
+    "colAlert": "Alerte",
+    "colSeverity": "Gravité",
+    "colWho": "Déclenchée par",
+    "colWhen": "Créée le",
+    "colStatus": "Statut",
+    "colActions": "Actions",
+    "filter": {
+      "all": "Toutes",
+      "OPEN": "Ouvertes",
+      "ACKNOWLEDGED": "Prises en compte",
+      "RESOLVED": "Résolues"
+    },
+    "status": {
+      "OPEN": "Ouverte",
+      "ACKNOWLEDGED": "Prise en compte",
+      "RESOLVED": "Résolue"
+    },
+    "severity": {
+      "INFO": "Info",
+      "WARNING": "Avertissement",
+      "CRITICAL": "Critique"
+    },
+    "action": {
+      "acknowledge": "Prendre en compte",
+      "resolve": "Résoudre",
+      "reopen": "Rouvrir"
+    },
+    "kind": {
+      "AI_GUARD_BLOCK": {
+        "title": "Entrée bloquée par un garde-fou"
+      },
+      "AI_REFUSAL": {
+        "title": "Refus d'outil répétés"
+      },
+      "AI_ERROR": {
+        "title": "Erreur de l'assistant"
+      },
+      "CONVERSATION_CLOSED": {
+        "title": "L'assistant a mis fin à une conversation"
+      },
+      "DEPARTURE_RISK": {
+        "title": "Employé à risque de départ"
+      }
+    },
+    "colDetail": "Détail",
+    "rowActions": "Actions de l'alerte",
+    "by": "par {name}",
+    "toastAcknowledged": "Alerte prise en compte",
+    "toastResolved": "Alerte résolue",
+    "toastReopened": "Alerte rouverte"
+  },
+  "documents": {
+    "title": "Mes documents",
+    "description": "Demandez et suivez vos documents RH.",
+    "workCertificateTitle": "Attestation de travail",
+    "workCertificateDescription": "Demandez une attestation de travail générée automatiquement par les RH.",
+    "requestWorkCertificate": "Demander une attestation",
+    "requestSuccess": "Votre demande a bien été enregistrée.",
+    "forbidden": "Vous n'êtes pas autorisé à accéder à cette page.",
+    "type": {
+      "WORK_CERTIFICATE": "Attestation de travail"
+    },
+    "status": {
+      "REQUESTED": "Demandée",
+      "VALIDATED": "Validée",
+      "GENERATED": "Générée",
+      "DOWNLOADED": "Téléchargée",
+      "REJECTED": "Refusée"
+    },
+    "myRequests": {
+      "title": "Mes demandes",
+      "type": "Type",
+      "requestedOn": "Demandé le",
+      "generatedOn": "Généré le",
+      "status": "Statut",
+      "actions": "Actions",
+      "download": "Télécharger",
+      "rejectionReason": "Motif : {note}"
+    },
+    "history": {
+      "title": "Historique des documents",
+      "description": "Toutes les demandes de documents RH de l'entreprise, de la soumission au téléchargement.",
+      "employee": "Collaborateur",
+      "type": "Type",
+      "requestedOn": "Demandé le",
+      "generatedOn": "Généré le",
+      "status": "Statut",
+      "empty": "Aucune demande de document pour le moment."
+    },
+    "requests": {
+      "title": "Demandes de documents",
+      "description": "Consultez les demandes de documents RH en attente et décidez de les approuver ou de les refuser.",
+      "employee": "Collaborateur",
+      "type": "Type",
+      "requestedOn": "Demandé le",
+      "actions": "Actions",
+      "approve": "Approuver",
+      "reject": "Refuser",
+      "noPending": "Aucune demande en attente.",
+      "rejectDialog": {
+        "title": "Refuser la demande",
+        "description": "Expliquez pourquoi cette demande est refusée. Le collaborateur verra cette note.",
+        "placeholder": "Motif du refus…"
+      },
+      "toast": {
+        "approved": "Demande approuvée et PDF généré.",
+        "approvedPending": "Demande approuvée — génération du PDF en attente.",
+        "rejected": "Demande refusée.",
+        "failed": "Une erreur est survenue."
+      }
+    },
+    "certificate": {
+      "heading": "Attestation de travail",
+      "issuedOn": "Délivrée le {date}",
+      "bodyActive": "Nous certifions que {name}, occupant le poste de {title} au sein du département {department}, est employé(e) par notre entreprise depuis le {startDate} et demeure un collaborateur actif à la date de délivrance de la présente attestation.",
+      "bodyTerminated": "Nous certifions que {name} a occupé le poste de {title} au sein du département {department} du {startDate} au {endDate}.",
+      "footer": "Ce document est généré automatiquement et est valable sans signature."
+    }
+  }
+}
